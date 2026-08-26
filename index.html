@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard | Infinity Piercing</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A1F1A; --card:#0F2E26; --card2:#14382E; --border:#1E4A3C;
+    --text:#F2E9E1; --muted:#9FB8AF; --accent:#3AA67F; --accent2:#F2C94C;
+    --ok:#2ECC71; --warn:#F5B041; --danger:#E74C3C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+  header h1{font-size:22px}
+  header .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .head-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .atualizado{color:var(--muted);font-size:12px}
+  button{background:var(--accent);color:#06211A;border:none;padding:9px 16px;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}
+  button:hover{filter:brightness(1.1)}
+  .status{padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:14px;display:none}
+  .status.erro{background:rgba(231,76,60,.15);border:1px solid var(--danger);color:#ffb3a7;display:block}
+  .status.ok{background:rgba(46,204,113,.12);border:1px solid var(--ok);color:#a9ecc4;display:block}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  .kpi .valor{font-size:26px;font-weight:800;margin-top:8px}
+  .kpi .detalhe{font-size:12px;color:var(--muted);margin-top:4px}
+  section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px}
+  section h2{font-size:16px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+  section h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .cruz{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+  .cruz .num{flex:1;min-width:180px}
+  .cruz .num .big{font-size:34px;font-weight:800}
+  .cruz .num .tag{font-size:13px;color:var(--muted);margin-top:2px}
+  .chart-box{position:relative;height:300px}
+  .chart-box.tall{height:340px}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  input[type=search],select{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px}
+  input[type=search]{flex:1;min-width:180px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:rgba(58,166,127,.06)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+  .b-recompra{background:rgba(46,204,113,.15);color:var(--ok)}
+  .b-sem{background:rgba(245,176,65,.15);color:var(--warn)}
+  .b-cadastro{background:rgba(159,184,175,.15);color:var(--muted)}
+  .vazio{color:var(--muted);text-align:center;padding:30px}
+  .debug{background:#06211A;border:1px dashed var(--accent);border-radius:12px;padding:16px;font-family:monospace;font-size:12px;white-space:pre-wrap;display:none;margin-top:20px}
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Dashboard de Vendas</h1>
+      <div class="sub">Infinity Piercing · desempenho e clientes</div>
+    </div>
+    <div class="head-right">
+      <span class="atualizado" id="atualizado">—</span>
+      <button onclick="carregar()">↻ Atualizar</button>
+    </div>
+  </header>
+
+  <div class="status" id="status"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2><span class="dot"></span>Cruzamento de clientes</h2>
+    <div class="cruz">
+      <div class="num">
+        <div class="big" id="cCompraram">0</div><div class="tag">Clientes que compraram</div>
+        <div class="big" id="cRecompra" style="color:var(--ok)">0</div><div class="tag">Histórico (recompra)</div>
+        <div class="big" id="cSem" style="color:var(--warn)">0</div><div class="tag">Comprou 1x (sem recompra)</div>
+        <div class="big" id="cCadastro" style="color:var(--muted)">0</div><div class="tag">Só cadastro</div>
+      </div>
+      <div class="chart-box" style="flex:1;min-width:260px"><canvas id="chartCruz"></canvas></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="dot"></span>Evolução mês a mês</h2>
+    <div class="chart-box tall"><canvas id="chartEvol"></canvas></div>
+  </section>
+
+  <section>
+    <h2><span class="dot"></span>Produtos mais vendidos</h2>
+    <div class="chart-box tall"><canvas id="chartProd"></canvas></div>
+  </section>
+
+  <section>
+    <h2><span class="dot"></span>Lista de clientes</h2>
+    <div class="filtros">
+      <input type="search" id="busca" placeholder="Buscar cliente ou e-mail..." oninput="renderTabela()">
+      <select id="filtroCls" onchange="renderTabela()">
+        <option value="">Todas as classificações</option>
+        <option value="recompra">Recompra (histórico)</option>
+        <option value="sem-recompra">Comprou 1x (sem recompra)</option>
+        <option value="so-cadastro">Só cadastro</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto"><table id="tabela">
+      <thead><tr><th>Cliente</th><th>E-mail</th><th>Pedidos</th><th>Total gasto</th><th>Última compra</th><th>Classificação</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+    <div class="vazio" id="vazioTabela" style="display:none">Nenhum cliente encontrado.</div>
+  </section>
+
+  <div class="debug" id="debug"></div>
+
+  <footer>Dados carregados automaticamente do web app · Infinity Piercing</footer>
+</div>
+
+<script>
+/* ============ CONFIGURAÇÃO ============
+   Cole abaixo a URL do seu web app do Google Apps Script.
+   Ex.: https://script.google.com/macros/s/SEU_ID/exec */
+var CONFIG = {
+  API_URL: "COLE_AQUI_A_URL_DO_WEB_APP"
+};
+
+var dados = null;
+var charts = {};
+
+function fmtBRL(v){ return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function setStatus(tipo,msg){
+  var s = document.getElementById("status");
+  s.className = "status " + tipo;
+  s.textContent = msg;
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+function normalizar(d){
+  var resumo = d.resumo || d.metricas || d.kpis || {};
+  var evolucao = d.evolucaoMensal || d.evolucao || d.mensal || d.porMes || [];
+  var produtos = d.produtosMaisVendidos || d.produtos || d.ranking || [];
+  var clientes = d.clientes || d.listaClientes || d.customers || [];
+  if (!Object.keys(resumo).length && !evolucao.length && !produtos.length && !clientes.length){
+    var dbg = document.getElementById("debug");
+    dbg.style.display = "block";
+    dbg.textContent = "Estrutura de dados não reconhecida. JSON recebido:\n" + JSON.stringify(d, null, 2);
+    setStatus("erro","A API respondeu, mas o formato não é o esperado. Veja o painel de debug abaixo.");
+    return;
+  }
+  dados = {resumo:resumo, evolucao:evolucao, produtos:produtos, clientes:clientes};
+  renderTudo();
+}
+
+function renderTudo(){
+  var r = dados.resumo;
+  var kpis = [
+    {l:"Receita total", v:fmtBRL(r.receita), d:""},
+    {l:"Ticket médio", v:fmtBRL(r.ticketMedio), d:"por pedido"},
+    {l:"Pedidos", v:(r.pedidos||0), d:""},
+    {l:"Clientes que compraram", v:(r.clientesComCompra||0), d:"de "+(r.clientes||0)+" cadastrados"},
+    {l:"Só cadastro", v:(r.soCadastro||0), d:""},
+    {l:"Taxa de recompra", v:Math.round((r.taxaRecompra||0)*100)+"%", d:"dos que compraram"}
+  ];
+  document.getElementById("kpis").innerHTML = kpis.map(function(k){
+    return '<div class="kpi"><div class="label">'+k.l+'</div><div class="valor">'+k.v+'</div><div class="detalhe">'+k.d+'</div></div>';
+  }).join("");
+
+  var compraram = r.clientesComCompra||0, soCad = r.soCadastro||0;
+  var recompra = Math.round((r.taxaRecompra||0)*compraram);
+  var sem = Math.max(0, compraram - recompra);
+  document.getElementById("cCompraram").textContent = compraram;
+  document.getElementById("cRecompra").textContent = recompra;
+  document.getElementById("cSem").textContent = sem;
+  document.getElementById("cCadastro").textContent = soCad;
+
+  renderCruz(recompra, sem, soCad);
+  renderEvolucao();
+  renderProdutos();
+  renderTabela();
+
+  document.getElementById("atualizado").textContent = "Atualizado: " + new Date().toLocaleString("pt-BR");
+  setStatus("ok","Dados carregados com sucesso.");
+}
+
+function mkChart(id, cfg){
+  if (charts[id]) charts[id].destroy();
+  var ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, cfg);
+}
+
+function renderCruz(recompra, sem, soCad){
+  mkChart("chartCruz", {
+    type:"doughnut",
+    data:{ labels:["Recompra (histórico)","Comprou 1x","Só cadastro"],
+      datasets:[{ data:[recompra,sem,soCad], backgroundColor:["#2ECC71","#F5B041","#6b7f77"], borderColor:"#0F2E26", borderWidth:2 }] },
+    options:{ plugins:{ legend:{ position:"bottom", labels:{ color:"#9FB8AF", boxWidth:12 } } }, cutout:"62%" }
+  });
+}
+
+function renderEvolucao(){
+  var ev = (dados.evolucao||[]).slice().sort(function(a,b){ return a.mes<b.mes?-1:1; });
+  var labels = ev.map(function(e){ return e.rotulo||e.mes; });
+  var pedidos = ev.map(function(e){ return e.pedidos||0; });
+  var receita = ev.map(function(e){ return e.receita||0; });
+  mkChart("chartEvol", {
+    type:"bar",
+    data:{ labels:labels, datasets:[
+      { label:"Pedidos", data:pedidos, backgroundColor:"#3AA67F", yAxisID:"y" },
+      { label:"Receita", data:receita, type:"line", borderColor:"#F2C94C", backgroundColor:"#F2C94C", tension:.35, yAxisID:"y1" }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:"#9FB8AF" } } },
+      scales:{ x:{ ticks:{ color:"#9FB8AF" }, grid:{ color:"#1E4A3C" } },
+        y:{ position:"left", ticks:{ color:"#9FB8AF" }, grid:{ color:"#1E4A3C" } },
+        y1:{ position:"right", ticks:{ color:"#F2C94C", callback:function(v){ return "R$"+(v>=1000?(v/1000)+"k":v); } }, grid:{ drawOnChartArea:false } } } }
+  });
+}
+
+function renderProdutos(){
+  var ps = (dados.produtos||[]).slice().sort(function(a,b){ return (b.quantidade||0)-(a.quantidade||0); }).slice(0,10);
+  var labels = ps.map(function(p){ return p.produto; });
+  var qtd = ps.map(function(p){ return p.quantidade||0; });
+  mkChart("chartProd", {
+    type:"bar",
+    data:{ labels:labels, datasets:[{ label:"Quantidade vendida", data:qtd, backgroundColor:"#3AA67F", borderRadius:6 }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ x:{ ticks:{ color:"#9FB8AF" }, grid:{ color:"#1E4A3C" } }, y:{ ticks:{ color:"#9FB8AF" }, grid:{ display:false } } } }
+  });
+}
+
+function renderTabela(){
+  var busca = (document.getElementById("busca").value||"").toLowerCase();
+  var cls = document.getElementById("filtroCls").value;
+  var rows = (dados.clientes||[]).filter(function(c){
+    if (cls && c.classificacao !== cls) return false;
+    if (busca){
+      var t = (c.cliente+" "+(c.email||"")).toLowerCase();
+      if (t.indexOf(busca) === -1) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (b.gasto||0)-(a.gasto||0); });
+
+  var tbody = document.getElementById("tbody");
+  var badges = { "recompra":["b-recompra","Recompra"], "sem-recompra":["b-sem","Comprou 1x"], "so-cadastro":["b-cadastro","Só cadastro"] };
+  tbody.innerHTML = rows.map(function(c){
+    var b = badges[c.classificacao] || badges["so-cadastro"];
+    return "<tr><td><b>"+esc(c.cliente||"—")+"</b></td><td>"+esc(c.email||"—")+"</td><td>"+(c.pedidos||0)+"</td><td>"+fmtBRL(c.gasto)+"</td><td>"+esc(c.ultimaCompra||"—")+"</td><td><span class='badge "+b[0]+"'>"+b[1]+"</span></td></tr>";
+  }).join("");
+  document.getElementById("vazioTabela").style.display = rows.length ? "none" : "block";
+}
+
+async function carregar(){
+  var url = (CONFIG.API_URL||"").trim();
+  if (!url || url.indexOf("COLE_AQUI") > -1){
+    setStatus("erro","Cole a URL do seu web app do Apps Script no topo do arquivo (CONFIG.API_URL).");
+    return;
+  }
+  setStatus("ok","Carregando dados...");
+  try{
+    var res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP "+res.status);
+    var d = await res.json();
+    normalizar(d);
+  }catch(e){
+    setStatus("erro","Não consegui carregar os dados. Confira se a URL está publicada e correta. Detalhe: "+e.message);
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>
