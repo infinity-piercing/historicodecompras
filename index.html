@@ -104,25 +104,18 @@
     <div class="subtitulo">Histórico de Compras por Cliente</div>
   </div>
   <div class="spacer"></div>
-  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando arquivos…</span></div>
+  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
   <button class="btn" onclick="carregarDados()">↻ Atualizar</button>
 </header>
 
 <main>
   <div class="avisos" id="avisos"></div>
-
-  <div class="diag" id="diag" style="display:none">
-    <h3>🔎 Arquivos lidos do repositório</h3>
-    <div id="diagLinhas"></div>
-  </div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Arquivos lidos do repositório</h3><div id="diagLinhas"></div></div>
 
   <div id="conteudo" style="display:none">
     <div class="foco" id="foco" style="display:none">
       <div class="num" id="focoNum">0</div>
-      <div class="txt">
-        <b>🎯 Clientes cadastrados que ainda não compraram</b>
-        <span id="focoTxt">—</span>
-      </div>
+      <div class="txt"><b>🎯 Clientes cadastrados que ainda não compraram</b><span id="focoTxt">—</span></div>
       <button class="btn-ver" onclick="verFoco()">Ver lista completa →</button>
     </div>
 
@@ -133,7 +126,7 @@
 
     <section id="overview">
       <div class="filtros">
-        <div class="linha"><label>Histórico — mês a mês (detectado da coluna Paid at)</label><div class="chips" id="chipsPeriodo"></div></div>
+        <div class="linha"><label>Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
         <div class="linha">
           <label>Filtros de navegação</label>
           <div class="chips" id="chipsSegmento"></div>
@@ -156,13 +149,13 @@
             </div>
           </div>
         </div>
-        <div class="card"><h3>🧭 Como funciona</h3>
+        <div class="card"><h3>🧭 Como atualizar</h3>
           <div style="font-size:13px;color:#374151;line-height:1.7">
-            • Os dados vêm dos <b>arquivos CSV/XLSX deste repositório</b> (base.csv, junho.csv, julho.csv…).<br>
-            • Para atualizar: baixe os CSVs das planilhas e <b>substitua os arquivos no GitHub</b>.<br>
-            • O mês é detectado pela coluna <b>Paid at</b>.<br>
-            • <b>Foco:</b> cadastrados que ainda não compraram.<br>
-            • Só pedidos <b>paid/pago</b> entram na receita.
+            • O dashboard <b>lê sozinho todos os CSVs</b> deste repositório.<br>
+            • A base é o arquivo que contém "base"/"cliente"/"customer" no nome.<br>
+            • Todo outro CSV vira um mês, com o rótulo detectado pela coluna <b>Paid at</b>.<br>
+            • Para agosto: baixe o CSV da planilha, suba como <b>agosto.csv</b> e atualize a página.<br>
+            • Só pedidos <b>paid/pago</b> entram na receita. <b>Foco:</b> cadastrados sem compra.
           </div>
         </div>
       </div>
@@ -194,23 +187,15 @@
   </div>
 </main>
 
-<footer>Dados lidos dos arquivos do repositório GitHub · Infinity Piercing</footer>
+<footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
 
 <script>
 /* ============================================================
-   CONFIGURAÇÃO — arquivos que você sobe no GitHub
-   (coloque estes arquivos na MESMA pasta do index.html)
-   base.csv  -> export da planilha de clientes cadastrados
-   junho.csv -> export da planilha de pedidos de junho
-   julho.csv -> export da planilha de pedidos de julho
+   CONFIGURAÇÃO — nome do repositório no GitHub
+   (os arquivos são descobertos automaticamente)
    ============================================================ */
 var CONFIG = {
-  base: { arquivo: 'base.csv', nome: 'Base de clientes' },
-  meses: [
-    { arquivo: 'junho.csv', nome: 'Junho/26' },
-    { arquivo: 'julho.csv', nome: 'Julho/26' }
-    // Novo mês: { arquivo: 'agosto.csv', nome: 'Agosto/26' }
-  ]
+  repo: 'infinity-piercing/historicodecompras'
 };
 
 /* ============ UTILITÁRIOS ============ */
@@ -290,33 +275,32 @@ function acharColuna(cab,chave){
   return -1;
 }
 
-/* ============ LEITURA DE ARQUIVO LOCAL (fetch) ============ */
-function parseCSV(texto){
-  var linhas=[],linha=[],campo='',aspas=false;
-  var delim=',';
-  for(var i=0;i<texto.length;i++){
-    var c=texto.charAt(i);
-    if(aspas){
-      if(c==='"'){ if(texto.charAt(i+1)==='"'){ campo+='"'; i++; } else aspas=false; }
-      else campo+=c;
-    } else {
-      if(c==='"') aspas=true;
-      else if(c===delim){ linha.push(campo); campo=''; }
-      else if(c==='\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; }
-      else if(c!=='\r') campo+=c;
-    }
-  }
-  if(campo!==''||linha.length){ linha.push(campo); linhas.push(linha); }
-  return linhas.filter(function(l){ return l.some(function(c){ return String(c).trim()!==''; }); });
+/* ============ LEITURA DINÂMICA DO REPOSITÓRIO ============
+   1) Lista os arquivos via GitHub API
+   2) Filtra .csv
+   3) classifica: base (nome contém base/cliente/customer) ou mês
+   4) Lê cada um via raw.githubusercontent.com e detecta o mês pela Paid at */
+var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function listarArquivosRepo(repo){
+  return fetch('https://api.github.com/repos/'+repo+'/contents/').then(function(r){
+    if(!r.ok) throw new Error('GitHub API HTTP '+r.status);
+    return r.json();
+  }).then(function(lista){
+    return (lista||[]).filter(function(f){ return /\.csv$/i.test(f.name||''); });
+  });
 }
-function detectarDelim(texto){
+function baixarCSV(url){
+  return fetch(url,{cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.text();
+  });
+}
+function parseCSV(texto){
   var primeira=texto.split('\n')[0]||'';
   var v1=(primeira.match(/,/g)||[]).length;
   var v2=(primeira.match(/;/g)||[]).length;
-  return v2>v1?';':',';
-}
-function parseCSV2(texto){
-  var delim=detectarDelim(texto);
+  var delim=v2>v1?';':',';
   var linhas=[],linha=[],campo='',aspas=false;
   for(var i=0;i<texto.length;i++){
     var c=texto.charAt(i);
@@ -333,36 +317,29 @@ function parseCSV2(texto){
   if(campo!==''||linha.length){ linha.push(campo); linhas.push(linha); }
   return linhas.filter(function(l){ return l.some(function(c){ return String(c).trim()!==''; }); });
 }
-function baixarArquivo(arquivo){
-  return fetch(arquivo,{cache:'no-store'}).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r;
-  });
+function ehArquivoBase(nome){
+  var n=norm(nome);
+  return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;
 }
-function lerArquivo(arquivo){
-  var ehCsv=/\.csv$/i.test(arquivo)||/\.txt$/i.test(arquivo);
-  return baixarArquivo(arquivo).then(function(r){
-    if(ehCsv) return r.text();
-    return r.arrayBuffer();
-  }).then(function(dados){
-    if(ehCsv){
-      var linhas=parseCSV2(String(dados));
-      if(!linhas.length) throw new Error('Arquivo vazio');
-      return {colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
-    } else {
-      if(typeof XLSX==='undefined') throw new Error('XLSX precisa da lib SheetJS (internet) — use CSV');
-      var wb=XLSX.read(new Uint8Array(dados),{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(!rows.length) throw new Error('Arquivo vazio');
-      return {colunas:rows[0].map(function(h){return String(h==null?'':h).trim();}),linhas:rows.slice(1)};
+function detectarRotulo(colunas,linhas,nomeArquivo){
+  var iData=acharColuna(colunas,'data');
+  if(iData>-1){
+    var cont={},total=0;
+    linhas.forEach(function(r){
+      var d=parseData(r[iData]); if(!d) return;
+      var k=d.getFullYear()*100+(d.getMonth()+1);
+      cont[k]=(cont[k]||0)+1; total++;
+    });
+    if(total){
+      var mel=null,melN=0;
+      for(var kk in cont){ if(cont[kk]>melN){ melN=cont[kk]; mel=parseInt(kk,10); } }
+      return NOMES_MESES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2);
     }
-  });
+  }
+  var m=(nomeArquivo||'').match(/([a-z]{3,4})[.\-_]?(\d{2,4})/i);
+  if(m) return m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2);
+  return nomeArquivo||'Mês';
 }
-
-/* ============ ESTADO ============ */
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
-var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 /* ============ PROCESSAMENTO ============ */
 function processarBase(b){
@@ -376,7 +353,7 @@ function processarBase(b){
     if(h==='lastname') iLn=i;
   }
   var iNome=(iFn>-1||iLn>-1)?-2:acharColuna(b.colunas,'nome');
-  var iCid=acharColuna(b.colunas,'cidade'), iTel=acharColuna(b.colunas,'telefone'), iHist=acharColuna(b.colunas,'historico'), iGasto=acharColuna(b.colunas,'total');
+  var iCid=acharColuna(b.colunas,'cidade'), iTel=acharColuna(b.colunas,'telefone');
   var map=new Map();
   b.linhas.forEach(function(r){
     var em=norm(r[iEmail]); if(!em||em.length<5) return;
@@ -384,7 +361,7 @@ function processarBase(b){
       var nome='';
       if(iFn>-1&&iLn>-1){ nome=String(r[iFn]||'').trim()+' '+String(r[iLn]||'').trim(); }
       else if(iNome>-2&&iNome>-1){ nome=String(r[iNome]||'').trim(); }
-      map.set(em,{email:String(r[iEmail]).trim(),nome:nome.trim(),cidade:iCid>-1?String(r[iCid]||'').trim():'',telefone:iTel>-1?String(r[iTel]||'').trim():'',historico:iHist>-1?parseMoney(r[iHist]):0,totalSpent:iGasto>-1?parseMoney(r[iGasto]):0});
+      map.set(em,{email:String(r[iEmail]).trim(),nome:nome.trim(),cidade:iCid>-1?String(r[iCid]||'').trim():'',telefone:iTel>-1?String(r[iTel]||'').trim():''});
     }
   });
   return {map:map};
@@ -424,69 +401,64 @@ function processarMes(colunas,linhas){
   });
   return saida;
 }
-function detectarRotulo(colunas,linhas,padrao){
-  var iData=acharColuna(colunas,'data');
-  if(iData===-1) return padrao||'Mês';
-  var cont={},total=0;
-  linhas.forEach(function(r){
-    var d=parseData(r[iData]); if(!d) return;
-    var k=d.getFullYear()*100+(d.getMonth()+1);
-    cont[k]=(cont[k]||0)+1; total++;
-  });
-  if(!total) return padrao||'Mês';
-  var mel=null,melN=0;
-  for(var kk in cont){ if(cont[kk]>melN){ melN=cont[kk]; mel=parseInt(kk,10); } }
-  return NOMES_MESES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2);
-}
 
 /* ============ CARREGAMENTO ============ */
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
+
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  txt.textContent='Carregando arquivos…';
+  txt.textContent='Lendo repositório…';
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado.diag=[];
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
 
-  var prom=[];
-  prom.push(lerArquivo(CONFIG.base.arquivo).then(function(d){
-    estado.base=processarBase(d);
-    estado.diag.push({nome:CONFIG.base.nome+' ('+CONFIG.base.arquivo+')',ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' clientes)':'sem coluna de e-mail'});
-    return {ok:!!estado.base};
-  }).catch(function(e){ estado.diag.push({nome:CONFIG.base.nome+' ('+CONFIG.base.arquivo+')',ok:false,det:e.message}); return {ok:false,erro:e.message}; }));
+  listarArquivosRepo(CONFIG.repo).then(function(arquivos){
+    if(!arquivos.length){ txt.textContent='Nenhum CSV encontrado'; pill.className='pill err'; return; }
+    var baseArq=arquivos.filter(function(f){ return ehArquivoBase(f.name); })[0];
+    var mesArqs=arquivos.filter(function(f){ return !ehArquivoBase(f.name); });
 
-  CONFIG.meses.forEach(function(m,i){
-    prom.push(lerArquivo(m.arquivo).then(function(d){
-      var rot=detectarRotulo(d.colunas,d.linhas,m.nome);
-      estado.meses[i]={rotulo:rot,ok:true,pedidos:processarMes(d.colunas,d.linhas)};
-      estado.diag.push({nome:m.arquivo+' → '+rot,ok:true,det:'('+estado.meses[i].pedidos.length+' pedidos)'});
-      return {ok:true};
-    }).catch(function(e){
-      estado.meses[i]={rotulo:m.nome,ok:false,erro:e.message,pedidos:[]};
-      estado.diag.push({nome:m.arquivo,ok:false,det:e.message});
-      return {ok:false,erro:e.message};
-    }));
-  });
-
-  Promise.all(prom).then(function(){
-    var diagBox=document.getElementById('diag');
-    diagBox.style.display='block';
-    var html='';
-    estado.diag.forEach(function(d){
-      html+='<div class="linha"><span class="'+(d.ok?'ok':'bad')+'">'+(d.ok?'✅':'❌')+' '+esc(d.nome)+'</span><span>'+esc(d.det)+'</span></div>';
-    });
-    diagBox.querySelector('#diagLinhas').innerHTML=html;
-
-    var ok=estado.meses.filter(function(m){return m.ok;}).length;
-    if(!estado.base&&ok===0){
-      txt.textContent='Arquivos não encontrados';
-      pill.className='pill err';
-      document.getElementById('conteudo').style.display='none';
-      return;
+    var prom=[];
+    if(baseArq){
+      prom.push(baixarCSV(baseArq.download_url).then(function(txtCsv){
+        var linhas=parseCSV(txtCsv);
+        var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
+        estado.base=processarBase(d);
+        estado.diag.push({nome:baseArq.name,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' clientes)':'sem coluna de e-mail'});
+      }).catch(function(e){ estado.diag.push({nome:baseArq.name,ok:false,det:e.message}); }));
+    } else {
+      estado.diag.push({nome:'Base de clientes',ok:false,det:'nenhum arquivo com "base"/"cliente"/"customer" no nome'});
     }
-    estado.periodo='TODOS'; estado.segmento='SEMCOMPRA'; estado.pagina=1;
-    renderTudo();
-    pill.className='pill '+(ok>0?'ok':'err');
-    txt.textContent=(ok>0?('✓ '+ok+' mês(es) + base '+(estado.base?'✓':'—')):'Somente base (sem meses)');
+
+    mesArqs.forEach(function(f){
+      prom.push(baixarCSV(f.download_url).then(function(txtCsv){
+        var linhas=parseCSV(txtCsv);
+        var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
+        var rot=detectarRotulo(d.colunas,d.linhas,f.name);
+        estado.meses.push({rotulo:rot,ok:true,pedidos:processarMes(d.colunas,d.linhas)});
+        estado.diag.push({nome:f.name+' → '+rot,ok:true,det:'('+estado.meses[estado.meses.length-1].pedidos.length+' pedidos)'});
+      }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
+    });
+
+    Promise.all(prom).then(function(){
+      var diagBox=document.getElementById('diag');
+      diagBox.style.display='block';
+      var html='';
+      estado.diag.forEach(function(d){
+        html+='<div class="linha"><span class="'+(d.ok?'ok':'bad')+'">'+(d.ok?'✅':'❌')+' '+esc(d.nome)+'</span><span>'+esc(d.det)+'</span></div>';
+      });
+      diagBox.querySelector('#diagLinhas').innerHTML=html;
+
+      estado.meses.sort(function(a,b){ var ma=a.rotulo.match(/(\d+)/),mb=b.rotulo.match(/(\d+)/); return (ma&&mb)?ma[1]-mb[1]:0; });
+      var ok=estado.meses.filter(function(m){return m.ok;}).length;
+      if(!estado.base&&ok===0){ txt.textContent='Sem dados legíveis'; pill.className='pill err'; return; }
+      renderTudo();
+      pill.className='pill '+(ok>0?'ok':'err');
+      txt.textContent=(ok>0?('✓ '+ok+' mês(es) + base '+(estado.base?'✓':'—')):'Somente base');
+    });
+  }).catch(function(e){
+    txt.textContent='Erro ao ler repositório';
+    pill.className='pill err';
+    avisar('erro','Não consegui listar os arquivos do GitHub',esc(e.message)+'<br>Confira se o repositório é público e o nome em CONFIG.repo está correto.');
   });
 }
 
@@ -552,8 +524,7 @@ function verFoco(){
   atualizarChipsSegmento(); montarTabela();
 }
 function atualizarChipsSegmento(){
-  var s=document.getElementById('chipsSegmento');
-  var chips=s.querySelectorAll('.chip');
+  var chips=document.getElementById('chipsSegmento').querySelectorAll('.chip');
   chips.forEach(function(c){ c.classList.toggle('ativo',c.dataset.seg===estado.segmento); });
 }
 function montarChips(){
