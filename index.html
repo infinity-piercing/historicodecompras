@@ -99,7 +99,6 @@
   .campo label{display:block;font-size:12px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
   .campo input[type=text]{border:1px solid var(--borda);border-radius:9px;padding:9px 12px;font-size:14px;width:100%}
   .arquivo-box{border:2px dashed var(--verde2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--creme)}
-  .arquivo-box.drag{background:var(--verde3);border-color:var(--verde)}
   .arquivo-box .a-ico{font-size:30px}
   .arquivo-box .a-txt{font-size:13.5px;color:#374151;margin-top:6px}
   .arquivo-box .a-sub{font-size:11.5px;color:var(--cinza);margin-top:2px}
@@ -176,6 +175,7 @@
         <div class="card"><h3>🧭 Como funciona</h3>
           <div style="font-size:13px;color:#374151;line-height:1.7">
             • Importe a <b>base de clientes</b> e cada <b>planilha mensal</b> pelo botão Importar.<br>
+            • O mês é <b>detectado automaticamente</b> pela coluna de data (Paid at / Created at).<br>
             • Os dados ficam <b>gravados na planilha</b> (aba BASE_CLIENTES + uma aba por mês).<br>
             • Cada mês importado entra no <b>histórico</b> e no gráfico de evolução.<br>
             • Cliente que comprou em <b>2+ meses</b> = recompra.<br>
@@ -217,7 +217,7 @@
   <div class="modal">
     <button class="fechar" onclick="fecharModal()">×</button>
     <h2>📥 Importar dados</h2>
-    <div class="sub">O arquivo é enviado e <b>gravado na planilha</b> (BASE_CLIENTES + uma aba por mês). Depois, é só abrir o dashboard que o histórico está lá.</div>
+    <div class="sub">O arquivo é enviado e <b>gravado na planilha</b> (BASE_CLIENTES + uma aba por mês). O mês é detectado automaticamente pela data da planilha.</div>
 
     <div class="tipo-row">
       <div class="tipo-box ativo" id="tipoBase" onclick="escolherTipo('base')"><span class="t-ico">👤</span>Base de clientes</div>
@@ -225,8 +225,8 @@
     </div>
 
     <div class="campo" id="campoRotulo" style="display:none">
-      <label>Nome do mês (histórico)</label>
-      <input type="text" id="rotuloMes" placeholder="Ex.: Ago/26">
+      <label>Mês detectado automaticamente (edite se necessário)</label>
+      <input type="text" id="rotuloMes" placeholder="Aguarde o arquivo…">
     </div>
 
     <div class="arquivo-box" id="arquivoBox" onclick="document.getElementById('fileInput').click()">
@@ -249,7 +249,7 @@
 
 <script>
 /* ============ CONFIGURAÇÃO ============
-   ✅ URL do Web App já preenchida com a implantação ativa. */
+   ✅ URL do Web App já preenchida (implantação ativa). */
 var URL_APP = 'https://script.google.com/macros/s/AKfycbyWhqKajKLM_MUhakjAo8d2g1iNHvRLt9TxWxTHh39yhdcbg6noxRc_evKHCUDoz3jwXQ/exec';
 
 /* ============ UTILITÁRIOS ============ */
@@ -343,6 +343,29 @@ function acharColuna(cab,chave){
   return -1;
 }
 
+/* ============ DETECÇÃO AUTOMÁTICA DO MÊS ============
+   Lê a coluna de data do arquivo (Paid at / Created at / data)
+   e descobre o mês predominante, formatando como "Jun/26". */
+var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function detectarMes(colunas,linhas){
+  var iData=acharColuna(colunas,'data');
+  if(iData===-1) return null;
+  var cont={},total=0;
+  for(var i=0;i<linhas.length;i++){
+    var d=parseData(linhas[i][iData]);
+    if(!d) continue;
+    var chave=d.getFullYear()+'-'+String(d.getMonth()+1).length+'-'+d.getMonth();
+    // usa chave numérica para comparar
+    var k=d.getFullYear()*100+(d.getMonth()+1);
+    cont[k]=(cont[k]||0)+1; total++;
+  }
+  if(!total) return null;
+  var melhor=null,melhorN=0;
+  for(var kk in cont){ if(cont[kk]>melhorN){ melhorN=cont[kk]; melhor=parseInt(kk,10); } }
+  var ano=Math.floor(melhor/100), mes=(melhor%100)-1;
+  return NOMES_MESES[mes]+'/'+String(ano).slice(2);
+}
+
 /* ============ LEITURA DE ARQUIVOS ============ */
 function parseCSV(texto,delim){
   var linhas=[],linha=[],campo='',aspas=false;
@@ -401,11 +424,8 @@ var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',busca:'',produto
 function abrirModal(){
   document.getElementById('overlay').classList.add('aberto');
   var rot=document.getElementById('rotuloMes');
-  if(!rot.value){
-    var agora=new Date();
-    var nomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    var ano=String(agora.getFullYear()).slice(2);
-    rot.value=nomes[agora.getMonth()]+'/'+ano;
+  if(estado.tipo==='mes'&&!rot.value){
+    rot.value='Aguarde o arquivo…';
   }
 }
 function fecharModal(){ document.getElementById('overlay').classList.remove('aberto'); document.getElementById('feed').className='feed'; document.getElementById('feed').textContent=''; document.getElementById('preview').className='preview'; document.getElementById('preview').innerHTML=''; document.getElementById('btnEnviar').disabled=true; document.getElementById('fileInput').value=''; }
@@ -416,6 +436,7 @@ function escolherTipo(t){
   document.getElementById('campoRotulo').style.display=t==='mes'?'':'none';
   document.getElementById('preview').className='preview';
   document.getElementById('btnEnviar').disabled=true;
+  if(t==='mes') document.getElementById('rotuloMes').value='Aguarde o arquivo…';
 }
 document.getElementById('fileInput').addEventListener('change',function(){ if(this.files&&this.files[0]) processarArquivo(this.files[0]); });
 
@@ -428,6 +449,7 @@ function processarArquivo(file){
     var totalIdx=acharColuna(res.colunas,'total');
     var statusIdx=acharColuna(res.colunas,'status');
     var prodIdx=acharColuna(res.colunas,'produto');
+    var dataIdx=acharColuna(res.colunas,'data');
     var p=document.getElementById('preview');
     p.className='preview show';
     var linhas='<div class="p-linha"><b>'+esc(file.name)+'</b> — '+numero(res.linhas.length)+' linha(s)</div>';
@@ -439,6 +461,14 @@ function processarArquivo(file){
       linhas+='<div class="p-linha '+(totalIdx>-1?'ok':'bad')+'">Total/Valor: '+(totalIdx>-1?'✓':'✗ (será usado 0)')+'</div>';
       linhas+='<div class="p-linha '+(statusIdx>-1?'ok':'bad')+'">Status: '+(statusIdx>-1?'✓ (pago/expirado)':'✗ (tudo será tratado como pago)')+'</div>';
       linhas+='<div class="p-linha '+(prodIdx>-1?'ok':'bad')+'">Produto: '+(prodIdx>-1?'✓':'✗')+'</div>';
+      var mesDet=detectarMes(res.colunas,res.linhas);
+      if(mesDet){
+        document.getElementById('rotuloMes').value=mesDet;
+        linhas+='<div class="p-linha ok">📅 Mês detectado automaticamente: <b>'+mesDet+'</b></div>';
+      } else {
+        document.getElementById('rotuloMes').value='';
+        linhas+='<div class="p-linha bad">📅 Não foi possível detectar o mês (coloque manualmente no campo acima)</div>';
+      }
     }
     p.innerHTML=linhas;
     document.getElementById('btnEnviar').disabled=false;
@@ -451,11 +481,16 @@ function processarArquivo(file){
 function enviar(){
   if(!URL_APP){ avisar('erro','URL do Apps Script não configurada','Abra o index.html e cole a URL do Web App na variável <b>URL_APP</b> (topo do script).'); return; }
   if(!estado.preview){ return; }
+  var rotulo=estado.tipo==='mes'?document.getElementById('rotuloMes').value.trim():'';
+  if(estado.tipo==='mes'&&(!rotulo||rotulo==='Aguarde o arquivo…'||rotulo==='')){
+    avisar('erro','Informe o mês','O sistema não conseguiu detectar o mês automaticamente. Digite o nome do mês no campo (ex.: Jun/26).');
+    return;
+  }
   var btn=document.getElementById('btnEnviar');
   btn.disabled=true; btn.textContent='Enviando…';
   var corpo={
     tipo:estado.tipo,
-    rotulo:estado.tipo==='mes'?document.getElementById('rotuloMes').value.trim():'',
+    rotulo:rotulo,
     colunas:estado.preview.colunas,
     linhas:estado.preview.linhas
   };
@@ -581,7 +616,7 @@ function clientesDoPeriodo(){
   pedidosDoPeriodo().forEach(function(o){
     if(!o.email) return;
     var c=map.get(o.email);
-    if(!c){ c={email:o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map(),mesesSet:new Set()}; map.set(o.email,c); }
+    if(!c){ c={email:o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map()}; map.set(o.email,c); }
     if(!o.pago) return;
     c.pedidos++; c.total+=o.total;
     var itens=o.items||[];
