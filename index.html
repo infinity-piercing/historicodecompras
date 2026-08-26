@@ -85,7 +85,6 @@
   .vazio-box{padding:40px 20px;text-align:center;color:var(--cinza);font-size:14px}
   .vazio-box .big{font-size:40px;margin-bottom:10px}
   footer{max-width:1280px;margin:20px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
-  /* ===== MODAL DE IMPORTAÇÃO ===== */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
   .overlay.aberto{display:flex}
   .modal{background:#fff;border-radius:16px;max-width:640px;width:100%;max-height:92vh;overflow:auto;padding:22px}
@@ -214,7 +213,6 @@
 
 <footer>Dados gravados na planilha "Dashboard Infinity Piercing" · histórico mês a mês · Infinity Piercing</footer>
 
-<!-- ============ MODAL DE IMPORTAÇÃO ============ -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <button class="fechar" onclick="fecharModal()">×</button>
@@ -251,9 +249,8 @@
 
 <script>
 /* ============ CONFIGURAÇÃO ============
-   Cole abaixo a URL do seu Web App do Apps Script:
-   https://script.google.com/macros/s/SEU_ID/exec */
-var URL_APP = '';
+   ✅ URL do Web App já preenchida com a implantação ativa. */
+var URL_APP = 'https://script.google.com/macros/s/AKfycbyWhqKajKLM_MUhakjAo8d2g1iNHvRLt9TxWxTHh39yhdcbg6noxRc_evKHCUDoz3jwXQ/exec';
 
 /* ============ UTILITÁRIOS ============ */
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
@@ -586,7 +583,7 @@ function clientesDoPeriodo(){
     var c=map.get(o.email);
     if(!c){ c={email:o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map(),mesesSet:new Set()}; map.set(o.email,c); }
     if(!o.pago) return;
-    c.pedidos++; c.total+=o.total; c.mesesSet.add(estado.periodo==='TODOS'?estado.meses.filter(function(x){return x.ok;}).map(function(x){return x.rotulo;}).join(','):estado.periodo);
+    c.pedidos++; c.total+=o.total;
     var itens=o.items||[];
     for(var i=0;i<itens.length;i++){ c.qtd+=itens[i].qtd||1; var pr=c.produtos.get(itens[i].produto)||0; c.produtos.set(itens[i].produto,pr+(itens[i].qtd||1)); }
     if(o.data&&(!c.ultima||o.data>c.ultima)) c.ultima=o.data;
@@ -634,11 +631,11 @@ function montarChips(){
 }
 function montarKpis(){
   var pedidos=pedidosDoPeriodo();
-  var receita=0,nPagos=0,qtd=0,nExp=0;
+  var receita=0,nPagos=0,nExp=0;
   pedidos.forEach(function(o){
     if(o.expirado) nExp++;
     if(!o.pago) return;
-    receita+=o.total; nPagos++; qtd+=1;
+    receita+=o.total; nPagos++;
   });
   var compradores=clientesDoPeriodo();
   var totalBase=estado.base?estado.base.map.size:0, nunca=0, recorrentes=0, naorec=0;
