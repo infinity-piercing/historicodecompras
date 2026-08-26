@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infinity Piercing · Dashboard de Compras</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{--verde:#1d4a2e;--verde2:#2e7d4f;--verde3:#eaf3ec;--creme:#f7f4ec;--branco:#fff;--cinza:#6b7280;--borda:#e5e0d4;--amber:#b45309;--amberbg:#fef3c7;--azul:#1d4ed8;--azulbg:#dbeafe;--roxo:#7c3aed;--roxobg:#ede9fe;--cinzabg:#f3f4f6;--red:#b91c1c;--redbg:#fee2e2;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
-  header{background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.12);position:sticky;top:0;z-index:50}
+  header{background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.12)}
   header img{height:44px;background:#fff;border-radius:10px;padding:4px;object-fit:contain}
   header .titulo{font-size:20px;font-weight:700;line-height:1.1}
   header .subtitulo{font-size:12.5px;opacity:.9}
@@ -18,11 +17,11 @@
   .pill .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}
   .pill.ok .dot{background:#4ade80}
   .pill.err .dot{background:#f87171}
-  .btn-import{background:#fff;color:var(--verde);border:none;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
-  .btn-import:hover{filter:brightness(.95)}
+  .btn{border:1px solid var(--borda);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
+  .btn:hover{border-color:var(--verde2);color:var(--verde)}
   main{max-width:1280px;margin:0 auto;padding:18px 16px}
   .avisos{margin-bottom:14px}
-  .aviso{border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:13.5px;display:none;line-height:1.5}
+  .aviso{border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:13.5px;line-height:1.5;display:none}
   .aviso.show{display:block}
   .aviso.erro{background:var(--redbg);border:1px solid #fca5a5;color:var(--red)}
   .aviso.info{background:var(--amberbg);border:1px solid #fcd34d;color:var(--amber)}
@@ -66,8 +65,6 @@
   .tabela-box{background:#fff;border:1px solid var(--borda);border-radius:14px;overflow:hidden}
   .tabela-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--borda);flex-wrap:wrap}
   .tabela-top .contador{font-size:13px;color:var(--cinza);flex:1}
-  .btn{border:1px solid var(--borda);background:#fff;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
-  .btn:hover{border-color:var(--verde2);color:var(--verde)}
   .tabela-scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
   th{background:var(--verde3);color:var(--verde);text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap;user-select:none}
@@ -85,35 +82,6 @@
   .vazio-box{padding:40px 20px;text-align:center;color:var(--cinza);font-size:14px}
   .vazio-box .big{font-size:40px;margin-bottom:10px}
   footer{max-width:1280px;margin:20px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
-  .overlay.aberto{display:flex}
-  .modal{background:#fff;border-radius:16px;max-width:640px;width:100%;max-height:92vh;overflow:auto;padding:22px}
-  .modal h2{font-size:18px;color:var(--verde);margin-bottom:4px}
-  .modal .sub{font-size:12.5px;color:var(--cinza);margin-bottom:16px}
-  .modal .fechar{float:right;border:none;background:none;font-size:22px;cursor:pointer;color:var(--cinza);line-height:1}
-  .tipo-row{display:flex;gap:10px;margin-bottom:14px}
-  .tipo-box{flex:1;border:2px solid var(--borda);border-radius:12px;padding:12px;cursor:pointer;text-align:center;font-size:13px;font-weight:600;color:#374151}
-  .tipo-box.ativo{border-color:var(--verde);background:var(--verde3);color:var(--verde)}
-  .tipo-box .t-ico{font-size:22px;display:block;margin-bottom:4px}
-  .campo{margin-bottom:14px}
-  .campo label{display:block;font-size:12px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-  .campo input[type=text]{border:1px solid var(--borda);border-radius:9px;padding:9px 12px;font-size:14px;width:100%}
-  .arquivo-box{border:2px dashed var(--verde2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--creme)}
-  .arquivo-box .a-ico{font-size:30px}
-  .arquivo-box .a-txt{font-size:13.5px;color:#374151;margin-top:6px}
-  .arquivo-box .a-sub{font-size:11.5px;color:var(--cinza);margin-top:2px}
-  .preview{background:var(--creme);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12.5px;display:none}
-  .preview.show{display:block}
-  .preview .p-linha{margin-bottom:4px}
-  .preview .ok{color:var(--verde);font-weight:700}
-  .preview .bad{color:var(--red);font-weight:700}
-  .feed{margin-top:12px;font-size:13px;display:none}
-  .feed.show{display:block}
-  .feed.ok{color:var(--verde);font-weight:700}
-  .feed.erro{color:var(--red)}
-  .btn-enviar{background:var(--verde);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:14px}
-  .btn-enviar:disabled{background:#c9cdc5;cursor:default}
-  .passos{margin-top:16px;background:var(--amberbg);border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#78350f;line-height:1.6}
 </style>
 </head>
 <body>
@@ -125,18 +93,17 @@
     <div class="subtitulo">Histórico de Compras por Cliente</div>
   </div>
   <div class="spacer"></div>
-  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Conectando…</span></div>
-  <button class="btn-import" onclick="abrirModal()">📥 Importar</button>
+  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando planilhas…</span></div>
+  <button class="btn" onclick="carregarDados()">↻ Atualizar</button>
 </header>
 
 <main>
   <div class="avisos" id="avisos"></div>
 
   <div class="vazio-box" id="vazioInicial" style="display:none">
-    <div class="big">📥</div>
-    <b>Nenhum dado na planilha ainda.</b><br>
-    Clique no botão <b>Importar</b> no topo para enviar a base de clientes e as planilhas mensais.
-    Tudo fica gravado na planilha e vira histórico mês a mês.
+    <div class="big">📊</div>
+    <b>Carregando dados das planilhas compartilhadas…</b><br>
+    Base de clientes + meses detectados automaticamente (coluna Paid at).
   </div>
 
   <div id="conteudo" style="display:none">
@@ -147,7 +114,7 @@
 
     <section id="overview">
       <div class="filtros">
-        <div class="linha"><label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div></div>
+        <div class="linha"><label>Histórico — mês a mês (detectado das planilhas)</label><div class="chips" id="chipsPeriodo"></div></div>
         <div class="linha">
           <label>Filtros de navegação</label>
           <div class="chips" id="chipsSegmento"></div>
@@ -174,12 +141,11 @@
         </div>
         <div class="card"><h3>🧭 Como funciona</h3>
           <div style="font-size:13px;color:#374151;line-height:1.7">
-            • Importe a <b>base de clientes</b> e cada <b>planilha mensal</b> pelo botão Importar.<br>
-            • O mês é <b>detectado automaticamente</b> pela coluna de data (Paid at / Created at).<br>
-            • Os dados ficam <b>gravados na planilha</b> (aba BASE_CLIENTES + uma aba por mês).<br>
-            • Cada mês importado entra no <b>histórico</b> e no gráfico de evolução.<br>
+            • As planilhas já compartilhadas (base + junho + julho) são lidas direto no navegador.<br>
+            • O <b>mês é detectado automaticamente</b> pela coluna "Paid at" de cada planilha.<br>
             • Cliente que comprou em <b>2+ meses</b> = recompra.<br>
-            • Só pedidos com status <b>pago</b> entram na receita.
+            • Só pedidos com status <b>paid/pago</b> entram na receita; expirados aparecem à parte.<br>
+            • Todo mês novo: basta compartilhar a nova planilha e adicionar uma linha no CONFIG.
           </div>
         </div>
       </div>
@@ -211,46 +177,22 @@
   </div>
 </main>
 
-<footer>Dados gravados na planilha "Dashboard Infinity Piercing" · histórico mês a mês · Infinity Piercing</footer>
-
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <button class="fechar" onclick="fecharModal()">×</button>
-    <h2>📥 Importar dados</h2>
-    <div class="sub">O arquivo é enviado e <b>gravado na planilha</b> (BASE_CLIENTES + uma aba por mês). O mês é detectado automaticamente pela data da planilha.</div>
-
-    <div class="tipo-row">
-      <div class="tipo-box ativo" id="tipoBase" onclick="escolherTipo('base')"><span class="t-ico">👤</span>Base de clientes</div>
-      <div class="tipo-box" id="tipoMes" onclick="escolherTipo('mes')"><span class="t-ico">📅</span>Mês de vendas</div>
-    </div>
-
-    <div class="campo" id="campoRotulo" style="display:none">
-      <label>Mês detectado automaticamente (edite se necessário)</label>
-      <input type="text" id="rotuloMes" placeholder="Aguarde o arquivo…">
-    </div>
-
-    <div class="arquivo-box" id="arquivoBox" onclick="document.getElementById('fileInput').click()">
-      <div class="a-ico">📄</div>
-      <div class="a-txt">Clique para escolher o arquivo</div>
-      <div class="a-sub">CSV, XLS ou XLSX</div>
-    </div>
-    <input type="file" id="fileInput" accept=".csv,.xls,.xlsx" style="display:none">
-
-    <div class="preview" id="preview"></div>
-    <div class="feed" id="feed"></div>
-
-    <button class="btn-enviar" id="btnEnviar" disabled onclick="enviar()">💾 Enviar e gravar na planilha</button>
-
-    <div class="passos">
-      <b>Primeira vez?</b> Crie a planilha "Dashboard Infinity Piercing" no Google Drive, abra Extensões → Apps Script, cole o Código.gs, implante como Aplicativo da web (Qualquer pessoa) e cole a URL no arquivo index.html (var URL_APP).
-    </div>
-  </div>
-</div>
+<footer>Dados lidos diretamente das planilhas Google compartilhadas · sem Apps Script · Infinity Piercing</footer>
 
 <script>
-/* ============ CONFIGURAÇÃO ============
-   ✅ URL do Web App já preenchida (implantação ativa). */
-var URL_APP = 'https://script.google.com/macros/s/AKfycbyWhqKajKLM_MUhakjAo8d2g1iNHvRLt9TxWxTHh39yhdcbg6noxRc_evKHCUDoz3jwXQ/exec';
+/* ============================================================
+   CONFIGURAÇÃO — as planilhas já compartilhadas
+   id  = código no link: docs.google.com/spreadsheets/d/SEU_ID/edit
+   gid = número após #gid= na aba correta
+   ============================================================ */
+var CONFIG = {
+  base: { id: '1GYQInakefjvDmoYFgVJfieZ3VDsIReRE_aCzbn0GKdU', gid: 685964685 },  // Clientes Cadastrados (customers_export)
+  meses: [
+    { id: '1VVCZc0bBQMZyl3AB7-SlJcGV7agEm5hJoOq-gYd404w', gid: 88704949 },  // Pedidos Realizados Junho.26
+    { id: '1VkOIuvArA4teg_p7OXbkTtEf_o3jUffwkRMpQhoTmHM', gid: 930202363 }   // Pedidos Realizados Julho.26
+    // Novo mês? adicione: { id: 'ID_DA_PLANILHA', gid: 0 }
+  ]
+};
 
 /* ============ UTILITÁRIOS ============ */
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
@@ -274,27 +216,21 @@ function parseMoney(v){
     if(out.lastIndexOf(',')>out.lastIndexOf('.')){ out=out.split('.').join('').replace(',','.'); }
     else { out=out.split(',').join(''); }
   } else if(virg){ out=out.replace(',','.'); }
-  else if(ponto){
-    var pd=out.split('.');
-    if(pd.length>1&&pd[pd.length-1].length===3){ out=pd.join(''); }
-  }
+  else if(ponto){ var pd=out.split('.'); if(pd.length>1&&pd[pd.length-1].length===3){ out=pd.join(''); } }
   var n=parseFloat(out);
-  if(isNaN(n)) return 0;
-  return negativo?-n:n;
+  return isNaN(n)?0:(negativo?-n:n);
 }
 
 function parseData(v){
   if(v==null||v==='') return null;
   if(v instanceof Date) return isNaN(v.getTime())?null:v;
   if(typeof v==='number'){
-    if(v>100000000000){ var a=new Date(v); return isNaN(a.getTime())?null:a; }
-    if(v>20000){ var b=new Date(Math.round((v-25569)*86400000)); return isNaN(b.getTime())?null:b; }
+    if(v>100000000000){ var a=new Date(v); return isNaN(a.getTime())?null:a; }        // ms epoch
+    if(v>20000){ var b=new Date(Math.round((v-25569)*86400000)); return isNaN(b.getTime())?null:b; } // serial
     return null;
   }
   var s=String(v).trim();
-  var espaco=s.indexOf(' ');
-  var dataParte=espaco>-1?s.substring(0,espaco):s;
-  var horaParte=espaco>-1?s.substring(espaco+1):'';
+  var espaco=s.indexOf(' '), dataParte=espaco>-1?s.substring(0,espaco):s, horaParte=espaco>-1?s.substring(espaco+1):'';
   var tracos=dataParte.split('-');
   if(tracos.length===3&&tracos[0].length===4){
     var hh=0,mm=0;
@@ -303,15 +239,10 @@ function parseData(v){
     if(!isNaN(d1.getTime())) return d1;
   }
   var sep=-1;
-  if(dataParte.indexOf('/')>-1) sep='/';
-  else if(dataParte.indexOf('-')>-1) sep='-';
-  else if(dataParte.indexOf('.')>-1) sep='.';
+  if(dataParte.indexOf('/')>-1) sep='/'; else if(dataParte.indexOf('-')>-1) sep='-'; else if(dataParte.indexOf('.')>-1) sep='.';
   if(sep>-1){
     var pd=dataParte.split(sep);
-    if(pd.length===3){
-      var d2=new Date(+pd[2],+pd[1]-1,+pd[0]);
-      if(!isNaN(d2.getTime())) return d2;
-    }
+    if(pd.length===3){ var d2=new Date(+pd[2],+pd[1]-1,+pd[0]); if(!isNaN(d2.getTime())) return d2; }
   }
   var g=new Date(s);
   return isNaN(g.getTime())?null:g;
@@ -321,8 +252,8 @@ function ehPago(st){ st=String(st||'').toLowerCase(); return st.indexOf('paid')>
 function ehExpirado(st){ st=String(st||'').toLowerCase(); return st.indexOf('expired')>-1||st.indexOf('expirado')>-1||st.indexOf('cancelado')>-1||st.indexOf('canceled')>-1||st.indexOf('chargeback')>-1||st.indexOf('reembolso')>-1||st.indexOf('falhou')>-1||st.indexOf('refused')>-1||st.indexOf('abandoned')>-1; }
 
 var ALIASES={
-  email:['email','e-mail','emailcomprador','buyeremail','emailcliente','emaildocliente','contato','clienteemail','customeremail','mail'],
-  nome:['nome','nomecomprador','buyername','nomecliente','nomedocliente','cliente','customer'],
+  email:['email','e-mail','emailcomprador','buyeremail','emailcliente','emaildocliente','clienteemail','customeremail','mail'],
+  nome:['nome','nomecomprador','buyername','nomecliente','nomedocliente','cliente','customer','firstname','lastname'],
   pedido:['name','pedido','ordernumber','npedido','numero do pedido','ordem','order'],
   data:['datadacompra','datadacompr','purchasedate','paiddate','paidat','datadopagamento','datapagamento','paymentdate','datadopedido','createdat','data','datacompra'],
   total:['total','valor','valordacompra','valorcompra','amount','preco','price','totalpago','valordopedido','totaldopedido','paymentamount','totaldacompra'],
@@ -343,509 +274,390 @@ function acharColuna(cab,chave){
   return -1;
 }
 
-/* ============ DETECÇÃO AUTOMÁTICA DO MÊS ============
-   Lê a coluna de data do arquivo (Paid at / Created at / data)
-   e descobre o mês predominante, formatando como "Jun/26". */
-var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-function detectarMes(colunas,linhas){
-  var iData=acharColuna(colunas,'data');
-  if(iData===-1) return null;
-  var cont={},total=0;
-  for(var i=0;i<linhas.length;i++){
-    var d=parseData(linhas[i][iData]);
-    if(!d) continue;
-    var chave=d.getFullYear()+'-'+String(d.getMonth()+1).length+'-'+d.getMonth();
-    // usa chave numérica para comparar
-    var k=d.getFullYear()*100+(d.getMonth()+1);
-    cont[k]=(cont[k]||0)+1; total++;
-  }
-  if(!total) return null;
-  var melhor=null,melhorN=0;
-  for(var kk in cont){ if(cont[kk]>melhorN){ melhorN=cont[kk]; melhor=parseInt(kk,10); } }
-  var ano=Math.floor(melhor/100), mes=(melhor%100)-1;
-  return NOMES_MESES[mes]+'/'+String(ano).slice(2);
-}
-
-/* ============ LEITURA DE ARQUIVOS ============ */
-function parseCSV(texto,delim){
-  var linhas=[],linha=[],campo='',aspas=false;
-  for(var i=0;i<texto.length;i++){
-    var c=texto.charAt(i);
-    if(aspas){
-      if(c==='"'){ if(texto.charAt(i+1)==='"'){ campo+='"'; i++; } else aspas=false; }
-      else campo+=c;
-    } else {
-      if(c==='"') aspas=true;
-      else if(c===delim){ linha.push(campo); campo=''; }
-      else if(c==='\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; }
-      else if(c!=='\r') campo+=c;
-    }
-  }
-  if(campo!==''||linha.length){ linha.push(campo); linhas.push(linha); }
-  return linhas.filter(function(l){ return l.some(function(c){ return String(c).trim()!==''; }); });
-}
-
-function lerArquivo(file){
-  return new Promise(function(res,rej){
-    var nome=String(file.name||'').toLowerCase();
-    var ehCsv=nome.indexOf('.csv')>-1||nome.indexOf('.txt')>-1;
-    if(!ehCsv&&typeof XLSX==='undefined'){ rej(new Error('Este formato precisa da biblioteca XLS (sem internet para carregar o CDN). Use arquivo CSV.')); return; }
-    var leitor=new FileReader();
-    leitor.onload=function(){
-      try{
-        if(ehCsv){
-          var texto=String(leitor.result||'');
-          var primeira=texto.split('\n')[0]||'';
-          var v1=(primeira.match(/,/g)||[]).length;
-          var v2=(primeira.match(/;/g)||[]).length;
-          var delim=v2>v1?';':',';
-          var linhas=parseCSV(texto,delim);
-          if(!linhas.length){ rej(new Error('Arquivo vazio.')); return; }
-          res({colunas:linhas[0].map(function(h){return String(h).trim();}), linhas:linhas.slice(1)});
-        } else {
-          var wb=XLSX.read(new Uint8Array(leitor.result),{type:'array'});
-          var ws=wb.Sheets[wb.SheetNames[0]];
-          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-          if(!rows.length){ rej(new Error('Arquivo vazio.')); return; }
-          res({colunas:rows[0].map(function(h){return String(h==null?'':h).trim();}), linhas:rows.slice(1)});
-        }
-      }catch(err){ rej(err); }
+/* ============ LEITURA DIRETA DA PLANILHA (gviz JSONP) ============ */
+function carregarPlanilha(id, gid){
+  return new Promise(function(resolve, reject){
+    var cb = '__gv' + Math.random().toString(36).slice(2);
+    var terminou = false;
+    window[cb] = function(resp){
+      if(terminou) return; terminou = true;
+      delete window[cb];
+      if(!resp || (resp.status && resp.status !== 'ok')){
+        reject(new Error((resp.status && resp.status.message) || 'Planilha não acessível'));
+        return;
+      }
+      var t = resp.table;
+      if(!t || !t.cols){ reject(new Error('Planilha sem dados')); return; }
+      var colunas = t.cols.map(function(c){ return (c.label || c.id || ''); });
+      var linhas = (t.rows || []).map(function(r){
+        var o = {};
+        (r.c || []).forEach(function(cel, i){ o[i] = (cel && cel.v != null) ? cel.v : ''; });
+        return o;
+      });
+      resolve({ colunas: colunas, linhas: linhas });
     };
-    leitor.onerror=function(){ rej(new Error('Falha ao ler o arquivo.')); };
-    if(ehCsv) leitor.readAsText(file,'utf-8');
-    else leitor.readAsArrayBuffer(file);
+    var s = document.createElement('script');
+    s.src = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:json;responseHandler=' + cb + '&gid=' + gid;
+    s.onerror = function(){ if(!terminou){ terminou = true; delete window[cb]; reject(new Error('Falha de rede')); } };
+    document.head.appendChild(s);
   });
 }
 
 /* ============ ESTADO ============ */
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],preview:null,tipo:'base'};
-
-/* ============ MODAL ============ */
-function abrirModal(){
-  document.getElementById('overlay').classList.add('aberto');
-  var rot=document.getElementById('rotuloMes');
-  if(estado.tipo==='mes'&&!rot.value){
-    rot.value='Aguarde o arquivo…';
-  }
-}
-function fecharModal(){ document.getElementById('overlay').classList.remove('aberto'); document.getElementById('feed').className='feed'; document.getElementById('feed').textContent=''; document.getElementById('preview').className='preview'; document.getElementById('preview').innerHTML=''; document.getElementById('btnEnviar').disabled=true; document.getElementById('fileInput').value=''; }
-function escolherTipo(t){
-  estado.tipo=t;
-  document.getElementById('tipoBase').className='tipo-box'+(t==='base'?' ativo':'');
-  document.getElementById('tipoMes').className='tipo-box'+(t==='mes'?' ativo':'');
-  document.getElementById('campoRotulo').style.display=t==='mes'?'':'none';
-  document.getElementById('preview').className='preview';
-  document.getElementById('btnEnviar').disabled=true;
-  if(t==='mes') document.getElementById('rotuloMes').value='Aguarde o arquivo…';
-}
-document.getElementById('fileInput').addEventListener('change',function(){ if(this.files&&this.files[0]) processarArquivo(this.files[0]); });
-
-function processarArquivo(file){
-  var feed=document.getElementById('feed');
-  feed.className='feed show'; feed.textContent='Lendo '+file.name+'…';
-  lerArquivo(file).then(function(res){
-    estado.preview=res;
-    var emailIdx=acharColuna(res.colunas,'email');
-    var totalIdx=acharColuna(res.colunas,'total');
-    var statusIdx=acharColuna(res.colunas,'status');
-    var prodIdx=acharColuna(res.colunas,'produto');
-    var dataIdx=acharColuna(res.colunas,'data');
-    var p=document.getElementById('preview');
-    p.className='preview show';
-    var linhas='<div class="p-linha"><b>'+esc(file.name)+'</b> — '+numero(res.linhas.length)+' linha(s)</div>';
-    linhas+='<div class="p-linha">Colunas: '+res.colunas.slice(0,14).map(esc).join(', ')+(res.colunas.length>14?'…':'')+'</div>';
-    if(estado.tipo==='base'){
-      linhas+='<div class="p-linha '+(emailIdx>-1?'ok':'bad')+'">E-mail: '+(emailIdx>-1?'✓ encontrado':'✗ não encontrado')+'</div>';
-    } else {
-      linhas+='<div class="p-linha '+(emailIdx>-1?'ok':'bad')+'">E-mail: '+(emailIdx>-1?'✓':'✗')+'</div>';
-      linhas+='<div class="p-linha '+(totalIdx>-1?'ok':'bad')+'">Total/Valor: '+(totalIdx>-1?'✓':'✗ (será usado 0)')+'</div>';
-      linhas+='<div class="p-linha '+(statusIdx>-1?'ok':'bad')+'">Status: '+(statusIdx>-1?'✓ (pago/expirado)':'✗ (tudo será tratado como pago)')+'</div>';
-      linhas+='<div class="p-linha '+(prodIdx>-1?'ok':'bad')+'">Produto: '+(prodIdx>-1?'✓':'✗')+'</div>';
-      var mesDet=detectarMes(res.colunas,res.linhas);
-      if(mesDet){
-        document.getElementById('rotuloMes').value=mesDet;
-        linhas+='<div class="p-linha ok">📅 Mês detectado automaticamente: <b>'+mesDet+'</b></div>';
-      } else {
-        document.getElementById('rotuloMes').value='';
-        linhas+='<div class="p-linha bad">📅 Não foi possível detectar o mês (coloque manualmente no campo acima)</div>';
-      }
-    }
-    p.innerHTML=linhas;
-    document.getElementById('btnEnviar').disabled=false;
-    feed.className='feed'; feed.textContent='';
-  }).catch(function(err){
-    feed.className='feed show erro'; feed.textContent='✗ '+err.message;
-  });
-}
-
-function enviar(){
-  if(!URL_APP){ avisar('erro','URL do Apps Script não configurada','Abra o index.html e cole a URL do Web App na variável <b>URL_APP</b> (topo do script).'); return; }
-  if(!estado.preview){ return; }
-  var rotulo=estado.tipo==='mes'?document.getElementById('rotuloMes').value.trim():'';
-  if(estado.tipo==='mes'&&(!rotulo||rotulo==='Aguarde o arquivo…'||rotulo==='')){
-    avisar('erro','Informe o mês','O sistema não conseguiu detectar o mês automaticamente. Digite o nome do mês no campo (ex.: Jun/26).');
-    return;
-  }
-  var btn=document.getElementById('btnEnviar');
-  btn.disabled=true; btn.textContent='Enviando…';
-  var corpo={
-    tipo:estado.tipo,
-    rotulo:rotulo,
-    colunas:estado.preview.colunas,
-    linhas:estado.preview.linhas
-  };
-  fetch(URL_APP,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(corpo),redirect:'follow'})
-    .then(function(r){ return r.text(); })
-    .then(function(txt){ return JSON.parse(txt); })
-    .then(function(res){
-      var feed=document.getElementById('feed');
-      if(res&&res.ok){
-        feed.className='feed show ok';
-        feed.textContent='✓ Gravado na planilha! Meses registrados: '+(res.meses||[]).join(', ')+'. Atualizando o dashboard…';
-        setTimeout(function(){ fecharModal(); carregarDados(); },900);
-      } else {
-        btn.disabled=false; btn.textContent='💾 Enviar e gravar na planilha';
-        feed.className='feed show erro';
-        feed.textContent='✗ '+(res&&res.erro?res.erro:'Falha ao gravar.');
-      }
-    })
-    .catch(function(err){
-      btn.disabled=false; btn.textContent='💾 Enviar e gravar na planilha';
-      var feed=document.getElementById('feed');
-      feed.className='feed show erro';
-      feed.textContent='✗ Não consegui enviar: '+err.message+' — confira se o Web App está publicado com acesso "Qualquer pessoa".';
-    });
-}
+var estado = { base: null, meses: [], periodo: 'TODOS', segmento: 'TODOS', busca: '', produto: '', ordem: { chave: 'total', dir: -1 }, pagina: 1, porPagina: 50, linhasTabela: [] };
+var NOMES_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 /* ============ PROCESSAMENTO ============ */
 function processarBase(b){
-  if(!b||!b.colunas||!b.linhas) return null;
-  var iEmail=acharColuna(b.colunas,'email');
-  if(iEmail===-1) return null;
-  var iNome=acharColuna(b.colunas,'nome'),iCid=acharColuna(b.colunas,'cidade'),iTel=acharColuna(b.colunas,'telefone'),iHist=acharColuna(b.colunas,'historico');
-  var map=new Map();
+  if(!b || !b.colunas || !b.linhas) return null;
+  var iEmail = acharColuna(b.colunas, 'email');
+  if(iEmail === -1) return null;
+  var iNome = acharColuna(b.colunas, 'nome');
+  var map = new Map();
   b.linhas.forEach(function(r){
-    var em=norm(r[iEmail]); if(!em||em.length<5) return;
-    if(!map.has(em)) map.set(em,{email:String(r[iEmail]).trim(),nome:iNome>-1?String(r[iNome]||'').trim():'',cidade:iCid>-1?String(r[iCid]||'').trim():'',telefone:iTel>-1?String(r[iTel]||'').trim():'',historico:iHist>-1?parseMoney(r[iHist]):0});
+    var em = norm(r[iEmail]); if(!em || em.length < 5) return;
+    if(!map.has(em)) map.set(em, { email: String(r[iEmail]).trim(), nome: iNome > -1 ? String(r[iNome]||'').trim() : '' });
   });
-  return {map:map};
+  return { map: map };
 }
 
-function processarMes(colunas,linhas){
-  var idx={
-    email:acharColuna(colunas,'email'),
-    pedido:acharColuna(colunas,'pedido'),
-    data:acharColuna(colunas,'data'),
-    total:acharColuna(colunas,'total'),
-    status:acharColuna(colunas,'status'),
-    produto:acharColuna(colunas,'produto'),
-    qtd:acharColuna(colunas,'qtd'),
-    preco:acharColuna(colunas,'preco'),
-    nome:acharColuna(colunas,'nome')
+/* Agrega o export da Shopify (cabeçalho do pedido + linhas de item) por nº do pedido */
+function processarMes(colunas, linhas){
+  var idx = {
+    email: acharColuna(colunas, 'email'),
+    pedido: acharColuna(colunas, 'pedido'),
+    data: acharColuna(colunas, 'data'),
+    total: acharColuna(colunas, 'total'),
+    status: acharColuna(colunas, 'status'),
+    produto: acharColuna(colunas, 'produto'),
+    qtd: acharColuna(colunas, 'qtd'),
+    preco: acharColuna(colunas, 'preco'),
+    nome: acharColuna(colunas, 'nome')
   };
-  var temPedido=idx.pedido>-1;
-  var ordens=new Map();
-  var seq=0;
+  var temPedido = idx.pedido > -1;
+  var ordens = new Map(), seq = 0;
   linhas.forEach(function(r){
-    var chave=temPedido?norm(r[idx.pedido]):('linha_'+(seq++));
-    if(!chave) chave='linha_'+(seq++);
-    var o=ordens.get(chave);
-    if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,status:'',items:[]}; ordens.set(chave,o); }
-    var temStatus=idx.status>-1&&String(r[idx.status]||'').trim()!=='';
+    var chave = temPedido ? norm(r[idx.pedido]) : ('linha_' + (seq++));
+    if(!chave) chave = 'linha_' + (seq++);
+    var o = ordens.get(chave);
+    if(!o){ o = { chave: chave, email: '', nome: '', data: null, total: 0, status: '', items: [] }; ordens.set(chave, o); }
+    var temStatus = idx.status > -1 && String(r[idx.status]||'').trim() !== '';
     if(temStatus){
-      o.status=String(r[idx.status]).trim();
-      if(idx.email>-1) o.email=String(r[idx.email]||'').trim();
-      if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-      if(idx.total>-1) o.total=parseMoney(r[idx.total]);
-      if(idx.data>-1) o.data=parseData(r[idx.data]);
+      o.status = String(r[idx.status]).trim();
+      if(idx.email > -1) o.email = String(r[idx.email]||'').trim();
+      if(idx.nome > -1 && !o.nome) o.nome = String(r[idx.nome]||'').trim();
+      if(idx.total > -1) o.total = parseMoney(r[idx.total]);
+      if(idx.data > -1) o.data = parseData(r[idx.data]);
     } else {
-      if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
-      if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
+      if(idx.email > -1 && !o.email) o.email = String(r[idx.email]||'').trim();
+      if(idx.nome > -1 && !o.nome) o.nome = String(r[idx.nome]||'').trim();
     }
-    if(idx.produto>-1||idx.qtd>-1){
-      var prod=idx.produto>-1?String(r[idx.produto]||'').trim():'';
-      var q=idx.qtd>-1?(parseInt(r[idx.qtd],10)||0):0;
-      var pr=idx.preco>-1?parseMoney(r[idx.preco]):0;
-      if(prod||q) o.items.push({produto:prod||'(sem produto)',qtd:q||1,preco:pr});
+    if(idx.produto > -1 || idx.qtd > -1){
+      var prod = idx.produto > -1 ? String(r[idx.produto]||'').trim() : '';
+      var q = idx.qtd > -1 ? (parseInt(r[idx.qtd],10) || 0) : 0;
+      var pr = idx.preco > -1 ? parseMoney(r[idx.preco]) : 0;
+      if(prod || q) o.items.push({ produto: prod || '(sem produto)', qtd: q || 1, preco: pr });
     }
   });
-  var saida=[];
+  var saida = [];
   ordens.forEach(function(o){
-    var st=String(o.status||'').toLowerCase();
-    var pago=st===''?true:ehPago(st);
-    saida.push({email:norm(o.email),nome:o.nome||'',data:o.data,total:pago?o.total:0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
+    var st = String(o.status || '').toLowerCase();
+    var pago = st === '' ? true : ehPago(st);
+    saida.push({ email: norm(o.email), nome: o.nome || '', data: o.data, total: pago ? o.total : 0, status: st, pago: pago, expirado: ehExpirado(st), items: o.items });
   });
   return saida;
 }
 
-/* ============ CARREGAMENTO (GET) ============ */
+/* Detecta o mês predominante (maioria das datas) e formata "Jun/26" */
+function detectarRotulo(colunas, linhas, padrao){
+  var iData = acharColuna(colunas, 'data');
+  if(iData === -1) return padrao || 'Mês';
+  var cont = {}, total = 0;
+  linhas.forEach(function(r){
+    var d = parseData(r[iData]);
+    if(!d) return;
+    var k = d.getFullYear() * 100 + (d.getMonth() + 1);
+    cont[k] = (cont[k] || 0) + 1; total++;
+  });
+  if(!total) return padrao || 'Mês';
+  var melhor = null, melhorN = 0;
+  for(var kk in cont){ if(cont[kk] > melhorN){ melhorN = cont[kk]; melhor = parseInt(kk, 10); } }
+  var ano = Math.floor(melhor / 100), mes = (melhor % 100) - 1;
+  return NOMES_MESES[mes] + '/' + String(ano).slice(2);
+}
+
+/* ============ CARREGAMENTO ============ */
 function carregarDados(){
-  var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  if(!URL_APP){
-    pill.className='pill err'; txt.textContent='URL não configurada';
-    avisar('erro','URL do Apps Script não configurada','Abra o <b>index.html</b> e cole a URL do Web App na variável <b>URL_APP</b> (topo do script).');
-    return;
-  }
-  txt.textContent='Carregando dados da planilha…';
-  fetch(URL_APP+'?t='+Date.now(),{redirect:'follow'})
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(j){
-      estado.base=j.base?processarBase(j.base):null;
-      estado.meses=(j.meses||[]).map(function(m){
-        return {rotulo:m.rotulo,ok:true,pedidos:processarMes(m.colunas||[],m.linhas||[])};
-      });
-      estado.periodo='TODOS'; estado.pagina=1;
-      renderTudo();
-      pill.className='pill ok';
-      txt.textContent='✓ '+(estado.meses.length)+' mês(es) + base '+(estado.base?'✓':'—');
-    })
-    .catch(function(err){
-      pill.className='pill err'; txt.textContent='Erro ao carregar';
-      avisar('erro','Não consegui carregar a planilha',esc(err.message)+'<br>Confira: Web App publicado com acesso "Qualquer pessoa" e URL correta em URL_APP.');
+  var pill = document.getElementById('pill'), txt = document.getElementById('pillTexto');
+  txt.textContent = 'Carregando planilhas…';
+  document.getElementById('avisos').innerHTML = '';
+
+  var promessas = [];
+  promessas.push(carregarPlanilha(CONFIG.base.id, CONFIG.base.gid).then(function(d){
+    estado.base = processarBase(d);
+    return { tipo: 'base', ok: !!estado.base, colunas: d.colunas };
+  }).catch(function(e){ return { tipo: 'base', ok: false, erro: e.message, colunas: [] }; }));
+
+  CONFIG.meses.forEach(function(m, i){
+    promessas.push(carregarPlanilha(m.id, m.gid).then(function(d){
+      var rot = detectarRotulo(d.colunas, d.linhas, m.rotulo);
+      estado.meses[i] = { rotulo: rot, ok: true, pedidos: processarMes(d.colunas, d.linhas) };
+      return { tipo: 'mes', ok: true, rotulo: rot };
+    }).catch(function(e){ estado.meses[i] = { rotulo: m.rotulo || ('Mês ' + (i+1)), ok: false, erro: e.message, pedidos: [] }; return { tipo: 'mes', ok: false, erro: e.message }; }));
+  });
+
+  Promise.all(promessas).then(function(resultados){
+    resultados.forEach(function(r){
+      if(r.ok) return;
+      if(r.tipo === 'base') avisar('erro', 'Base de clientes não carregada', 'Verifique se a planilha está compartilhada como "qualquer pessoa com o link" (Leitor ou Editor). Detalhe: ' + esc(r.erro||''));
+      else avisar('erro', 'Mês ' + esc(r.rotulo || '') + ' não carregado', 'Verifique o compartilhamento/link da planilha. Detalhe: ' + esc(r.erro||''));
     });
+    estado.periodo = 'TODOS'; estado.pagina = 1;
+    renderTudo();
+    var ok = estado.meses.filter(function(m){ return m.ok; }).length;
+    pill.className = 'pill ' + (ok > 0 ? 'ok' : 'err');
+    txt.textContent = (ok > 0 ? '✓ ' + ok + ' mês(es) + base ' + (estado.base ? '✓' : '—') : 'Sem dados — confira o compartilhamento');
+  });
 }
 
 /* ============ ANÁLISE ============ */
 function pedidosDoPeriodo(){
-  if(estado.periodo==='TODOS'){ var t=[]; estado.meses.forEach(function(m){ if(m.ok) t=t.concat(m.pedidos); }); return t; }
-  var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
-  return m&&m.ok?m.pedidos:[];
+  if(estado.periodo === 'TODOS'){ var t = []; estado.meses.forEach(function(m){ if(m.ok) t = t.concat(m.pedidos); }); return t; }
+  var m = estado.meses.filter(function(x){ return x.rotulo === estado.periodo; })[0];
+  return m && m.ok ? m.pedidos : [];
 }
 function clientesDoPeriodo(){
-  var map=new Map();
+  var map = new Map();
   pedidosDoPeriodo().forEach(function(o){
     if(!o.email) return;
-    var c=map.get(o.email);
-    if(!c){ c={email:o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map()}; map.set(o.email,c); }
+    var c = map.get(o.email);
+    if(!c){ c = { email: o.email, nome: o.nome || '', pedidos: 0, total: 0, qtd: 0, ultima: null, produtos: new Map() }; map.set(o.email, c); }
     if(!o.pago) return;
-    c.pedidos++; c.total+=o.total;
-    var itens=o.items||[];
-    for(var i=0;i<itens.length;i++){ c.qtd+=itens[i].qtd||1; var pr=c.produtos.get(itens[i].produto)||0; c.produtos.set(itens[i].produto,pr+(itens[i].qtd||1)); }
-    if(o.data&&(!c.ultima||o.data>c.ultima)) c.ultima=o.data;
+    c.pedidos++; c.total += o.total;
+    var itens = o.items || [];
+    for(var i = 0; i < itens.length; i++){ c.qtd += itens[i].qtd || 1; var pr = c.produtos.get(itens[i].produto) || 0; c.produtos.set(itens[i].produto, pr + (itens[i].qtd || 1)); }
+    if(o.data && (!c.ultima || o.data > c.ultima)) c.ultima = o.data;
   });
   return map;
 }
 function mesesComCompra(email){
-  var n=0;
-  estado.meses.forEach(function(m){ if(m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;})) n++; });
+  var n = 0;
+  estado.meses.forEach(function(m){ if(m.ok && m.pedidos.some(function(o){ return o.email === email && o.pago; })) n++; });
   return n;
 }
-function comprouNoMes(email,rotulo){
-  var m=estado.meses.filter(function(x){return x.rotulo===rotulo;})[0];
-  return !!(m&&m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;}));
+function comprouNoMes(email, rotulo){
+  var m = estado.meses.filter(function(x){ return x.rotulo === rotulo; })[0];
+  return !!(m && m.ok && m.pedidos.some(function(o){ return o.email === email && o.pago; }));
 }
 function ultimoMesLabel(){
-  var arr=estado.meses.filter(function(m){return m.ok;});
-  return arr.length?arr[arr.length-1].rotulo:'';
+  var arr = estado.meses.filter(function(m){ return m.ok; });
+  return arr.length ? arr[arr.length - 1].rotulo : '';
 }
-function situacao(email,comprouNoPeriodo){
-  var meses=mesesComCompra(email);
-  if(comprouNoPeriodo) return meses>=2?'recorrente':'comprou';
+function situacao(email, comprouNoPeriodo){
+  var meses = mesesComCompra(email);
+  if(comprouNoPeriodo) return meses >= 2 ? 'recorrente' : 'comprou';
   if(!estado.base) return 'fora';
-  if(estado.base.map.has(email)) return meses>0?'historico':'cadastro';
+  if(estado.base.map.has(email)) return meses > 0 ? 'historico' : 'cadastro';
   return 'fora';
 }
 
 /* ============ RENDER ============ */
 function montarChips(){
-  var p=document.getElementById('chipsPeriodo'); p.innerHTML='';
-  var t=document.createElement('button'); t.className='chip'+(estado.periodo==='TODOS'?' ativo':''); t.textContent='📅 Todos os meses';
-  t.onclick=function(){estado.periodo='TODOS';estado.pagina=1;renderTudo();}; p.appendChild(t);
+  var p = document.getElementById('chipsPeriodo'); p.innerHTML = '';
+  var t = document.createElement('button'); t.className = 'chip' + (estado.periodo === 'TODOS' ? ' ativo' : ''); t.textContent = '📅 Todos os meses';
+  t.onclick = function(){ estado.periodo = 'TODOS'; estado.pagina = 1; renderTudo(); }; p.appendChild(t);
   estado.meses.forEach(function(m){
-    var b=document.createElement('button'); b.className='chip'+(estado.periodo===m.rotulo?' ativo':'');
-    b.textContent='✅ '+m.rotulo;
-    b.onclick=function(){estado.periodo=m.rotulo;estado.pagina=1;renderTudo();};
-    p.appendChild(b);
+    if(!m.ok) return;
+    var b = document.createElement('button'); b.className = 'chip' + (estado.periodo === m.rotulo ? ' ativo' : ''); b.textContent = '✅ ' + m.rotulo;
+    b.onclick = function(){ estado.periodo = m.rotulo; estado.pagina = 1; renderTudo(); }; p.appendChild(b);
   });
-  var s=document.getElementById('chipsSegmento'); s.innerHTML='';
-  var segs=[['TODOS','Todos'],['COMPROU','Comprou no período'],['RECORRENTE','Recompra (2+ meses)'],['NAOREC','Não recomprou (últ. mês)'],['CADASTRO','Só cadastro'],['FORA','Fora da base']];
+  var s = document.getElementById('chipsSegmento'); s.innerHTML = '';
+  var segs = [['TODOS','Todos'],['COMPROU','Comprou no período'],['RECORRENTE','Recompra (2+ meses)'],['NAOREC','Não recomprou (últ. mês)'],['CADASTRO','Só cadastro'],['FORA','Fora da base']];
   segs.forEach(function(it){
-    var b=document.createElement('button'); b.className='chip'+(estado.segmento===it[0]?' ativo':''); b.textContent=it[1];
-    b.onclick=function(){estado.segmento=it[0];estado.pagina=1;renderTudo();}; s.appendChild(b);
+    var b = document.createElement('button'); b.className = 'chip' + (estado.segmento === it[0] ? ' ativo' : ''); b.textContent = it[1];
+    b.onclick = function(){ estado.segmento = it[0]; estado.pagina = 1; renderTudo(); }; s.appendChild(b);
   });
 }
 function montarKpis(){
-  var pedidos=pedidosDoPeriodo();
-  var receita=0,nPagos=0,nExp=0;
+  var pedidos = pedidosDoPeriodo();
+  var receita = 0, nPagos = 0, nExp = 0;
   pedidos.forEach(function(o){
     if(o.expirado) nExp++;
     if(!o.pago) return;
-    receita+=o.total; nPagos++;
+    receita += o.total; nPagos++;
   });
-  var compradores=clientesDoPeriodo();
-  var totalBase=estado.base?estado.base.map.size:0, nunca=0, recorrentes=0, naorec=0;
-  var ultimo=ultimoMesLabel();
-  compradores.forEach(function(c,em){
-    if(mesesComCompra(em)>=2) recorrentes++;
-    if(ultimo&&!comprouNoMes(em,ultimo)) naorec++;
+  var compradores = clientesDoPeriodo();
+  var totalBase = estado.base ? estado.base.map.size : 0, nunca = 0, recorrentes = 0, naorec = 0;
+  var ultimo = ultimoMesLabel();
+  compradores.forEach(function(c, em){
+    if(mesesComCompra(em) >= 2) recorrentes++;
+    if(ultimo && !comprouNoMes(em, ultimo)) naorec++;
   });
-  if(estado.base){ estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) nunca++; }); }
-  var cards=[
-    {rotulo:'Receita (pagos)',valor:dinheiro(receita),ico:'💰',detalhe:nPagos+' pedidos pagos'},
-    {rotulo:'Ticket médio',valor:nPagos?dinheiro(receita/nPagos):'R$ 0,00',ico:'🎯',detalhe:'por pedido pago'},
-    {rotulo:'Clientes que compraram',valor:numero(compradores.size),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês selecionado'},
-    {rotulo:'Só cadastro',valor:numero(nunca),ico:'👤',detalhe:totalBase?'de '+numero(totalBase)+' na base':'base não importada'},
-    {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses'},
-    {rotulo:'Não recomprou (últ. mês)',valor:numero(naorec),ico:'📚',detalhe:ultimo?'não compraram em '+ultimo:'—'},
-    {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'tentativas não concluídas'}
+  if(estado.base){ estado.base.map.forEach(function(v, em){ if(mesesComCompra(em) === 0) nunca++; }); }
+  var cards = [
+    { rotulo: 'Receita (pagos)', valor: dinheiro(receita), ico: '💰', detalhe: nPagos + ' pedidos pagos' },
+    { rotulo: 'Ticket médio', valor: nPagos ? dinheiro(receita / nPagos) : 'R$ 0,00', ico: '🎯', detalhe: 'por pedido pago' },
+    { rotulo: 'Clientes que compraram', valor: numero(compradores.size), ico: '🛍️', detalhe: estado.periodo === 'TODOS' ? 'em todos os meses' : 'no mês selecionado' },
+    { rotulo: 'Só cadastro', valor: numero(nunca), ico: '👤', detalhe: totalBase ? 'de ' + numero(totalBase) + ' na base' : 'base não carregada' },
+    { rotulo: 'Recompra (2+ meses)', valor: numero(recorrentes), ico: '🔁', detalhe: 'clientes em 2+ meses' },
+    { rotulo: 'Não recomprou (últ. mês)', valor: numero(naorec), ico: '📚', detalhe: ultimo ? 'não compraram em ' + ultimo : '—' },
+    { rotulo: 'Pedidos expirados', valor: numero(nExp), ico: '🚫', detalhe: 'tentativas não concluídas' }
   ];
-  document.getElementById('kpis').innerHTML=cards.map(function(c){return '<div class="kpi"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>';}).join('');
+  document.getElementById('kpis').innerHTML = cards.map(function(c){ return '<div class="kpi"><div class="ico">' + c.ico + '</div><div class="rotulo">' + c.rotulo + '</div><div class="valor">' + c.valor + '</div><div class="detalhe">' + c.detalhe + '</div></div>'; }).join('');
 }
 function montarEvolucao(){
-  var c=document.getElementById('evolucao'); if(!c) return;
-  var ctx=c.getContext('2d'); var W=c.width,H=c.height; ctx.clearRect(0,0,W,H);
-  var meses=estado.meses.filter(function(m){return m.ok;});
-  if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Importe um mês para ver a evolução',W/2,H/2); return; }
-  var dados=meses.map(function(m){
-    var receita=0,clientes=new Set();
-    m.pedidos.forEach(function(o){ if(!o.pago)return; receita+=o.total; if(o.email)clientes.add(o.email); });
-    return {rotulo:m.rotulo,receita:receita,clientes:clientes.size};
+  var c = document.getElementById('evolucao'); if(!c) return;
+  var ctx = c.getContext('2d'); var W = c.width, H = c.height; ctx.clearRect(0, 0, W, H);
+  var meses = estado.meses.filter(function(m){ return m.ok; });
+  if(!meses.length){ ctx.fillStyle = '#9ca3af'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Nenhum mês carregado', W/2, H/2); return; }
+  var dados = meses.map(function(m){
+    var receita = 0, clientes = new Set();
+    m.pedidos.forEach(function(o){ if(!o.pago) return; receita += o.total; if(o.email) clientes.add(o.email); });
+    return { rotulo: m.rotulo, receita: receita, clientes: clientes.size };
   });
-  var maxR=Math.max.apply(null,dados.map(function(d){return d.receita;}))||1;
-  var maxC=Math.max.apply(null,dados.map(function(d){return d.clientes;}))||1;
-  var padL=8,padT=16,padR=8,padB=26; var gw=(W-padL-padR)/dados.length; var bw=Math.min(28,gw*0.32);
-  ctx.font='10px sans-serif';
-  dados.forEach(function(d,i){
-    var x=padL+gw*i+gw/2; var hR=(d.receita/maxR)*(H-padT-padB); var hC=(d.clientes/maxC)*(H-padT-padB);
-    ctx.fillStyle='rgba(29,74,46,.85)'; ctx.fillRect(x-bw-2,H-padB-hR,bw,hR);
-    ctx.fillStyle='rgba(46,125,79,.4)'; ctx.fillRect(x+2,H-padB-hC,bw,hC);
-    ctx.fillStyle='#374151'; ctx.textAlign='center'; ctx.fillText(d.rotulo,x,H-8);
-    ctx.fillStyle='#1d4a2e'; ctx.font='bold 9.5px sans-serif';
-    ctx.fillText(d.receita>=1000?'R$'+Math.round(d.receita/1000)+'k':'R$'+Math.round(d.receita),x-bw/2-2,H-padB-hR-4);
-    ctx.fillText(d.clientes,x+bw/2+2,H-padB-hC-4); ctx.font='10px sans-serif';
+  var maxR = Math.max.apply(null, dados.map(function(d){ return d.receita; })) || 1;
+  var maxC = Math.max.apply(null, dados.map(function(d){ return d.clientes; })) || 1;
+  var padL = 8, padT = 16, padR = 8, padB = 26; var gw = (W - padL - padR) / dados.length; var bw = Math.min(28, gw * 0.32);
+  ctx.font = '10px sans-serif';
+  dados.forEach(function(d, i){
+    var x = padL + gw * i + gw / 2; var hR = (d.receita / maxR) * (H - padT - padB); var hC = (d.clientes / maxC) * (H - padT - padB);
+    ctx.fillStyle = 'rgba(29,74,46,.85)'; ctx.fillRect(x - bw - 2, H - padB - hR, bw, hR);
+    ctx.fillStyle = 'rgba(46,125,79,.4)'; ctx.fillRect(x + 2, H - padB - hC, bw, hC);
+    ctx.fillStyle = '#374151'; ctx.textAlign = 'center'; ctx.fillText(d.rotulo, x, H - 8);
+    ctx.fillStyle = '#1d4a2e'; ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillText(d.receita >= 1000 ? 'R$' + Math.round(d.receita/1000) + 'k' : 'R$' + Math.round(d.receita), x - bw/2 - 2, H - padB - hR - 4);
+    ctx.fillText(d.clientes, x + bw/2 + 2, H - padB - hC - 4); ctx.font = '10px sans-serif';
   });
 }
 function montarTopProdutos(){
-  var map=new Map();
+  var map = new Map();
   pedidosDoPeriodo().forEach(function(o){
     if(!o.pago) return;
-    (o.items||[]).forEach(function(it){
-      var p=map.get(it.produto)||{qtd:0,receita:0};
-      p.qtd+=it.qtd||1; p.receita+=it.preco?(it.preco*(it.qtd||1)):0;
-      map.set(it.produto,p);
+    (o.items || []).forEach(function(it){
+      var p = map.get(it.produto) || { qtd: 0, receita: 0 };
+      p.qtd += it.qtd || 1; p.receita += it.preco ? (it.preco * (it.qtd || 1)) : 0;
+      map.set(it.produto, p);
     });
   });
-  var arr=[]; map.forEach(function(v,k){arr.push({nome:k,qtd:v.qtd,receita:v.receita});});
-  arr.sort(function(a,b){return b.receita-a.receita;});
-  var top=arr.slice(0,10), max=top.length?Math.max(top[0].receita,1):1;
-  var sel=document.getElementById('selectProduto'); var atual=estado.produto;
-  sel.innerHTML='<option value="">Todos os produtos</option>';
-  arr.slice(0,30).forEach(function(p){ var o=document.createElement('option'); o.value=p.nome; o.textContent=p.nome+' ('+numero(p.qtd)+')'; sel.appendChild(o); });
-  if(atual) sel.value=atual;
-  var el=document.getElementById('topProdutos');
-  if(!top.length){ el.innerHTML='<div style="color:var(--cinza);text-align:center;padding:20px">Sem produtos no período.</div>'; return; }
-  el.innerHTML='';
+  var arr = []; map.forEach(function(v, k){ arr.push({ nome: k, qtd: v.qtd, receita: v.receita }); });
+  arr.sort(function(a, b){ return b.receita - a.receita; });
+  var top = arr.slice(0, 10), max = top.length ? Math.max(top[0].receita, 1) : 1;
+  var sel = document.getElementById('selectProduto'); var atual = estado.produto;
+  sel.innerHTML = '<option value="">Todos os produtos</option>';
+  arr.slice(0, 30).forEach(function(p){ var o = document.createElement('option'); o.value = p.nome; o.textContent = p.nome + ' (' + numero(p.qtd) + ')'; sel.appendChild(o); });
+  if(atual) sel.value = atual;
+  var el = document.getElementById('topProdutos');
+  if(!top.length){ el.innerHTML = '<div style="color:var(--cinza);text-align:center;padding:20px">Sem produtos no período.</div>'; return; }
+  el.innerHTML = '';
   top.forEach(function(p){
-    var larg=Math.max(2,Math.round((p.receita/max)*100));
-    var d=document.createElement('div'); d.className='barra'; d.title=p.nome;
-    d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+' un</span>';
+    var larg = Math.max(2, Math.round((p.receita / max) * 100));
+    var d = document.createElement('div'); d.className = 'barra'; d.title = p.nome;
+    d.innerHTML = '<span class="nome">' + esc(p.nome) + '</span><span class="pista"><span class="preench" style="width:' + larg + '%"></span></span><span class="val">' + numero(p.qtd) + ' un</span>';
     el.appendChild(d);
   });
 }
 function montarDonut(){
-  var pagos=0,expirados=0;
-  pedidosDoPeriodo().forEach(function(o){ if(o.pago)pagos++; else if(o.expirado)expirados++; });
-  var total=pagos+expirados, pct=total?Math.round((pagos/total)*100):0;
-  var d=document.getElementById('donut');
-  d.style.background=total?'conic-gradient(var(--verde2) 0 '+pct+'%, #f87171 '+pct+'% 100%)':'#e5e7eb';
-  document.getElementById('donutCentro').textContent=pct+'%';
-  document.getElementById('legPagos').textContent=numero(pagos);
-  document.getElementById('legExpirados').textContent=numero(expirados);
+  var pagos = 0, expirados = 0;
+  pedidosDoPeriodo().forEach(function(o){ if(o.pago) pagos++; else if(o.expirado) expirados++; });
+  var total = pagos + expirados, pct = total ? Math.round((pagos / total) * 100) : 0;
+  var d = document.getElementById('donut');
+  d.style.background = total ? 'conic-gradient(var(--verde2) 0 ' + pct + '%, #f87171 ' + pct + '% 100%)' : '#e5e7eb';
+  document.getElementById('donutCentro').textContent = pct + '%';
+  document.getElementById('legPagos').textContent = numero(pagos);
+  document.getElementById('legExpirados').textContent = numero(expirados);
 }
 function montarTabela(){
-  var compradores=clientesDoPeriodo();
-  var linhas=[]; var chaveProduto=estado.produto;
-  var ultimo=ultimoMesLabel();
-  var todos=new Set(); compradores.forEach(function(v,em){todos.add(em);});
-  if(estado.base){ estado.base.map.forEach(function(v,em){todos.add(em);}); }
+  var compradores = clientesDoPeriodo();
+  var linhas = [], chaveProduto = estado.produto;
+  var ultimo = ultimoMesLabel();
+  var todos = new Set(); compradores.forEach(function(v, em){ todos.add(em); });
+  if(estado.base){ estado.base.map.forEach(function(v, em){ todos.add(em); }); }
   todos.forEach(function(em){
-    var c=compradores.get(em);
-    var nome=(c&&c.nome)||(estado.base&&estado.base.map.get(em)&&estado.base.map.get(em).nome)||em;
-    if(!nome||nome===em) nome=em;
-    if(chaveProduto&&c){ if(!c.produtos.has(chaveProduto)) return; }
-    var row={email:em,nome:nome,sit:situacao(em,!!c),pedidos:c?c.pedidos:0,total:c?c.total:0,qtd:c?c.qtd:0,ultima:c?c.ultima:null,meses:mesesComCompra(em),comprouUltimo:ultimo?comprouNoMes(em,ultimo):false};
+    var c = compradores.get(em);
+    var nome = (c && c.nome) || (estado.base && estado.base.map.get(em) && estado.base.map.get(em).nome) || em;
+    if(!nome || nome === em) nome = em;
+    if(chaveProduto && c){ if(!c.produtos.has(chaveProduto)) return; }
+    var row = { email: em, nome: nome, sit: situacao(em, !!c), pedidos: c ? c.pedidos : 0, total: c ? c.total : 0, qtd: c ? c.qtd : 0, ultima: c ? c.ultima : null, meses: mesesComCompra(em), comprouUltimo: ultimo ? comprouNoMes(em, ultimo) : false };
     linhas.push(row);
   });
-  var seg=estado.segmento;
-  if(seg!=='TODOS'){
-    linhas=linhas.filter(function(r){
-      if(seg==='COMPROU')return r.sit==='comprou'||r.sit==='recorrente';
-      if(seg==='CADASTRO')return r.sit==='cadastro';
-      if(seg==='RECORRENTE')return r.meses>=2;
-      if(seg==='NAOREC')return r.pedidos>0&&!r.comprouUltimo;
-      if(seg==='FORA')return r.sit==='fora';
+  var seg = estado.segmento;
+  if(seg !== 'TODOS'){
+    linhas = linhas.filter(function(r){
+      if(seg === 'COMPROU') return r.sit === 'comprou' || r.sit === 'recorrente';
+      if(seg === 'CADASTRO') return r.sit === 'cadastro';
+      if(seg === 'RECORRENTE') return r.meses >= 2;
+      if(seg === 'NAOREC') return r.pedidos > 0 && !r.comprouUltimo;
+      if(seg === 'FORA') return r.sit === 'fora';
       return true;
     });
   }
-  var b=norm(estado.busca);
-  if(b){ linhas=linhas.filter(function(r){return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1;}); }
-  var chave=estado.ordem.chave,dir=estado.ordem.dir;
-  linhas.sort(function(a,z){ var va=a[chave],vz=z[chave]; if(va==null)va=''; if(vz==null)vz=''; if(typeof va==='number'&&typeof vz==='number')return (va-vz)*dir; return String(va).localeCompare(String(vz),'pt-BR')*dir; });
-  estado.linhasTabela=linhas;
-  var total=linhas.length;
-  document.getElementById('contadorTabela').textContent=numero(total)+' cliente(s) · '+(estado.periodo==='TODOS'?'todos os meses':estado.periodo);
-  var totalPag=Math.max(1,Math.ceil(total/estado.porPagina));
-  if(estado.pagina>totalPag)estado.pagina=totalPag;
-  var ini=(estado.pagina-1)*estado.porPagina, fatia=linhas.slice(ini,ini+estado.porPagina);
-  var tb=document.getElementById('tbodyClientes'); tb.innerHTML='';
-  if(!fatia.length){ tb.innerHTML='<tr><td colspan="7" style="color:var(--cinza);text-align:center;padding:24px">Nenhum cliente encontrado.</td></tr>'; }
-  else{
+  var b = norm(estado.busca);
+  if(b){ linhas = linhas.filter(function(r){ return norm(r.nome).indexOf(b) > -1 || norm(r.email).indexOf(b) > -1; }); }
+  var chave = estado.ordem.chave, dir = estado.ordem.dir;
+  linhas.sort(function(a, z){ var va = a[chave], vz = z[chave]; if(va == null) va = ''; if(vz == null) vz = ''; if(typeof va === 'number' && typeof vz === 'number') return (va - vz) * dir; return String(va).localeCompare(String(vz), 'pt-BR') * dir; });
+  estado.linhasTabela = linhas;
+  var total = linhas.length;
+  document.getElementById('contadorTabela').textContent = numero(total) + ' cliente(s) · ' + (estado.periodo === 'TODOS' ? 'todos os meses' : estado.periodo);
+  var totalPag = Math.max(1, Math.ceil(total / estado.porPagina));
+  if(estado.pagina > totalPag) estado.pagina = totalPag;
+  var ini = (estado.pagina - 1) * estado.porPagina, fatia = linhas.slice(ini, ini + estado.porPagina);
+  var tb = document.getElementById('tbodyClientes'); tb.innerHTML = '';
+  if(!fatia.length){ tb.innerHTML = '<tr><td colspan="7" style="color:var(--cinza);text-align:center;padding:24px">Nenhum cliente encontrado.</td></tr>'; }
+  else {
     fatia.forEach(function(r){
-      var badge='',cls='';
-      if(r.sit==='comprou'){badge='Comprou no período';cls='b-comprou';}
-      else if(r.sit==='recorrente'){badge='Recompra (2+ meses)';cls='b-recorrente';}
-      else if(r.sit==='cadastro'){badge='Só cadastro';cls='b-cadastro';}
-      else if(r.sit==='historico'){badge='Não recomprou';cls='b-naorec';}
-      else{badge='Fora da base';cls='b-fora';}
-      var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td><span class="badge '+cls+'">'+badge+'</span></td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?'<span class="badge b-recorrente">'+r.meses+' meses</span>':r.meses+(r.meses===1?' mês':''))+'</td>';
+      var badge = '', cls = '';
+      if(r.sit === 'comprou'){ badge = 'Comprou no período'; cls = 'b-comprou'; }
+      else if(r.sit === 'recorrente'){ badge = 'Recompra (2+ meses)'; cls = 'b-recorrente'; }
+      else if(r.sit === 'cadastro'){ badge = 'Só cadastro'; cls = 'b-cadastro'; }
+      else if(r.sit === 'historico'){ badge = 'Não recomprou'; cls = 'b-naorec'; }
+      else { badge = 'Fora da base'; cls = 'b-fora'; }
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(r.nome) + '</td><td>' + esc(r.email) + '</td><td><span class="badge ' + cls + '">' + badge + '</span></td><td>' + numero(r.pedidos) + '</td><td>' + dinheiro(r.total) + '</td><td>' + fmtData(r.ultima) + '</td><td>' + (r.meses >= 2 ? '<span class="badge b-recorrente">' + r.meses + ' meses</span>' : r.meses + (r.meses === 1 ? ' mês' : '')) + '</td>';
       tb.appendChild(tr);
     });
   }
-  document.getElementById('infoPag').textContent='Página '+estado.pagina+' de '+totalPag;
-  document.getElementById('prevPag').disabled=estado.pagina<=1;
-  document.getElementById('nextPag').disabled=estado.pagina>=totalPag;
+  document.getElementById('infoPag').textContent = 'Página ' + estado.pagina + ' de ' + totalPag;
+  document.getElementById('prevPag').disabled = estado.pagina <= 1;
+  document.getElementById('nextPag').disabled = estado.pagina >= totalPag;
 }
 function renderTudo(){
-  var temDados=estado.base!==null||estado.meses.some(function(m){return m.ok;});
-  document.getElementById('vazioInicial').style.display=temDados?'none':'block';
-  document.getElementById('conteudo').style.display=temDados?'':'none';
-  var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  if(!temDados){ pill.className='pill err'; txt.textContent='Sem dados — clique em 📥 Importar'; return; }
+  var temDados = estado.base !== null || estado.meses.some(function(m){ return m.ok; });
+  document.getElementById('vazioInicial').style.display = temDados ? 'none' : 'block';
+  document.getElementById('conteudo').style.display = temDados ? '' : 'none';
+  if(!temDados) return;
   montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela();
 }
 function exportarCsv(){
   if(!estado.linhasTabela.length){ alert('Nenhuma linha para exportar.'); return; }
-  var linhas=estado.linhasTabela.map(function(r){
-    return ['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"',r.sit,r.pedidos,String(r.total).replace('.',','),r.ultima?fmtData(r.ultima):'',r.meses].join(';');
+  var linhas = estado.linhasTabela.map(function(r){
+    return ['"' + r.nome.replace(/"/g,'""') + '"','"' + r.email.replace(/"/g,'""') + '"', r.sit, r.pedidos, String(r.total).replace('.', ','), r.ultima ? fmtData(r.ultima) : '', r.meses].join(';');
   });
-  var csv='\uFEFFCliente;E-mail;Situacao;Pedidos;Total;Ultima compra;Meses com compra\n'+linhas.join('\n');
-  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clientes_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
+  var csv = '\uFEFFCliente;E-mail;Situacao;Pedidos;Total;Ultima compra;Meses com compra\n' + linhas.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clientes_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 
 /* ============ EVENTOS ============ */
 document.querySelectorAll('.tab').forEach(function(t){
-  t.onclick=function(){
-    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('ativo');});
+  t.onclick = function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('ativo'); });
     t.classList.add('ativo');
-    document.getElementById('overview').style.display=t.dataset.tab==='overview'?'':'none';
-    document.getElementById('clientes').style.display=t.dataset.tab==='clientes'?'':'none';
+    document.getElementById('overview').style.display = t.dataset.tab === 'overview' ? '' : 'none';
+    document.getElementById('clientes').style.display = t.dataset.tab === 'clientes' ? '' : 'none';
   };
 });
-document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();});
-document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;estado.pagina=1;renderTudo();});
+document.getElementById('busca').addEventListener('input', function(e){ estado.busca = e.target.value; estado.pagina = 1; montarTabela(); });
+document.getElementById('selectProduto').addEventListener('change', function(e){ estado.produto = e.target.value; estado.pagina = 1; renderTudo(); });
 document.querySelectorAll('th[data-ord]').forEach(function(th){
-  th.onclick=function(){
-    var k=th.dataset.ord;
-    if(estado.ordem.chave===k){estado.ordem.dir*=-1;} else {estado.ordem.chave=k;estado.ordem.dir=-1;}
-    estado.pagina=1; montarTabela();
+  th.onclick = function(){
+    var k = th.dataset.ord;
+    if(estado.ordem.chave === k){ estado.ordem.dir *= -1; } else { estado.ordem.chave = k; estado.ordem.dir = -1; }
+    estado.pagina = 1; montarTabela();
   };
 });
-document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
-document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
-document.getElementById('btnCsv').onclick=exportarCsv;
-document.getElementById('overlay').addEventListener('click',function(e){ if(e.target===this) fecharModal(); });
+document.getElementById('prevPag').onclick = function(){ if(estado.pagina > 1){ estado.pagina--; montarTabela(); } };
+document.getElementById('nextPag').onclick = function(){ estado.pagina++; montarTabela(); };
+document.getElementById('btnCsv').onclick = exportarCsv;
 
 /* ============ INÍCIO ============ */
 carregarDados();
