@@ -32,7 +32,6 @@
   .diag .linha{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;font-size:13px;flex-wrap:wrap}
   .diag .ok{color:var(--verde);font-weight:700}
   .diag .bad{color:var(--red);font-weight:700}
-  .diag .dica{font-size:12px;color:var(--cinza);width:100%;padding-left:22px}
   .foco{background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
   .foco .num{font-size:38px;font-weight:800;line-height:1}
   .foco .txt{flex:1;min-width:200px}
@@ -105,7 +104,7 @@
     <div class="subtitulo">Histórico de Compras por Cliente</div>
   </div>
   <div class="spacer"></div>
-  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando planilhas…</span></div>
+  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando arquivos…</span></div>
   <button class="btn" onclick="carregarDados()">↻ Atualizar</button>
 </header>
 
@@ -113,7 +112,7 @@
   <div class="avisos" id="avisos"></div>
 
   <div class="diag" id="diag" style="display:none">
-    <h3>🔎 Diagnóstico da leitura das planilhas</h3>
+    <h3>🔎 Arquivos lidos do repositório</h3>
     <div id="diagLinhas"></div>
   </div>
 
@@ -134,7 +133,7 @@
 
     <section id="overview">
       <div class="filtros">
-        <div class="linha"><label>Histórico — mês a mês (detectado das planilhas)</label><div class="chips" id="chipsPeriodo"></div></div>
+        <div class="linha"><label>Histórico — mês a mês (detectado da coluna Paid at)</label><div class="chips" id="chipsPeriodo"></div></div>
         <div class="linha">
           <label>Filtros de navegação</label>
           <div class="chips" id="chipsSegmento"></div>
@@ -159,8 +158,8 @@
         </div>
         <div class="card"><h3>🧭 Como funciona</h3>
           <div style="font-size:13px;color:#374151;line-height:1.7">
-            • As planilhas são lidas <b>direto pelo navegador</b> (sem Apps Script).<br>
-            • Para funcionar, cada planilha precisa estar com acesso <b>"Qualquer pessoa com o link — Leitor"</b> (ou publicada na web).<br>
+            • Os dados vêm dos <b>arquivos CSV/XLSX deste repositório</b> (base.csv, junho.csv, julho.csv…).<br>
+            • Para atualizar: baixe os CSVs das planilhas e <b>substitua os arquivos no GitHub</b>.<br>
             • O mês é detectado pela coluna <b>Paid at</b>.<br>
             • <b>Foco:</b> cadastrados que ainda não compraram.<br>
             • Só pedidos <b>paid/pago</b> entram na receita.
@@ -195,19 +194,22 @@
   </div>
 </main>
 
-<footer>Leitura direta do Google Sheets · sem Apps Script · Infinity Piercing</footer>
+<footer>Dados lidos dos arquivos do repositório GitHub · Infinity Piercing</footer>
 
 <script>
 /* ============================================================
-   CONFIGURAÇÃO — planilhas do projeto
-   id  = código no link: docs.google.com/spreadsheets/d/SEU_ID/edit
-   gid = número após #gid= na aba correta
+   CONFIGURAÇÃO — arquivos que você sobe no GitHub
+   (coloque estes arquivos na MESMA pasta do index.html)
+   base.csv  -> export da planilha de clientes cadastrados
+   junho.csv -> export da planilha de pedidos de junho
+   julho.csv -> export da planilha de pedidos de julho
    ============================================================ */
 var CONFIG = {
-  base: { nome: 'Base de clientes', id: '1GYQInakefjvDmoYFgVJfieZ3VDsIReRE_aCzbn0GKdU', gid: 685964685 },
+  base: { arquivo: 'base.csv', nome: 'Base de clientes' },
   meses: [
-    { nome: 'Junho/26', id: '1VVCZc0bBQMZyl3AB7-SlJcGV7agEm5hJoOq-gYd404w', gid: 88704949 },
-    { nome: 'Julho/26', id: '1VkOIuvArA4teg_p7OXbkTtEf_o3jUffwkRMpQhoTmHM', gid: 930202363 }
+    { arquivo: 'junho.csv', nome: 'Junho/26' },
+    { arquivo: 'julho.csv', nome: 'Julho/26' }
+    // Novo mês: { arquivo: 'agosto.csv', nome: 'Agosto/26' }
   ]
 };
 
@@ -288,46 +290,73 @@ function acharColuna(cab,chave){
   return -1;
 }
 
-/* ============ LEITOR DIRETO (gviz JSONP) ============
-   Funciona quando a planilha está compartilhada como
-   "Qualquer pessoa com o link" OU publicada na web. */
-function carregarPlanilha(id,gid){
-  return new Promise(function(res,rej){
-    var cb='__gv'+Math.random().toString(36).slice(2), fim=false, tentou=0;
-    function tentar(){
-      window[cb]=function(resp){
-        if(fim) return; fim=true;
-        delete window[cb];
-        if(!resp||(resp.status&&resp.status!=='ok')){ rej(new Error('Sem acesso à planilha (verifique o compartilhamento)')); return; }
-        var t=resp.table;
-        if(!t||!t.cols){ rej(new Error('Planilha sem dados')); return; }
-        var cols=t.cols.map(function(c){ return (c.label||c.id||''); });
-        var rows=(t.rows||[]).map(function(r){
-          var o={};
-          (r.c||[]).forEach(function(cel,i){ o[i]=(cel&&cel.v!=null)?cel.v:''; });
-          return o;
-        });
-        res({colunas:cols,linhas:rows});
-      };
-      var s=document.createElement('script');
-      s.src='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:json;responseHandler='+cb+'&gid='+gid;
-      s.onerror=function(){
-        if(!fim){ fim=true; delete window[cb]; rej(new Error('Falha de rede ou planilha bloqueada')); }
-      };
-      document.head.appendChild(s);
-      setTimeout(function(){
-        if(!fim && tentou<2){
-          tentou++;
-          window[cb]=null; delete window[cb];
-          try{ s.parentNode && s.parentNode.removeChild(s); }catch(e){}
-          if(!fim) tentar();
-        } else if(!fim){
-          fim=true; delete window[cb];
-          rej(new Error('Tempo esgotado — planilha não respondeu (está privada?)'));
-        }
-      },12000);
+/* ============ LEITURA DE ARQUIVO LOCAL (fetch) ============ */
+function parseCSV(texto){
+  var linhas=[],linha=[],campo='',aspas=false;
+  var delim=',';
+  for(var i=0;i<texto.length;i++){
+    var c=texto.charAt(i);
+    if(aspas){
+      if(c==='"'){ if(texto.charAt(i+1)==='"'){ campo+='"'; i++; } else aspas=false; }
+      else campo+=c;
+    } else {
+      if(c==='"') aspas=true;
+      else if(c===delim){ linha.push(campo); campo=''; }
+      else if(c==='\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; }
+      else if(c!=='\r') campo+=c;
     }
-    tentar();
+  }
+  if(campo!==''||linha.length){ linha.push(campo); linhas.push(linha); }
+  return linhas.filter(function(l){ return l.some(function(c){ return String(c).trim()!==''; }); });
+}
+function detectarDelim(texto){
+  var primeira=texto.split('\n')[0]||'';
+  var v1=(primeira.match(/,/g)||[]).length;
+  var v2=(primeira.match(/;/g)||[]).length;
+  return v2>v1?';':',';
+}
+function parseCSV2(texto){
+  var delim=detectarDelim(texto);
+  var linhas=[],linha=[],campo='',aspas=false;
+  for(var i=0;i<texto.length;i++){
+    var c=texto.charAt(i);
+    if(aspas){
+      if(c==='"'){ if(texto.charAt(i+1)==='"'){ campo+='"'; i++; } else aspas=false; }
+      else campo+=c;
+    } else {
+      if(c==='"') aspas=true;
+      else if(c===delim){ linha.push(campo); campo=''; }
+      else if(c==='\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; }
+      else if(c!=='\r') campo+=c;
+    }
+  }
+  if(campo!==''||linha.length){ linha.push(campo); linhas.push(linha); }
+  return linhas.filter(function(l){ return l.some(function(c){ return String(c).trim()!==''; }); });
+}
+function baixarArquivo(arquivo){
+  return fetch(arquivo,{cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r;
+  });
+}
+function lerArquivo(arquivo){
+  var ehCsv=/\.csv$/i.test(arquivo)||/\.txt$/i.test(arquivo);
+  return baixarArquivo(arquivo).then(function(r){
+    if(ehCsv) return r.text();
+    return r.arrayBuffer();
+  }).then(function(dados){
+    if(ehCsv){
+      var linhas=parseCSV2(String(dados));
+      if(!linhas.length) throw new Error('Arquivo vazio');
+      return {colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
+    } else {
+      if(typeof XLSX==='undefined') throw new Error('XLSX precisa da lib SheetJS (internet) — use CSV');
+      var wb=XLSX.read(new Uint8Array(dados),{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(!rows.length) throw new Error('Arquivo vazio');
+      return {colunas:rows[0].map(function(h){return String(h==null?'':h).trim();}),linhas:rows.slice(1)};
+    }
   });
 }
 
@@ -355,13 +384,7 @@ function processarBase(b){
       var nome='';
       if(iFn>-1&&iLn>-1){ nome=String(r[iFn]||'').trim()+' '+String(r[iLn]||'').trim(); }
       else if(iNome>-2&&iNome>-1){ nome=String(r[iNome]||'').trim(); }
-      map.set(em,{
-        email:String(r[iEmail]).trim(), nome:nome.trim(),
-        cidade:iCid>-1?String(r[iCid]||'').trim():'',
-        telefone:iTel>-1?String(r[iTel]||'').trim():'',
-        historico:iHist>-1?parseMoney(r[iHist]):0,
-        totalSpent:iGasto>-1?parseMoney(r[iGasto]):0
-      });
+      map.set(em,{email:String(r[iEmail]).trim(),nome:nome.trim(),cidade:iCid>-1?String(r[iCid]||'').trim():'',telefone:iTel>-1?String(r[iTel]||'').trim():'',historico:iHist>-1?parseMoney(r[iHist]):0,totalSpent:iGasto>-1?parseMoney(r[iGasto]):0});
     }
   });
   return {map:map};
@@ -416,31 +439,31 @@ function detectarRotulo(colunas,linhas,padrao){
   return NOMES_MESES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2);
 }
 
-/* ============ CARREGAMENTO + DIAGNÓSTICO ============ */
+/* ============ CARREGAMENTO ============ */
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  txt.textContent='Carregando planilhas…';
+  txt.textContent='Carregando arquivos…';
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
   estado.diag=[];
 
   var prom=[];
-  prom.push(carregarPlanilha(CONFIG.base.id,CONFIG.base.gid).then(function(d){
+  prom.push(lerArquivo(CONFIG.base.arquivo).then(function(d){
     estado.base=processarBase(d);
-    estado.diag.push({nome:CONFIG.base.nome,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' clientes)':'sem coluna de e-mail'});
-    return {tipo:'base',ok:!!estado.base};
-  }).catch(function(e){ estado.diag.push({nome:CONFIG.base.nome,ok:false,det:e.message}); return {tipo:'base',ok:false,erro:e.message}; }));
+    estado.diag.push({nome:CONFIG.base.nome+' ('+CONFIG.base.arquivo+')',ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' clientes)':'sem coluna de e-mail'});
+    return {ok:!!estado.base};
+  }).catch(function(e){ estado.diag.push({nome:CONFIG.base.nome+' ('+CONFIG.base.arquivo+')',ok:false,det:e.message}); return {ok:false,erro:e.message}; }));
 
   CONFIG.meses.forEach(function(m,i){
-    prom.push(carregarPlanilha(m.id,m.gid).then(function(d){
+    prom.push(lerArquivo(m.arquivo).then(function(d){
       var rot=detectarRotulo(d.colunas,d.linhas,m.nome);
       estado.meses[i]={rotulo:rot,ok:true,pedidos:processarMes(d.colunas,d.linhas)};
-      estado.diag.push({nome:m.nome+' → '+rot,ok:true,det:'('+estado.meses[i].pedidos.length+' pedidos)'});
-      return {tipo:'mes',ok:true,rotulo:rot};
+      estado.diag.push({nome:m.arquivo+' → '+rot,ok:true,det:'('+estado.meses[i].pedidos.length+' pedidos)'});
+      return {ok:true};
     }).catch(function(e){
       estado.meses[i]={rotulo:m.nome,ok:false,erro:e.message,pedidos:[]};
-      estado.diag.push({nome:m.nome,ok:false,det:e.message});
-      return {tipo:'mes',ok:false,rotulo:m.nome,erro:e.message};
+      estado.diag.push({nome:m.arquivo,ok:false,det:e.message});
+      return {ok:false,erro:e.message};
     }));
   });
 
@@ -449,15 +472,13 @@ function carregarDados(){
     diagBox.style.display='block';
     var html='';
     estado.diag.forEach(function(d){
-      html+='<div class="linha"><span class="'+(d.ok?'ok':'bad')+'">'+(d.ok?'✅':'❌')+' '+esc(d.nome)+'</span><span>'+esc(d.det)+'</span>';
-      if(!d.ok) html+='<span class="dica">👉 Para liberar: abra a planilha → Compartilhar → "Qualquer pessoa com o link" → papel de Leitor (ou: Arquivo → Compartilhar → Publicar na web). Depois clique em Atualizar.</span>';
-      html+='</div>';
+      html+='<div class="linha"><span class="'+(d.ok?'ok':'bad')+'">'+(d.ok?'✅':'❌')+' '+esc(d.nome)+'</span><span>'+esc(d.det)+'</span></div>';
     });
     diagBox.querySelector('#diagLinhas').innerHTML=html;
 
     var ok=estado.meses.filter(function(m){return m.ok;}).length;
     if(!estado.base&&ok===0){
-      txt.textContent='Sem acesso às planilhas';
+      txt.textContent='Arquivos não encontrados';
       pill.className='pill err';
       document.getElementById('conteudo').style.display='none';
       return;
@@ -519,7 +540,7 @@ function montarFoco(){
   estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem.push({email:v.email,nome:v.nome||v.email,telefone:v.telefone||'',cidade:v.cidade||''}); });
   var pct=estado.base.map.size?Math.round((sem.length/estado.base.map.size)*100):0;
   document.getElementById('focoNum').textContent=numero(sem.length);
-  document.getElementById('focoTxt').textContent=sem.length+' de '+numero(estado.base.map.size)+' cadastrados ('+pct+'% da base) não fizeram nenhuma compra nos meses carregados. Clique em "Ver lista" para trabalhar essa base.';
+  document.getElementById('focoTxt').textContent=sem.length+' de '+numero(estado.base.map.size)+' cadastrados ('+pct+'% da base) não fizeram nenhuma compra nos meses carregados.';
   el.style.display='block';
 }
 function verFoco(){
