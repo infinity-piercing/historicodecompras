@@ -125,6 +125,7 @@
     <nav class="tabs">
       <button class="tab ativo" data-tab="overview" id="tabOverview">📊 Visão geral</button>
       <button class="tab" data-tab="clientes" id="tabClientes">👥 Clientes</button>
+      <button class="tab" data-tab="produtos" id="tabProdutos">🏆 Produtos</button>
     </nav>
 
     <section id="overview">
@@ -154,6 +155,24 @@
         </div>
         <div class="card"><h3 id="cardComo">🧭 Como atualizar</h3>
           <div id="comoTexto" style="font-size:13px;color:#374151;line-height:1.7"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="produtos" style="display:none">
+      <div class="tabela-box">
+        <div class="tabela-top">
+          <div class="contador" id="contadorProdutos">—</div>
+          <button class="btn" id="btnCsvProdutos">⬇ Exportar CSV</button>
+        </div>
+        <div class="tabela-scroll">
+          <table>
+            <thead><tr>
+              <th data-ord="nome" id="thProdNome">Produto</th><th data-ord="qtd" id="thProdQtd">Qtd vendida</th>
+              <th data-ord="receita" id="thProdReceita">Receita</th><th data-ord="pct" id="thProdPct">% da receita</th>
+            </tr></thead>
+            <tbody id="tbodyProdutos"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -189,7 +208,6 @@
 <script>
 /* ============================================================
    CONFIGURAÇÃO — nome do repositório no GitHub
-   (os arquivos são descobertos automaticamente)
    ============================================================ */
 var CONFIG = { repo: 'infinity-piercing/historicodecompras' };
 
@@ -199,7 +217,7 @@ var I18N = {
   pt: {
     subTitulo:'Histórico de Compras por Cliente', atualizar:'Atualizar',
     carregando:'Carregando…', lendoRepo:'Lendo repositório…', nenhumCsv:'Nenhum CSV encontrado', semDados:'Sem dados legíveis', soBase:'Somente base', erroRepo:'Erro ao ler repositório',
-    tabOverview:'📊 Visão geral', tabClientes:'👥 Clientes',
+    tabOverview:'📊 Visão geral', tabClientes:'👥 Clientes', tabProdutos:'🏆 Produtos',
     lblPeriodo:'Histórico — mês a mês (detectado automaticamente)', lblFiltros:'Filtros de navegação',
     todosMeses:'📅 Todos os meses', buscar:'🔍 Buscar cliente ou e-mail…', todosProdutos:'Todos os produtos',
     focoTitulo:'🎯 Clientes cadastrados que ainda não compraram',
@@ -219,19 +237,20 @@ var I18N = {
     como4:'• Para agosto: baixe o CSV da planilha, suba como <b>agosto.csv</b> e atualize a página.',
     como5:'• Só pedidos <b>paid/pago</b> entram na receita. <b>Foco:</b> cadastrados sem compra.',
     thNome:'Cliente', thEmail:'E-mail', thTel:'Telefone', thCidade:'Cidade', thSit:'Situação', thPedidos:'Pedidos', thTotal:'Total', thUltima:'Última compra', thMeses:'Meses',
+    thProdNome:'Produto', thProdQtd:'Qtd vendida', thProdReceita:'Receita', thProdPct:'% da receita',
     bSemCompra:'Cadastrado sem compra', bComprou:'Comprou no período', bRecorrente:'Recompra (2+ meses)', bNaoRec:'Não recomprou', bFora:'Fora da base',
     exportar:'⬇ Exportar CSV', anterior:'Anterior', proxima:'Próxima',
     clientesSufixo:'cliente(s)', paginaDe:'Página {p} de {t}', nenhumCliente:'Nenhum cliente encontrado.',
     mesesCom:'meses', mesSingular:'mês', cliAbrev:'cli',
     diagTitulo:'🔎 Arquivos lidos do repositório',
     semColunaEmail:'sem coluna de e-mail', semArquivoBase:'nenhum arquivo com "base"/"cliente"/"customer" no nome',
-    pedidosWord:'pedidos',
+    pedidosWord:'pedidos', produtosSufixo:'produto(s)',
     rodape:'Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing'
   },
   zh: {
     subTitulo:'客户购买历史记录', atualizar:'刷新',
     carregando:'加载中…', lendoRepo:'正在读取仓库…', nenhumCsv:'未找到 CSV 文件', semDados:'没有可读数据', soBase:'仅客户库', erroRepo:'读取仓库时出错',
-    tabOverview:'📊 总览', tabClientes:'👥 客户',
+    tabOverview:'📊 总览', tabClientes:'👥 客户', tabProdutos:'🏆 产品',
     lblPeriodo:'历史记录 — 逐月（自动检测）', lblFiltros:'导航筛选',
     todosMeses:'📅 所有月份', buscar:'🔍 搜索客户或邮箱…', todosProdutos:'所有产品',
     focoTitulo:'🎯 已注册但尚未购买的客户',
@@ -251,13 +270,14 @@ var I18N = {
     como4:'• 八月：下载该月 CSV，上传为 <b>agosto.csv</b> 并刷新页面。',
     como5:'• 只有 <b>paid/pago</b> 状态的订单计入收入。<b>重点：</b>已注册未购买的客户。',
     thNome:'客户', thEmail:'邮箱', thTel:'电话', thCidade:'城市', thSit:'状态', thPedidos:'订单数', thTotal:'总计', thUltima:'最后购买', thMeses:'月份数',
+    thProdNome:'产品', thProdQtd:'销量', thProdReceita:'收入', thProdPct:'收入占比',
     bSemCompra:'已注册未购买', bComprou:'期间内购买', bRecorrente:'复购（2+ 个月）', bNaoRec:'未复购', bFora:'不在客户库',
     exportar:'⬇ 导出 CSV', anterior:'上一页', proxima:'下一页',
     clientesSufixo:'位客户', paginaDe:'第 {p} 页 / 共 {t} 页', nenhumCliente:'未找到客户。',
     mesesCom:'个月', mesSingular:'个月', cliAbrev:'位客户',
     diagTitulo:'🔎 从仓库读取的文件',
     semColunaEmail:'缺少邮箱列', semArquivoBase:'未找到包含 base/cliente/customer 的文件',
-    pedidosWord:'笔订单',
+    pedidosWord:'笔订单', produtosSufixo:'个产品',
     rodape:'数据动态读取自 GitHub 仓库的 CSV · Infinity Piercing'
   }
 };
@@ -266,14 +286,15 @@ function tpl(s,o){ return String(s).replace(/\{(\w+)\}/g,function(m,k){ return o
 function aplicarIdioma(){
   var m={
     subTitulo:t('subTitulo'), btnAtualizar:t('atualizar'),
-    tabOverview:t('tabOverview'), tabClientes:t('tabClientes'),
+    tabOverview:t('tabOverview'), tabClientes:t('tabClientes'), tabProdutos:t('tabProdutos'),
     lblPeriodo:t('lblPeriodo'), lblFiltros:t('lblFiltros'),
     focoTitulo:t('focoTitulo'), btnVerFoco:t('verLista'),
     cardEvolucao:t('cardEvolucao'), cardProdutos:t('cardProdutos'), cardPagos:t('cardPagos'), cardComo:t('cardComo'),
     legPagosLabel:t('pagos'), legExpiradosLabel:t('expirados'),
     thNome:t('thNome'), thEmail:t('thEmail'), thTel:t('thTel'), thCidade:t('thCidade'), thSit:t('thSit'),
     thPedidos:t('thPedidos'), thTotal:t('thTotal'), thUltima:t('thUltima'), thMeses:t('thMeses'),
-    btnCsv:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
+    thProdNome:t('thProdNome'), thProdQtd:t('thProdQtd'), thProdReceita:t('thProdReceita'), thProdPct:t('thProdPct'),
+    btnCsv:t('exportar'), btnCsvProdutos:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
     diagTitulo:t('diagTitulo'), rodape:t('rodape')
   };
   for(var k in m){ var el=document.getElementById(k); if(el) el.textContent=m[k]; }
@@ -481,14 +502,14 @@ function processarMes(colunas,linhas){
 }
 
 /* ============ CARREGAMENTO ============ */
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
   txt.textContent=t('lendoRepo');
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
     if(!arquivos.length){ txt.textContent=t('nenhumCsv'); pill.className='pill err'; return; }
@@ -582,6 +603,26 @@ function situacao(email,comprou){
 }
 function dadoBase(email){ return estado.base?estado.base.map.get(email)||null:null; }
 
+/* ============ PRODUTOS (ranking por nome) ============ */
+function rankingProdutos(){
+  var map=new Map();
+  pedidosDoPeriodo().forEach(function(o){
+    if(!o.pago) return;
+    (o.items||[]).forEach(function(it){
+      var p=map.get(it.produto)||{qtd:0,receita:0};
+      p.qtd+=it.qtd||1;
+      p.receita+=it.preco?(it.preco*(it.qtd||1)):0;
+      map.set(it.produto,p);
+    });
+  });
+  var arr=[];
+  map.forEach(function(v,k){ arr.push({nome:k,qtd:v.qtd,receita:v.receita}); });
+  var totalReceita=arr.reduce(function(s,p){ return s+p.receita; },0)||1;
+  arr.forEach(function(p){ p.pct=totalReceita?Math.round((p.receita/totalReceita)*100):0; });
+  arr.sort(function(a,b){ return b.receita-a.receita; });
+  return arr;
+}
+
 /* ============ RENDER ============ */
 function montarFoco(){
   var el=document.getElementById('foco');
@@ -597,6 +638,7 @@ function verFoco(){
   document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('ativo');});
   document.querySelector('.tab[data-tab="clientes"]').classList.add('ativo');
   document.getElementById('overview').style.display='none';
+  document.getElementById('produtos').style.display='none';
   document.getElementById('clientes').style.display='';
   estado.segmento='SEMCOMPRA'; estado.pagina=1;
   atualizarChipsSegmento(); montarTabela();
@@ -681,17 +723,7 @@ function montarEvolucao(){
   });
 }
 function montarTopProdutos(){
-  var map=new Map();
-  pedidosDoPeriodo().forEach(function(o){
-    if(!o.pago) return;
-    (o.items||[]).forEach(function(it){
-      var p=map.get(it.produto)||{qtd:0,receita:0};
-      p.qtd+=it.qtd||1; p.receita+=it.preco?(it.preco*(it.qtd||1)):0;
-      map.set(it.produto,p);
-    });
-  });
-  var arr=[]; map.forEach(function(v,k){arr.push({nome:k,qtd:v.qtd,receita:v.receita});});
-  arr.sort(function(a,b){return b.receita-a.receita;});
+  var arr=rankingProdutos();
   var top=arr.slice(0,10), max=top.length?Math.max(top[0].receita,1):1;
   var sel=document.getElementById('selectProduto'); var atual=estado.produto;
   sel.innerHTML='<option value="">'+esc(t('todosProdutos'))+'</option>';
@@ -705,6 +737,18 @@ function montarTopProdutos(){
     var d=document.createElement('div'); d.className='barra'; d.title=p.nome;
     d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+'</span>';
     el.appendChild(d);
+  });
+}
+function montarTabelaProdutos(){
+  var arr=rankingProdutos();
+  estado.linhasProdutos=arr;
+  document.getElementById('contadorProdutos').textContent=numero(arr.length)+' '+t('produtosSufixo')+' · '+(estado.periodo==='TODOS'?t('detTodosMeses'):estado.periodo);
+  var tb=document.getElementById('tbodyProdutos'); tb.innerHTML='';
+  if(!arr.length){ tb.innerHTML='<tr><td colspan="4" style="color:var(--cinza);text-align:center;padding:24px">'+t('semProdutos')+'</td></tr>'; return; }
+  arr.forEach(function(p){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(p.nome)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td><td>'+p.pct+'%</td>';
+    tb.appendChild(tr);
   });
 }
 function montarDonut(){
@@ -777,7 +821,7 @@ function renderTudo(){
   document.getElementById('conteudo').style.display=temDados?'':'none';
   aplicarIdioma();
   if(!temDados) return;
-  montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela();
+  montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela(); montarTabelaProdutos();
 }
 function exportarCsv(){
   if(!estado.linhasTabela.length){ alert(t('nenhumCliente')); return; }
@@ -788,6 +832,15 @@ function exportarCsv(){
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clientes_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
+function exportarCsvProdutos(){
+  if(!estado.linhasProdutos.length){ alert(t('semProdutos')); return; }
+  var linhas=estado.linhasProdutos.map(function(p){
+    return ['"'+p.nome.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',','),p.pct+'%'].join(';');
+  });
+  var csv='\uFEFF'+[t('thProdNome'),t('thProdQtd'),t('thProdReceita'),t('thProdPct')].join(';')+'\n'+linhas.join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='produtos_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
 
 /* ============ EVENTOS ============ */
 document.querySelectorAll('.tab').forEach(function(t){
@@ -796,6 +849,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     t.classList.add('ativo');
     document.getElementById('overview').style.display=t.dataset.tab==='overview'?'':'none';
     document.getElementById('clientes').style.display=t.dataset.tab==='clientes'?'':'none';
+    document.getElementById('produtos').style.display=t.dataset.tab==='produtos'?'':'none';
   };
 });
 document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();});
@@ -810,6 +864,7 @@ document.querySelectorAll('th[data-ord]').forEach(function(th){
 document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
 document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
 document.getElementById('btnCsv').onclick=exportarCsv;
+document.getElementById('btnCsvProdutos').onclick=exportarCsvProdutos;
 
 /* ============ INÍCIO ============ */
 aplicarIdioma();
