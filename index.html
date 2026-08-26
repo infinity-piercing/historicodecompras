@@ -222,7 +222,7 @@ var I18N = {
     bSemCompra:'Cadastrado sem compra', bComprou:'Comprou no período', bRecorrente:'Recompra (2+ meses)', bNaoRec:'Não recomprou', bFora:'Fora da base',
     exportar:'⬇ Exportar CSV', anterior:'Anterior', proxima:'Próxima',
     clientesSufixo:'cliente(s)', paginaDe:'Página {p} de {t}', nenhumCliente:'Nenhum cliente encontrado.',
-    mesesCom:'meses', mesSingular:'mês',
+    mesesCom:'meses', mesSingular:'mês', cliAbrev:'cli',
     diagTitulo:'🔎 Arquivos lidos do repositório',
     semColunaEmail:'sem coluna de e-mail', semArquivoBase:'nenhum arquivo com "base"/"cliente"/"customer" no nome',
     pedidosWord:'pedidos',
@@ -254,7 +254,7 @@ var I18N = {
     bSemCompra:'已注册未购买', bComprou:'期间内购买', bRecorrente:'复购（2+ 个月）', bNaoRec:'未复购', bFora:'不在客户库',
     exportar:'⬇ 导出 CSV', anterior:'上一页', proxima:'下一页',
     clientesSufixo:'位客户', paginaDe:'第 {p} 页 / 共 {t} 页', nenhumCliente:'未找到客户。',
-    mesesCom:'个月', mesSingular:'个月',
+    mesesCom:'个月', mesSingular:'个月', cliAbrev:'位客户',
     diagTitulo:'🔎 从仓库读取的文件',
     semColunaEmail:'缺少邮箱列', semArquivoBase:'未找到包含 base/cliente/customer 的文件',
     pedidosWord:'笔订单',
@@ -279,7 +279,7 @@ function aplicarIdioma(){
   for(var k in m){ var el=document.getElementById(k); if(el) el.textContent=m[k]; }
   var b=document.getElementById('busca'); if(b) b.placeholder=t('buscar');
   var sp=document.getElementById('selectProduto');
-  if(sp) sp.options[0].textContent=t('todosProdutos');
+  if(sp&&sp.options[0]) sp.options[0].textContent=t('todosProdutos');
   document.getElementById('btnIdioma').textContent=(LANG==='pt')?'中文':'PT';
   document.getElementById('comoTexto').innerHTML=t('como1')+'<br>'+t('como2')+'<br>'+t('como3')+'<br>'+t('como4')+'<br>'+t('como5');
 }
@@ -475,7 +475,7 @@ function processarMes(colunas,linhas){
   ordens.forEach(function(o){
     var st=String(o.status||'').toLowerCase();
     var pago=st===''?true:ehPago(st);
-    saida.push({email:norm(o.email),nome:o.nome||'',data:o.data,total:pago?o.total:0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
+    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?o.total:0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
   return saida;
 }
@@ -551,7 +551,7 @@ function clientesDoPeriodo(){
   pedidosDoPeriodo().forEach(function(o){
     if(!o.email) return;
     var c=map.get(o.email);
-    if(!c){ c={email:o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map()}; map.set(o.email,c); }
+    if(!c){ c={email:o.emailRaw||o.email,nome:o.nome||'',pedidos:0,total:0,qtd:0,ultima:null,produtos:new Map()}; map.set(o.email,c); }
     if(!o.pago) return;
     c.pedidos++; c.total+=o.total;
     var it=o.items||[];
@@ -656,16 +656,28 @@ function montarEvolucao(){
   });
   var maxR=Math.max.apply(null,dados.map(function(d){return d.receita;}))||1;
   var maxC=Math.max.apply(null,dados.map(function(d){return d.clientes;}))||1;
-  var padL=8,padT=16,padR=8,padB=26; var gw=(W-padL-padR)/dados.length; var bw=Math.min(28,gw*0.32);
-  ctx.font='10px sans-serif';
+  var padL=10,padT=34,padR=10,padB=28;
+  var gw=(W-padL-padR)/dados.length;
+  var bw=Math.min(30,gw*0.34);
   dados.forEach(function(d,i){
-    var x=padL+gw*i+gw/2; var hR=(d.receita/maxR)*(H-padT-padB); var hC=(d.clientes/maxC)*(H-padT-padB);
-    ctx.fillStyle='rgba(29,74,46,.85)'; ctx.fillRect(x-bw-2,H-padB-hR,bw,hR);
-    ctx.fillStyle='rgba(46,125,79,.4)'; ctx.fillRect(x+2,H-padB-hC,bw,hC);
-    ctx.fillStyle='#374151'; ctx.textAlign='center'; ctx.fillText(d.rotulo,x,H-8);
-    ctx.fillStyle='#1d4a2e'; ctx.font='bold 9.5px sans-serif';
-    ctx.fillText(d.receita>=1000?'R$'+Math.round(d.receita/1000)+'k':'R$'+Math.round(d.receita),x-bw/2-2,H-padB-hR-4);
-    ctx.fillText(d.clientes,x+bw/2+2,H-padB-hC-4); ctx.font='10px sans-serif';
+    var x=padL+gw*i+gw/2;
+    var hR=(d.receita/maxR)*(H-padT-padB);
+    var hC=(d.clientes/maxC)*(H-padT-padB);
+    ctx.fillStyle='rgba(29,74,46,.85)';
+    ctx.fillRect(x-bw-2,H-padB-hR,bw,hR);
+    ctx.fillStyle='rgba(46,125,79,.4)';
+    ctx.fillRect(x+2,H-padB-hC,bw,hC);
+    var rx=d.receita>=1000?('R$'+Math.round(d.receita/1000)+'k'):('R$'+Math.round(d.receita));
+    var rotulo=rx+' · '+d.clientes+' '+t('cliAbrev');
+    var ty=H-padB-Math.max(hR,hC)-8;
+    if(ty<padT+4) ty=padT+4;
+    ctx.fillStyle='#1d4a2e';
+    ctx.font='bold 10px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(rotulo,x,ty);
+    ctx.fillStyle='#374151';
+    ctx.font='10px sans-serif';
+    ctx.fillText(d.rotulo,x,H-10);
   });
 }
 function montarTopProdutos(){
@@ -717,7 +729,8 @@ function montarTabela(){
     var nome=(c&&c.nome)||(db&&db.nome)||em;
     if(!nome||nome===em) nome=em;
     if(chaveProduto&&c){ if(!c.produtos.has(chaveProduto)) return; }
-    linhas.push({email:em,nome:nome,tel:(db&&db.telefone)||'',cidade:(db&&db.cidade)||'',sit:situacao(em,!!c),pedidos:c?c.pedidos:0,total:c?c.total:0,qtd:c?c.qtd:0,ultima:c?c.ultima:null,meses:mesesComCompra(em),comprouUltimo:ultimo?comprouNoMes(em,ultimo):false});
+    var emailExib=(c&&c.email)||(db&&db.email)||em;
+    linhas.push({email:emailExib,nome:nome,tel:(db&&db.telefone)||'',cidade:(db&&db.cidade)||'',sit:situacao(em,!!c),pedidos:c?c.pedidos:0,total:c?c.total:0,qtd:c?c.qtd:0,ultima:c?c.ultima:null,meses:mesesComCompra(em),comprouUltimo:ultimo?comprouNoMes(em,ultimo):false});
   });
   var seg=estado.segmento;
   if(seg!=='TODOS'){
