@@ -19,6 +19,8 @@
   .pill.err .dot{background:#f87171}
   .btn{border:1px solid var(--borda);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
   .btn:hover{border-color:var(--verde2);color:var(--verde)}
+  .btn-lang{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5)}
+  .btn-lang:hover{background:rgba(255,255,255,.32);color:#fff;border-color:#fff}
   main{max-width:1280px;margin:0 auto;padding:18px 16px}
   .avisos{margin-bottom:14px}
   .aviso{border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:13.5px;line-height:1.5;display:none}
@@ -101,34 +103,35 @@
   <img src="logo.png" alt="Infinity Piercing" onerror="this.style.display='none'">
   <div>
     <div class="titulo">Infinity Piercing</div>
-    <div class="subtitulo">Histórico de Compras por Cliente</div>
+    <div class="subtitulo" id="subTitulo">Histórico de Compras por Cliente</div>
   </div>
   <div class="spacer"></div>
   <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
-  <button class="btn" onclick="carregarDados()">↻ Atualizar</button>
+  <button class="btn btn-lang" id="btnIdioma" onclick="mudarIdioma()">中文</button>
+  <button class="btn" onclick="carregarDados()">↻ <span id="btnAtualizar">Atualizar</span></button>
 </header>
 
 <main>
   <div class="avisos" id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Arquivos lidos do repositório</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3 id="diagTitulo">🔎 Arquivos lidos do repositório</h3><div id="diagLinhas"></div></div>
 
   <div id="conteudo" style="display:none">
     <div class="foco" id="foco" style="display:none">
       <div class="num" id="focoNum">0</div>
-      <div class="txt"><b>🎯 Clientes cadastrados que ainda não compraram</b><span id="focoTxt">—</span></div>
-      <button class="btn-ver" onclick="verFoco()">Ver lista completa →</button>
+      <div class="txt"><b id="focoTitulo">🎯 Clientes cadastrados que ainda não compraram</b><span id="focoTxt">—</span></div>
+      <button class="btn-ver" id="btnVerFoco" onclick="verFoco()">Ver lista completa →</button>
     </div>
 
     <nav class="tabs">
-      <button class="tab ativo" data-tab="overview">📊 Visão geral</button>
-      <button class="tab" data-tab="clientes">👥 Clientes</button>
+      <button class="tab ativo" data-tab="overview" id="tabOverview">📊 Visão geral</button>
+      <button class="tab" data-tab="clientes" id="tabClientes">👥 Clientes</button>
     </nav>
 
     <section id="overview">
       <div class="filtros">
-        <div class="linha"><label>Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
+        <div class="linha"><label id="lblPeriodo">Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
         <div class="linha">
-          <label>Filtros de navegação</label>
+          <label id="lblFiltros">Filtros de navegação</label>
           <div class="chips" id="chipsSegmento"></div>
           <div class="busca">
             <input id="busca" type="text" placeholder="🔍 Buscar cliente ou e-mail…">
@@ -138,25 +141,19 @@
       </div>
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
-        <div class="card"><h3>📈 Evolução mês a mês</h3><canvas id="evolucao"></canvas></div>
-        <div class="card"><h3>🏆 Produtos mais vendidos</h3><div class="barras" id="topProdutos"></div></div>
-        <div class="card"><h3>✅ Pedidos pagos × expirados</h3>
+        <div class="card"><h3 id="cardEvolucao">📈 Evolução mês a mês</h3><canvas id="evolucao"></canvas></div>
+        <div class="card"><h3 id="cardProdutos">🏆 Produtos mais vendidos</h3><div class="barras" id="topProdutos"></div></div>
+        <div class="card"><h3 id="cardPagos">✅ Pedidos pagos × expirados</h3>
           <div class="donut-wrap">
             <div class="donut" id="donut"><div class="centro" id="donutCentro">—</div></div>
             <div class="legenda">
-              <div class="item"><span class="cor" style="background:var(--verde2)"></span> Pagos: <b id="legPagos">—</b></div>
-              <div class="item"><span class="cor" style="background:#f87171"></span> Expirados: <b id="legExpirados">—</b></div>
+              <div class="item"><span class="cor" style="background:var(--verde2)"></span> <span id="legPagosLabel">Pagos</span>: <b id="legPagos">—</b></div>
+              <div class="item"><span class="cor" style="background:#f87171"></span> <span id="legExpiradosLabel">Expirados</span>: <b id="legExpirados">—</b></div>
             </div>
           </div>
         </div>
-        <div class="card"><h3>🧭 Como atualizar</h3>
-          <div style="font-size:13px;color:#374151;line-height:1.7">
-            • O dashboard <b>lê sozinho todos os CSVs</b> deste repositório.<br>
-            • A base é o arquivo que contém "base"/"cliente"/"customer" no nome.<br>
-            • Todo outro CSV vira um mês, com o rótulo detectado pela coluna <b>Paid at</b>.<br>
-            • Para agosto: baixe o CSV da planilha, suba como <b>agosto.csv</b> e atualize a página.<br>
-            • Só pedidos <b>paid/pago</b> entram na receita. <b>Foco:</b> cadastrados sem compra.
-          </div>
+        <div class="card"><h3 id="cardComo">🧭 Como atualizar</h3>
+          <div id="comoTexto" style="font-size:13px;color:#374151;line-height:1.7"></div>
         </div>
       </div>
     </section>
@@ -170,33 +167,123 @@
         <div class="tabela-scroll">
           <table>
             <thead><tr>
-              <th data-ord="nome">Cliente</th><th data-ord="email">E-mail</th><th data-ord="tel">Telefone</th><th data-ord="cidade">Cidade</th>
-              <th data-ord="sit">Situação</th><th data-ord="pedidos">Pedidos</th><th data-ord="total">Total</th>
-              <th data-ord="ultima">Última compra</th><th data-ord="meses">Meses</th>
+              <th data-ord="nome" id="thNome">Cliente</th><th data-ord="email" id="thEmail">E-mail</th><th data-ord="tel" id="thTel">Telefone</th><th data-ord="cidade" id="thCidade">Cidade</th>
+              <th data-ord="sit" id="thSit">Situação</th><th data-ord="pedidos" id="thPedidos">Pedidos</th><th data-ord="total" id="thTotal">Total</th>
+              <th data-ord="ultima" id="thUltima">Última compra</th><th data-ord="meses" id="thMeses">Meses</th>
             </tr></thead>
             <tbody id="tbodyClientes"></tbody>
           </table>
         </div>
         <div class="paginacao">
-          <button class="btn" id="prevPag">← Anterior</button>
+          <button class="btn" id="prevPag">← <span id="btnAnterior">Anterior</span></button>
           <span id="infoPag">—</span>
-          <button class="btn" id="nextPag">Próxima →</button>
+          <button class="btn" id="nextPag"><span id="btnProxima">Próxima</span> →</button>
         </div>
       </div>
     </section>
   </div>
 </main>
 
-<footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
+<footer id="rodape">Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
 
 <script>
 /* ============================================================
    CONFIGURAÇÃO — nome do repositório no GitHub
    (os arquivos são descobertos automaticamente)
    ============================================================ */
-var CONFIG = {
-  repo: 'infinity-piercing/historicodecompras'
+var CONFIG = { repo: 'infinity-piercing/historicodecompras' };
+
+/* ============ IDIOMA (PT ⇄ 中文) ============ */
+var LANG = 'pt';
+var I18N = {
+  pt: {
+    subTitulo:'Histórico de Compras por Cliente', atualizar:'Atualizar',
+    carregando:'Carregando…', lendoRepo:'Lendo repositório…', nenhumCsv:'Nenhum CSV encontrado', semDados:'Sem dados legíveis', soBase:'Somente base', erroRepo:'Erro ao ler repositório',
+    tabOverview:'📊 Visão geral', tabClientes:'👥 Clientes',
+    lblPeriodo:'Histórico — mês a mês (detectado automaticamente)', lblFiltros:'Filtros de navegação',
+    todosMeses:'📅 Todos os meses', buscar:'🔍 Buscar cliente ou e-mail…', todosProdutos:'Todos os produtos',
+    focoTitulo:'🎯 Clientes cadastrados que ainda não compraram',
+    focoFrase:'{n} de {t} cadastrados ({p}% da base) não fizeram nenhuma compra nos meses carregados.',
+    verLista:'Ver lista completa →',
+    kpiSemCompra:'Cadastrados sem compra', kpiSemCompraDet:'de {t} na base',
+    kpiReceita:'Receita (pagos)', kpiTicket:'Ticket médio', kpiCompraram:'Clientes que compraram',
+    kpiRecompra:'Recompra (2+ meses)', kpiNaoRec:'Não recomprou (últ. mês)', kpiExp:'Pedidos expirados',
+    detPedidos:'pedidos', detPorPedido:'por pedido', detTodosMeses:'em todos os meses', detNoMes:'no mês',
+    detRecompra:'clientes em 2+ meses', detNaoCompraram:'não compraram em', detNaoConcluidos:'não concluídos',
+    cardEvolucao:'📈 Evolução mês a mês', cardProdutos:'🏆 Produtos mais vendidos', cardPagos:'✅ Pedidos pagos × expirados',
+    pagos:'Pagos', expirados:'Expirados', nenhumMes:'Nenhum mês carregado', semProdutos:'Sem produtos no período.',
+    cardComo:'🧭 Como atualizar',
+    como1:'• O dashboard <b>lê sozinho todos os CSVs</b> deste repositório.',
+    como2:'• A base é o arquivo que contém "base"/"cliente"/"customer" no nome.',
+    como3:'• Todo outro CSV vira um mês, com o rótulo detectado pela coluna <b>Paid at</b>.',
+    como4:'• Para agosto: baixe o CSV da planilha, suba como <b>agosto.csv</b> e atualize a página.',
+    como5:'• Só pedidos <b>paid/pago</b> entram na receita. <b>Foco:</b> cadastrados sem compra.',
+    thNome:'Cliente', thEmail:'E-mail', thTel:'Telefone', thCidade:'Cidade', thSit:'Situação', thPedidos:'Pedidos', thTotal:'Total', thUltima:'Última compra', thMeses:'Meses',
+    bSemCompra:'Cadastrado sem compra', bComprou:'Comprou no período', bRecorrente:'Recompra (2+ meses)', bNaoRec:'Não recomprou', bFora:'Fora da base',
+    exportar:'⬇ Exportar CSV', anterior:'Anterior', proxima:'Próxima',
+    clientesSufixo:'cliente(s)', paginaDe:'Página {p} de {t}', nenhumCliente:'Nenhum cliente encontrado.',
+    mesesCom:'meses', mesSingular:'mês',
+    diagTitulo:'🔎 Arquivos lidos do repositório',
+    semColunaEmail:'sem coluna de e-mail', semArquivoBase:'nenhum arquivo com "base"/"cliente"/"customer" no nome',
+    pedidosWord:'pedidos',
+    rodape:'Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing'
+  },
+  zh: {
+    subTitulo:'客户购买历史记录', atualizar:'刷新',
+    carregando:'加载中…', lendoRepo:'正在读取仓库…', nenhumCsv:'未找到 CSV 文件', semDados:'没有可读数据', soBase:'仅客户库', erroRepo:'读取仓库时出错',
+    tabOverview:'📊 总览', tabClientes:'👥 客户',
+    lblPeriodo:'历史记录 — 逐月（自动检测）', lblFiltros:'导航筛选',
+    todosMeses:'📅 所有月份', buscar:'🔍 搜索客户或邮箱…', todosProdutos:'所有产品',
+    focoTitulo:'🎯 已注册但尚未购买的客户',
+    focoFrase:'在已加载的月份中，{t} 位注册客户里有 {n} 位（占客户库 {p}%）没有进行任何购买。',
+    verLista:'查看完整列表 →',
+    kpiSemCompra:'已注册未购买', kpiSemCompraDet:'客户库共 {t} 位',
+    kpiReceita:'收入（已付款）', kpiTicket:'平均客单价', kpiCompraram:'购买过的客户',
+    kpiRecompra:'复购（2+ 个月）', kpiNaoRec:'未复购（最后一个月）', kpiExp:'过期订单',
+    detPedidos:'笔订单', detPorPedido:'每笔订单', detTodosMeses:'所有月份', detNoMes:'所选月份',
+    detRecompra:'购买 2+ 个月的客户', detNaoCompraram:'未在以下月份购买', detNaoConcluidos:'未完成',
+    cardEvolucao:'📈 逐月趋势', cardProdutos:'🏆 最畅销产品', cardPagos:'✅ 已付款 × 已过期订单',
+    pagos:'已付款', expirados:'已过期', nenhumMes:'未加载任何月份', semProdutos:'该期间没有产品。',
+    cardComo:'🧭 如何更新',
+    como1:'• 仪表盘会自动读取本仓库中的<b>所有 CSV</b>。',
+    como2:'• 客户库 = 文件名中包含 "base"/"cliente"/"customer" 的文件。',
+    como3:'• 其他 CSV 均按月处理，标签通过 <b>Paid at</b> 列自动检测。',
+    como4:'• 八月：下载该月 CSV，上传为 <b>agosto.csv</b> 并刷新页面。',
+    como5:'• 只有 <b>paid/pago</b> 状态的订单计入收入。<b>重点：</b>已注册未购买的客户。',
+    thNome:'客户', thEmail:'邮箱', thTel:'电话', thCidade:'城市', thSit:'状态', thPedidos:'订单数', thTotal:'总计', thUltima:'最后购买', thMeses:'月份数',
+    bSemCompra:'已注册未购买', bComprou:'期间内购买', bRecorrente:'复购（2+ 个月）', bNaoRec:'未复购', bFora:'不在客户库',
+    exportar:'⬇ 导出 CSV', anterior:'上一页', proxima:'下一页',
+    clientesSufixo:'位客户', paginaDe:'第 {p} 页 / 共 {t} 页', nenhumCliente:'未找到客户。',
+    mesesCom:'个月', mesSingular:'个月',
+    diagTitulo:'🔎 从仓库读取的文件',
+    semColunaEmail:'缺少邮箱列', semArquivoBase:'未找到包含 base/cliente/customer 的文件',
+    pedidosWord:'笔订单',
+    rodape:'数据动态读取自 GitHub 仓库的 CSV · Infinity Piercing'
+  }
 };
+function t(k){ return (I18N[LANG]&&I18N[LANG][k])||I18N.pt[k]||k; }
+function tpl(s,o){ return String(s).replace(/\{(\w+)\}/g,function(m,k){ return o[k]!=null?o[k]:m; }); }
+function aplicarIdioma(){
+  var m={
+    subTitulo:t('subTitulo'), btnAtualizar:t('atualizar'),
+    tabOverview:t('tabOverview'), tabClientes:t('tabClientes'),
+    lblPeriodo:t('lblPeriodo'), lblFiltros:t('lblFiltros'),
+    focoTitulo:t('focoTitulo'), btnVerFoco:t('verLista'),
+    cardEvolucao:t('cardEvolucao'), cardProdutos:t('cardProdutos'), cardPagos:t('cardPagos'), cardComo:t('cardComo'),
+    legPagosLabel:t('pagos'), legExpiradosLabel:t('expirados'),
+    thNome:t('thNome'), thEmail:t('thEmail'), thTel:t('thTel'), thCidade:t('thCidade'), thSit:t('thSit'),
+    thPedidos:t('thPedidos'), thTotal:t('thTotal'), thUltima:t('thUltima'), thMeses:t('thMeses'),
+    btnCsv:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
+    diagTitulo:t('diagTitulo'), rodape:t('rodape')
+  };
+  for(var k in m){ var el=document.getElementById(k); if(el) el.textContent=m[k]; }
+  var b=document.getElementById('busca'); if(b) b.placeholder=t('buscar');
+  var sp=document.getElementById('selectProduto');
+  if(sp) sp.options[0].textContent=t('todosProdutos');
+  document.getElementById('btnIdioma').textContent=(LANG==='pt')?'中文':'PT';
+  document.getElementById('comoTexto').innerHTML=t('como1')+'<br>'+t('como2')+'<br>'+t('como3')+'<br>'+t('como4')+'<br>'+t('como5');
+}
+function mudarIdioma(){ LANG=(LANG==='pt')?'zh':'pt'; aplicarIdioma(); if(document.getElementById('conteudo').style.display!=='none') renderTudo(); }
 
 /* ============ UTILITÁRIOS ============ */
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
@@ -275,11 +362,7 @@ function acharColuna(cab,chave){
   return -1;
 }
 
-/* ============ LEITURA DINÂMICA DO REPOSITÓRIO ============
-   1) Lista os arquivos via GitHub API
-   2) Filtra .csv
-   3) classifica: base (nome contém base/cliente/customer) ou mês
-   4) Lê cada um via raw.githubusercontent.com e detecta o mês pela Paid at */
+/* ============ LEITURA DINÂMICA DO REPOSITÓRIO ============ */
 var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 function listarArquivosRepo(repo){
@@ -290,12 +373,7 @@ function listarArquivosRepo(repo){
     return (lista||[]).filter(function(f){ return /\.csv$/i.test(f.name||''); });
   });
 }
-function baixarCSV(url){
-  return fetch(url,{cache:'no-store'}).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.text();
-  });
-}
+function baixarCSV(url){ return fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }
 function parseCSV(texto){
   var primeira=texto.split('\n')[0]||'';
   var v1=(primeira.match(/,/g)||[]).length;
@@ -407,13 +485,13 @@ var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',pro
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  txt.textContent='Lendo repositório…';
+  txt.textContent=t('lendoRepo');
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
   estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
-    if(!arquivos.length){ txt.textContent='Nenhum CSV encontrado'; pill.className='pill err'; return; }
+    if(!arquivos.length){ txt.textContent=t('nenhumCsv'); pill.className='pill err'; return; }
     var baseArq=arquivos.filter(function(f){ return ehArquivoBase(f.name); })[0];
     var mesArqs=arquivos.filter(function(f){ return !ehArquivoBase(f.name); });
 
@@ -423,10 +501,10 @@ function carregarDados(){
         var linhas=parseCSV(txtCsv);
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
         estado.base=processarBase(d);
-        estado.diag.push({nome:baseArq.name,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' clientes)':'sem coluna de e-mail'});
+        estado.diag.push({nome:baseArq.name,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' '+t('clientesSufixo')+')':t('semColunaEmail')});
       }).catch(function(e){ estado.diag.push({nome:baseArq.name,ok:false,det:e.message}); }));
     } else {
-      estado.diag.push({nome:'Base de clientes',ok:false,det:'nenhum arquivo com "base"/"cliente"/"customer" no nome'});
+      estado.diag.push({nome:t('kpiSemCompra')+' (base)',ok:false,det:t('semArquivoBase')});
     }
 
     mesArqs.forEach(function(f){
@@ -435,7 +513,7 @@ function carregarDados(){
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
         var rot=detectarRotulo(d.colunas,d.linhas,f.name);
         estado.meses.push({rotulo:rot,ok:true,pedidos:processarMes(d.colunas,d.linhas)});
-        estado.diag.push({nome:f.name+' → '+rot,ok:true,det:'('+estado.meses[estado.meses.length-1].pedidos.length+' pedidos)'});
+        estado.diag.push({nome:f.name+' → '+rot,ok:true,det:'('+estado.meses[estado.meses.length-1].pedidos.length+' '+t('pedidosWord')+')'});
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
 
@@ -450,21 +528,21 @@ function carregarDados(){
 
       estado.meses.sort(function(a,b){ var ma=a.rotulo.match(/(\d+)/),mb=b.rotulo.match(/(\d+)/); return (ma&&mb)?ma[1]-mb[1]:0; });
       var ok=estado.meses.filter(function(m){return m.ok;}).length;
-      if(!estado.base&&ok===0){ txt.textContent='Sem dados legíveis'; pill.className='pill err'; return; }
+      if(!estado.base&&ok===0){ txt.textContent=t('semDados'); pill.className='pill err'; return; }
       renderTudo();
       pill.className='pill '+(ok>0?'ok':'err');
-      txt.textContent=(ok>0?('✓ '+ok+' mês(es) + base '+(estado.base?'✓':'—')):'Somente base');
+      txt.textContent=(ok>0?('✓ '+ok+' '+t('mesesCom')+' + base '+(estado.base?'✓':'—')):t('soBase'));
     });
   }).catch(function(e){
-    txt.textContent='Erro ao ler repositório';
+    txt.textContent=t('erroRepo');
     pill.className='pill err';
-    avisar('erro','Não consegui listar os arquivos do GitHub',esc(e.message)+'<br>Confira se o repositório é público e o nome em CONFIG.repo está correto.');
+    avisar('erro','GitHub',esc(e.message));
   });
 }
 
 /* ============ ANÁLISE ============ */
 function pedidosDoPeriodo(){
-  if(estado.periodo==='TODOS'){ var t=[]; estado.meses.forEach(function(m){ if(m.ok) t=t.concat(m.pedidos); }); return t; }
+  if(estado.periodo==='TODOS'){ var t2=[]; estado.meses.forEach(function(m){ if(m.ok) t2=t2.concat(m.pedidos); }); return t2; }
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
   return m&&m.ok?m.pedidos:[];
 }
@@ -512,7 +590,7 @@ function montarFoco(){
   estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem.push({email:v.email,nome:v.nome||v.email,telefone:v.telefone||'',cidade:v.cidade||''}); });
   var pct=estado.base.map.size?Math.round((sem.length/estado.base.map.size)*100):0;
   document.getElementById('focoNum').textContent=numero(sem.length);
-  document.getElementById('focoTxt').textContent=sem.length+' de '+numero(estado.base.map.size)+' cadastrados ('+pct+'% da base) não fizeram nenhuma compra nos meses carregados.';
+  document.getElementById('focoTxt').textContent=tpl(t('focoFrase'),{n:numero(sem.length),t:numero(estado.base.map.size),p:pct});
   el.style.display='block';
 }
 function verFoco(){
@@ -529,15 +607,15 @@ function atualizarChipsSegmento(){
 }
 function montarChips(){
   var p=document.getElementById('chipsPeriodo'); p.innerHTML='';
-  var t=document.createElement('button'); t.className='chip'+(estado.periodo==='TODOS'?' ativo':''); t.textContent='📅 Todos os meses';
-  t.onclick=function(){estado.periodo='TODOS';estado.pagina=1;renderTudo();}; p.appendChild(t);
+  var t2=document.createElement('button'); t2.className='chip'+(estado.periodo==='TODOS'?' ativo':''); t2.textContent=t('todosMeses');
+  t2.onclick=function(){estado.periodo='TODOS';estado.pagina=1;renderTudo();}; p.appendChild(t2);
   estado.meses.forEach(function(m){
     if(!m.ok) return;
     var b=document.createElement('button'); b.className='chip'+(estado.periodo===m.rotulo?' ativo':''); b.textContent='✅ '+m.rotulo;
     b.onclick=function(){estado.periodo=m.rotulo;estado.pagina=1;renderTudo();}; p.appendChild(b);
   });
   var s=document.getElementById('chipsSegmento'); s.innerHTML='';
-  var segs=[['SEMCOMPRA','🎯 Cadastrados sem compra'],['TODOS','Todos'],['COMPROU','Comprou no período'],['RECORRENTE','Recompra (2+ meses)'],['NAOREC','Não recomprou (últ. mês)'],['HISTORICO','Com histórico (não no período)'],['FORA','Fora da base']];
+  var segs=[['SEMCOMPRA',t('kpiSemCompra')],['TODOS',t('tabOverview').replace('📊 ','')],['COMPROU',t('bComprou')],['RECORRENTE',t('kpiRecompra')],['NAOREC',t('kpiNaoRec')],['HISTORICO',t('bNaoRec')],['FORA',t('bFora')]];
   segs.forEach(function(it){
     var b=document.createElement('button'); b.className='chip'+(estado.segmento===it[0]?' ativo':''); b.dataset.seg=it[0]; b.textContent=it[1];
     b.onclick=function(){estado.segmento=it[0];estado.pagina=1;renderTudo();}; s.appendChild(b);
@@ -556,13 +634,13 @@ function montarKpis(){
   });
   if(estado.base){ estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; }); }
   var cards=[
-    {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:true},
-    {rotulo:'Receita (pagos)',valor:dinheiro(receita),ico:'💰',detalhe:nPagos+' pedidos'},
-    {rotulo:'Ticket médio',valor:nPagos?dinheiro(receita/nPagos):'R$ 0,00',ico:'🎯',detalhe:'por pedido'},
-    {rotulo:'Clientes que compraram',valor:numero(compradores.size),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês'},
-    {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses'},
-    {rotulo:'Não recomprou (últ. mês)',valor:numero(naorec),ico:'📚',detalhe:ultimo?'não compraram em '+ultimo:'—'},
-    {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos'}
+    {rotulo:t('kpiSemCompra'),valor:numero(sem),ico:'🎯',detalhe:totalBase?tpl(t('kpiSemCompraDet'),{t:numero(totalBase)}):'-',destaque:true},
+    {rotulo:t('kpiReceita'),valor:dinheiro(receita),ico:'💰',detalhe:nPagos+' '+t('detPedidos')},
+    {rotulo:t('kpiTicket'),valor:nPagos?dinheiro(receita/nPagos):'R$ 0,00',ico:'🎯',detalhe:t('detPorPedido')},
+    {rotulo:t('kpiCompraram'),valor:numero(compradores.size),ico:'🛍️',detalhe:estado.periodo==='TODOS'?t('detTodosMeses'):t('detNoMes')},
+    {rotulo:t('kpiRecompra'),valor:numero(recorrentes),ico:'🔁',detalhe:t('detRecompra')},
+    {rotulo:t('kpiNaoRec'),valor:numero(naorec),ico:'📚',detalhe:ultimo?t('detNaoCompraram')+' '+ultimo:'—'},
+    {rotulo:t('kpiExp'),valor:numero(nExp),ico:'🚫',detalhe:t('detNaoConcluidos')}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
@@ -570,7 +648,7 @@ function montarEvolucao(){
   var c=document.getElementById('evolucao'); if(!c) return;
   var ctx=c.getContext('2d'); var W=c.width,H=c.height; ctx.clearRect(0,0,W,H);
   var meses=estado.meses.filter(function(m){return m.ok;});
-  if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
+  if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText(t('nenhumMes'),W/2,H/2); return; }
   var dados=meses.map(function(m){
     var receita=0,clientes=new Set();
     m.pedidos.forEach(function(o){ if(!o.pago)return; receita+=o.total; if(o.email)clientes.add(o.email); });
@@ -604,16 +682,16 @@ function montarTopProdutos(){
   arr.sort(function(a,b){return b.receita-a.receita;});
   var top=arr.slice(0,10), max=top.length?Math.max(top[0].receita,1):1;
   var sel=document.getElementById('selectProduto'); var atual=estado.produto;
-  sel.innerHTML='<option value="">Todos os produtos</option>';
+  sel.innerHTML='<option value="">'+esc(t('todosProdutos'))+'</option>';
   arr.slice(0,30).forEach(function(p){ var o=document.createElement('option'); o.value=p.nome; o.textContent=p.nome+' ('+numero(p.qtd)+')'; sel.appendChild(o); });
   if(atual) sel.value=atual;
   var el=document.getElementById('topProdutos');
-  if(!top.length){ el.innerHTML='<div style="color:var(--cinza);text-align:center;padding:20px">Sem produtos no período.</div>'; return; }
+  if(!top.length){ el.innerHTML='<div style="color:var(--cinza);text-align:center;padding:20px">'+t('semProdutos')+'</div>'; return; }
   el.innerHTML='';
   top.forEach(function(p){
     var larg=Math.max(2,Math.round((p.receita/max)*100));
     var d=document.createElement('div'); d.className='barra'; d.title=p.nome;
-    d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+' un</span>';
+    d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+'</span>';
     el.appendChild(d);
   });
 }
@@ -658,41 +736,42 @@ function montarTabela(){
   var chave=estado.ordem.chave,dir=estado.ordem.dir;
   linhas.sort(function(a,z){ var va=a[chave],vz=z[chave]; if(va==null)va=''; if(vz==null)vz=''; if(typeof va==='number'&&typeof vz==='number')return (va-vz)*dir; return String(va).localeCompare(String(vz),'pt-BR')*dir; });
   estado.linhasTabela=linhas;
-  document.getElementById('contadorTabela').textContent=numero(linhas.length)+' cliente(s) · '+(estado.periodo==='TODOS'?'todos os meses':estado.periodo);
+  document.getElementById('contadorTabela').textContent=numero(linhas.length)+' '+t('clientesSufixo')+' · '+(estado.periodo==='TODOS'?t('detTodosMeses'):estado.periodo);
   var totalPag=Math.max(1,Math.ceil(linhas.length/estado.porPagina));
   if(estado.pagina>totalPag)estado.pagina=totalPag;
   var ini=(estado.pagina-1)*estado.porPagina, fatia=linhas.slice(ini,ini+estado.porPagina);
   var tb=document.getElementById('tbodyClientes'); tb.innerHTML='';
-  if(!fatia.length){ tb.innerHTML='<tr><td colspan="9" style="color:var(--cinza);text-align:center;padding:24px">Nenhum cliente encontrado.</td></tr>'; }
+  if(!fatia.length){ tb.innerHTML='<tr><td colspan="9" style="color:var(--cinza);text-align:center;padding:24px">'+t('nenhumCliente')+'</td></tr>'; }
   else{
     fatia.forEach(function(r){
       var badge='',cls='';
-      if(r.sit==='semcompra'){badge='Cadastrado sem compra';cls='b-semcompra';}
-      else if(r.sit==='comprou'){badge='Comprou no período';cls='b-comprou';}
-      else if(r.sit==='recorrente'){badge='Recompra (2+ meses)';cls='b-recorrente';}
-      else if(r.sit==='historico'){badge='Não recomprou';cls='b-historico';}
-      else{badge='Fora da base';cls='b-fora';}
+      if(r.sit==='semcompra'){badge=t('bSemCompra');cls='b-semcompra';}
+      else if(r.sit==='comprou'){badge=t('bComprou');cls='b-comprou';}
+      else if(r.sit==='recorrente'){badge=t('bRecorrente');cls='b-recorrente';}
+      else if(r.sit==='historico'){badge=t('bNaoRec');cls='b-historico';}
+      else{badge=t('bFora');cls='b-fora';}
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.tel)+'</td><td>'+esc(r.cidade)+'</td><td><span class="badge '+cls+'">'+badge+'</span></td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?'<span class="badge b-recorrente">'+r.meses+' meses</span>':r.meses+(r.meses===1?' mês':''))+'</td>';
+      tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.tel)+'</td><td>'+esc(r.cidade)+'</td><td><span class="badge '+cls+'">'+badge+'</span></td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?'<span class="badge b-recorrente">'+r.meses+' '+t('mesesCom')+'</span>':r.meses+' '+t('mesSingular'))+'</td>';
       tb.appendChild(tr);
     });
   }
-  document.getElementById('infoPag').textContent='Página '+estado.pagina+' de '+totalPag;
+  document.getElementById('infoPag').textContent=tpl(t('paginaDe'),{p:estado.pagina,t:totalPag});
   document.getElementById('prevPag').disabled=estado.pagina<=1;
   document.getElementById('nextPag').disabled=estado.pagina>=totalPag;
 }
 function renderTudo(){
   var temDados=estado.base!==null||estado.meses.some(function(m){return m.ok;});
   document.getElementById('conteudo').style.display=temDados?'':'none';
+  aplicarIdioma();
   if(!temDados) return;
   montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela();
 }
 function exportarCsv(){
-  if(!estado.linhasTabela.length){ alert('Nenhuma linha para exportar.'); return; }
+  if(!estado.linhasTabela.length){ alert(t('nenhumCliente')); return; }
   var linhas=estado.linhasTabela.map(function(r){
     return ['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"','"'+r.tel.replace(/"/g,'""')+'"','"'+r.cidade.replace(/"/g,'""')+'"',r.sit,r.pedidos,String(r.total).replace('.',','),r.ultima?fmtData(r.ultima):'',r.meses].join(';');
   });
-  var csv='\uFEFFCliente;E-mail;Telefone;Cidade;Situacao;Pedidos;Total;Ultima compra;Meses\n'+linhas.join('\n');
+  var csv='\uFEFF'+[t('thNome'),t('thEmail'),t('thTel'),t('thCidade'),t('thSit'),t('thPedidos'),t('thTotal'),t('thUltima'),t('thMeses')].join(';')+'\n'+linhas.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clientes_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -719,6 +798,8 @@ document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado
 document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
 document.getElementById('btnCsv').onclick=exportarCsv;
 
+/* ============ INÍCIO ============ */
+aplicarIdioma();
 carregarDados();
 </script>
 </body>
