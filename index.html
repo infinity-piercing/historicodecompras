@@ -67,7 +67,6 @@
   .card h3{font-size:14.5px;color:#111827;margin-bottom:12px}
   .card h3 .hint{font-size:11px;color:var(--cinza);font-weight:400}
   canvas{width:100%;height:235px}
-  /* Barras de produtos: nome completo com quebra de linha (sem cortar) */
   .barras .barra{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
   .barras .nome{width:48%;text-align:left;color:#374151;font-size:11.5px;line-height:1.35;white-space:normal;word-break:break-word;overflow:visible}
   .barras .pista{flex:1;background:var(--creme);border-radius:6px;height:18px;overflow:hidden}
@@ -87,8 +86,8 @@
   table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
   th{background:var(--verde3);color:var(--verde);text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap;user-select:none}
   td{padding:9px 12px;border-top:1px solid var(--borda);white-space:nowrap;vertical-align:top}
-  /* Coluna do nome do produto: quebra de linha, nome completo visível */
   td.prod-nome{white-space:normal;word-break:break-word;min-width:280px;max-width:460px;line-height:1.35}
+  td.prod-sku{font-weight:700;color:var(--verde2);font-size:12px;min-width:110px}
   tr:hover td{background:#fafaf7}
   .badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
   .b-semcompra{background:var(--amberbg);color:var(--amber)}
@@ -126,6 +125,19 @@
       <button class="btn-ver" id="btnVerFoco" onclick="verFoco()">Ver lista completa →</button>
     </div>
 
+    <!-- Barra de filtros compartilhada: vale para as 3 abas -->
+    <div class="filtros">
+      <div class="linha"><label id="lblPeriodo">Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
+      <div class="linha">
+        <label id="lblFiltros">Filtros de navegação</label>
+        <div class="chips" id="chipsSegmento"></div>
+        <div class="busca">
+          <input id="busca" type="text" placeholder="🔍 Buscar cliente, e-mail, produto ou SKU…">
+          <select id="selectProduto"><option value="">Todos os produtos</option></select>
+        </div>
+      </div>
+    </div>
+
     <nav class="tabs">
       <button class="tab ativo" data-tab="overview" id="tabOverview">📊 Visão geral</button>
       <button class="tab" data-tab="clientes" id="tabClientes">👥 Clientes</button>
@@ -133,17 +145,6 @@
     </nav>
 
     <section id="overview">
-      <div class="filtros">
-        <div class="linha"><label id="lblPeriodo">Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
-        <div class="linha">
-          <label id="lblFiltros">Filtros de navegação</label>
-          <div class="chips" id="chipsSegmento"></div>
-          <div class="busca">
-            <input id="busca" type="text" placeholder="🔍 Buscar cliente ou e-mail…">
-            <select id="selectProduto"><option value="">Todos os produtos</option></select>
-          </div>
-        </div>
-      </div>
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
         <div class="card"><h3 id="cardEvolucao">📈 Evolução mês a mês</h3><canvas id="evolucao"></canvas></div>
@@ -172,7 +173,7 @@
         <div class="tabela-scroll">
           <table>
             <thead><tr>
-              <th data-ord="nome" id="thProdNome">Produto (Lineitem name)</th><th data-ord="qtd" id="thProdQtd">Qtd vendida</th>
+              <th data-ord="sku" id="thProdSku">SKU</th><th data-ord="nome" id="thProdNome">Produto (Lineitem name)</th><th data-ord="qtd" id="thProdQtd">Qtd vendida</th>
               <th data-ord="receita" id="thProdReceita">Receita</th><th data-ord="pct" id="thProdPct">% da receita</th>
             </tr></thead>
             <tbody id="tbodyProdutos"></tbody>
@@ -234,7 +235,7 @@ var I18N = {
     carregando:'Carregando…', lendoRepo:'Lendo repositório…', nenhumCsv:'Nenhum CSV encontrado', semDados:'Sem dados legíveis', soBase:'Somente base', erroRepo:'Erro ao ler repositório',
     tabOverview:'📊 Visão geral', tabClientes:'👥 Clientes', tabProdutos:'🏆 Produtos',
     lblPeriodo:'Histórico — mês a mês (detectado automaticamente)', lblFiltros:'Filtros de navegação',
-    todosMeses:'📅 Todos os meses', buscar:'🔍 Buscar cliente ou e-mail…', todosProdutos:'Todos os produtos',
+    todosMeses:'📅 Todos os meses', buscar:'🔍 Buscar cliente, e-mail, produto ou SKU…', todosProdutos:'Todos os produtos',
     focoTitulo:'🎯 Clientes cadastrados que ainda não compraram',
     focoFrase:'{n} de {t} cadastrados ({p}% da base) não fizeram nenhuma compra nos meses carregados.',
     verLista:'Ver lista completa →',
@@ -252,7 +253,7 @@ var I18N = {
     como4:'• Para agosto: baixe o CSV da planilha, suba como <b>agosto.csv</b> e atualize a página.',
     como5:'• Só pedidos <b>paid/pago</b> entram na receita. <b>Foco:</b> cadastrados sem compra.',
     thNome:'Cliente', thEmail:'E-mail', thTel:'Telefone', thCidade:'Cidade', thSit:'Situação', thPedidos:'Pedidos', thTotal:'Total', thUltima:'Última compra', thMeses:'Meses',
-    thProdNome:'Produto (Lineitem name)', thProdQtd:'Qtd vendida', thProdReceita:'Receita', thProdPct:'% da receita',
+    thProdSku:'SKU', thProdNome:'Produto (Lineitem name)', thProdQtd:'Qtd vendida', thProdReceita:'Receita', thProdPct:'% da receita',
     bSemCompra:'Cadastrado sem compra', bComprou:'Comprou no período', bRecorrente:'Recompra (2+ meses)', bNaoRec:'Não recomprou', bFora:'Fora da base',
     exportar:'⬇ Exportar CSV', anterior:'Anterior', proxima:'Próxima',
     clientesSufixo:'cliente(s)', paginaDe:'Página {p} de {t}', nenhumCliente:'Nenhum cliente encontrado.',
@@ -267,7 +268,7 @@ var I18N = {
     carregando:'加载中…', lendoRepo:'正在读取仓库…', nenhumCsv:'未找到 CSV 文件', semDados:'没有可读数据', soBase:'仅客户库', erroRepo:'读取仓库时出错',
     tabOverview:'📊 总览', tabClientes:'👥 客户', tabProdutos:'🏆 产品',
     lblPeriodo:'历史记录 — 逐月（自动检测）', lblFiltros:'导航筛选',
-    todosMeses:'📅 所有月份', buscar:'🔍 搜索客户或邮箱…', todosProdutos:'所有产品',
+    todosMeses:'📅 所有月份', buscar:'🔍 搜索客户、邮箱、产品或 SKU…', todosProdutos:'所有产品',
     focoTitulo:'🎯 已注册但尚未购买的客户',
     focoFrase:'在已加载的月份中，{t} 位注册客户里有 {n} 位（占客户库 {p}%）没有进行任何购买。',
     verLista:'查看完整列表 →',
@@ -285,7 +286,7 @@ var I18N = {
     como4:'• 八月：下载该月 CSV，上传为 <b>agosto.csv</b> 并刷新页面。',
     como5:'• 只有 <b>paid/pago</b> 状态的订单计入收入。<b>重点：</b>已注册未购买的客户。',
     thNome:'客户', thEmail:'邮箱', thTel:'电话', thCidade:'城市', thSit:'状态', thPedidos:'订单数', thTotal:'总计', thUltima:'最后购买', thMeses:'月份数',
-    thProdNome:'产品 (Lineitem name)', thProdQtd:'销量', thProdReceita:'收入', thProdPct:'收入占比',
+    thProdSku:'SKU', thProdNome:'产品 (Lineitem name)', thProdQtd:'销量', thProdReceita:'收入', thProdPct:'收入占比',
     bSemCompra:'已注册未购买', bComprou:'期间内购买', bRecorrente:'复购（2+ 个月）', bNaoRec:'未复购', bFora:'不在客户库',
     exportar:'⬇ 导出 CSV', anterior:'上一页', proxima:'下一页',
     clientesSufixo:'位客户', paginaDe:'第 {p} 页 / 共 {t} 页', nenhumCliente:'未找到客户。',
@@ -308,7 +309,7 @@ function aplicarIdioma(){
     legPagosLabel:t('pagos'), legExpiradosLabel:t('expirados'),
     thNome:t('thNome'), thEmail:t('thEmail'), thTel:t('thTel'), thCidade:t('thCidade'), thSit:t('thSit'),
     thPedidos:t('thPedidos'), thTotal:t('thTotal'), thUltima:t('thUltima'), thMeses:t('thMeses'),
-    thProdNome:t('thProdNome'), thProdQtd:t('thProdQtd'), thProdReceita:t('thProdReceita'), thProdPct:t('thProdPct'),
+    thProdSku:t('thProdSku'), thProdNome:t('thProdNome'), thProdQtd:t('thProdQtd'), thProdReceita:t('thProdReceita'), thProdPct:t('thProdPct'),
     btnCsv:t('exportar'), btnCsvProdutos:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
     diagTitulo:t('diagTitulo'), rodape:t('rodape')
   };
@@ -383,6 +384,7 @@ var ALIASES={
   total:['total','valor','valordacompra','valorcompra','amount','preco','price','totalpago','valordopedido','totaldopedido','paymentamount','totaldacompra'],
   status:['status','statusdacompra','statusfinancial','statusdopagamento','situation','paymentstatus','financialstatus'],
   produto:['lineitemname','lineiteimname','lineitem','produto','product','nomedoproduto','productname','item','nomeproduto','produtos'],
+  sku:['lineitemsku','lineiteimsku','lineitemsku','produtosku','productsku','sku','codigo','code','variant sku','sku'],
   qtd:['lineitemquantity','lineiteimquantity','quantidade','qty','quantity','pecas','npecas','quant'],
   preco:['lineitemprice','lineiteimprice','precounitario','valorunitario','preco'],
   cidade:['cidade','city','defaultaddresscity','addresscity'],
@@ -397,18 +399,27 @@ function acharColuna(cab,chave){
   }
   return -1;
 }
-/* Busca prioritária e robusta da coluna de produto ("Lineitem name") */
 function acharColunaProduto(cab){
-  var alvos=['lineitemname','lineiteimname','lineitemname'];
   for(var i=0;i<cab.length;i++){
     var h=norm(cab[i]); if(!h) continue;
     if(h==='lineitemname'||h==='lineiteimname') return i;
   }
   for(var j=0;j<cab.length;j++){
     var h2=norm(cab[j]); if(!h2) continue;
-    if(h2.indexOf('lineitem')>-1) return j;
+    if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j;
   }
   return acharColuna(cab,'produto');
+}
+function acharColunaSku(cab){
+  for(var i=0;i<cab.length;i++){
+    var h=norm(cab[i]); if(!h) continue;
+    if(h==='lineitemsku'||h==='lineiteimsku') return i;
+  }
+  for(var j=0;j<cab.length;j++){
+    var h2=norm(cab[j]); if(!h2) continue;
+    if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j;
+  }
+  return acharColuna(cab,'sku');
 }
 
 /* ============ LEITURA DINÂMICA DO REPOSITÓRIO ============ */
@@ -499,6 +510,7 @@ function processarMes(colunas,linhas){
     total:acharColuna(colunas,'total'),
     status:acharColuna(colunas,'status'),
     produto:acharColunaProduto(colunas),
+    sku:acharColunaSku(colunas),
     qtd:acharColuna(colunas,'qtd'),
     preco:acharColuna(colunas,'preco'),
     nome:acharColuna(colunas,'nome')
@@ -521,12 +533,12 @@ function processarMes(colunas,linhas){
       if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
       if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
     }
-    /* Nome do produto vem da coluna "Lineitem name" (acharColunaProduto) */
     if(idx.produto>-1||idx.qtd>-1){
       var prod=idx.produto>-1?String(r[idx.produto]||'').trim():'';
+      var sku=idx.sku>-1?String(r[idx.sku]||'').trim():'';
       var q=idx.qtd>-1?(parseInt(r[idx.qtd],10)||0):0;
       var pr=idx.preco>-1?parseMoney(r[idx.preco]):0;
-      if(prod||q) o.items.push({produto:prod||'(sem produto)',qtd:q||1,preco:pr});
+      if(prod||q) o.items.push({produto:prod||'(sem produto)',sku:sku,qtd:q||1,preco:pr});
     }
   });
   var saida=[];
@@ -535,7 +547,7 @@ function processarMes(colunas,linhas){
     var pago=st===''?true:ehPago(st);
     saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?o.total:0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
-  return {saida:saida,idxProduto:idx.produto,colunas:colunas};
+  return {saida:saida,idxProduto:idx.produto,idxSku:idx.sku,colunas:colunas};
 }
 
 /* ============ CARREGAMENTO ============ */
@@ -571,9 +583,10 @@ function carregarDados(){
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
         var rot=detectarRotulo(d.colunas,d.linhas,f.name);
         var proc=processarMes(d.colunas,d.linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idxProduto:proc.idxProduto,colunas:proc.colunas});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idxProduto:proc.idxProduto,idxSku:proc.idxSku,colunas:proc.colunas});
         var colProd=proc.idxProduto>-1?(d.colunas[proc.idxProduto]||'?'):'não encontrada';
-        estado.diag.push({nome:f.name+' → '+rot,ok:true,det:'('+proc.saida.length+' '+t('pedidosWord')+') · produto: '+esc(colProd)});
+        var colSku=proc.idxSku>-1?(d.colunas[proc.idxSku]||'?'):'não encontrada';
+        estado.diag.push({nome:f.name+' → '+rot,ok:true,det:'('+proc.saida.length+' '+t('pedidosWord')+') · produto: '+esc(colProd)+' · sku: '+esc(colSku)});
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
 
@@ -653,20 +666,21 @@ function situacao(email,comprou){
 }
 function dadoBase(email){ return estado.base?estado.base.map.get(email)||null:null; }
 
-/* ============ PRODUTOS (ranking por Lineitem name) ============ */
+/* ============ PRODUTOS (ranking por Lineitem name + SKU) ============ */
 function rankingProdutos(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
     if(!o.pago) return;
     (o.items||[]).forEach(function(it){
-      var p=map.get(it.produto)||{qtd:0,receita:0};
+      var p=map.get(it.produto)||{qtd:0,receita:0,sku:''};
       p.qtd+=it.qtd||1;
       p.receita+=it.preco?(it.preco*(it.qtd||1)):0;
+      if(!p.sku&&it.sku) p.sku=it.sku;
       map.set(it.produto,p);
     });
   });
   var arr=[];
-  map.forEach(function(v,k){ arr.push({nome:k,qtd:v.qtd,receita:v.receita}); });
+  map.forEach(function(v,k){ arr.push({nome:k,sku:v.sku||'',qtd:v.qtd,receita:v.receita}); });
   var totalReceita=arr.reduce(function(s,p){ return s+p.receita; },0)||1;
   arr.forEach(function(p){ p.pct=totalReceita?Math.round((p.receita/totalReceita)*100):0; });
   arr.sort(function(a,b){ return b.receita-a.receita; });
@@ -782,28 +796,29 @@ function montarTopProdutos(){
   var top=arr.slice(0,10), max=top.length?Math.max(top[0].receita,1):1;
   var sel=document.getElementById('selectProduto'); var atual=estado.produto;
   sel.innerHTML='<option value="">'+esc(t('todosProdutos'))+'</option>';
-  arr.slice(0,30).forEach(function(p){ var o=document.createElement('option'); o.value=p.nome; o.textContent=p.nome+' ('+numero(p.qtd)+')'; sel.appendChild(o); });
+  arr.slice(0,30).forEach(function(p){ var o=document.createElement('option'); o.value=p.nome; o.textContent=(p.sku?p.sku+' · ':'')+p.nome+' ('+numero(p.qtd)+')'; sel.appendChild(o); });
   if(atual) sel.value=atual;
   var el=document.getElementById('topProdutos');
   if(!top.length){ el.innerHTML='<div style="color:var(--cinza);text-align:center;padding:20px">'+t('semProdutos')+'</div>'; return; }
   el.innerHTML='';
   top.forEach(function(p){
     var larg=Math.max(2,Math.round((p.receita/max)*100));
-    var d=document.createElement('div'); d.className='barra'; d.title=p.nome;
-    d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+'</span>';
+    var d=document.createElement('div'); d.className='barra'; d.title=(p.sku?p.sku+' · ':'')+p.nome;
+    d.innerHTML='<span class="nome">'+(p.sku?'<b style="color:var(--verde2)">'+esc(p.sku)+'</b> · ':'')+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="val">'+numero(p.qtd)+'</span>';
     el.appendChild(d);
   });
 }
 function montarTabelaProdutos(){
   var arr=rankingProdutos();
+  var b=norm(estado.busca);
+  if(b){ arr=arr.filter(function(p){ return norm(p.nome).indexOf(b)>-1||norm(p.sku).indexOf(b)>-1; }); }
   estado.linhasProdutos=arr;
   document.getElementById('contadorProdutos').textContent=numero(arr.length)+' '+t('produtosSufixo')+' · '+(estado.periodo==='TODOS'?t('detTodosMeses'):rotuloExibido(estado.periodo));
   var tb=document.getElementById('tbodyProdutos'); tb.innerHTML='';
-  if(!arr.length){ tb.innerHTML='<tr><td colspan="4" style="color:var(--cinza);text-align:center;padding:24px">'+t('semProdutos')+'</td></tr>'; return; }
+  if(!arr.length){ tb.innerHTML='<tr><td colspan="5" style="color:var(--cinza);text-align:center;padding:24px">'+t('semProdutos')+'</td></tr>'; return; }
   arr.forEach(function(p){
     var tr=document.createElement('tr');
-    /* Coluna do nome do produto com quebra de linha -> nome completo visível */
-    tr.innerHTML='<td class="prod-nome">'+esc(p.nome)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td><td>'+p.pct+'%</td>';
+    tr.innerHTML='<td class="prod-sku">'+esc(p.sku||'—')+'</td><td class="prod-nome">'+esc(p.nome)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td><td>'+p.pct+'%</td>';
     tb.appendChild(tr);
   });
 }
@@ -891,9 +906,9 @@ function exportarCsv(){
 function exportarCsvProdutos(){
   if(!estado.linhasProdutos.length){ alert(t('semProdutos')); return; }
   var linhas=estado.linhasProdutos.map(function(p){
-    return ['"'+p.nome.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',','),p.pct+'%'].join(';');
+    return ['"'+p.sku.replace(/"/g,'""')+'"','"'+p.nome.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',','),p.pct+'%'].join(';');
   });
-  var csv='\uFEFF'+[t('thProdNome'),t('thProdQtd'),t('thProdReceita'),t('thProdPct')].join(';')+'\n'+linhas.join('\n');
+  var csv='\uFEFF'+[t('thProdSku'),t('thProdNome'),t('thProdQtd'),t('thProdReceita'),t('thProdPct')].join(';')+'\n'+linhas.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='produtos_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -908,7 +923,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.getElementById('produtos').style.display=t.dataset.tab==='produtos'?'':'none';
   };
 });
-document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();});
+document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();montarTabelaProdutos();});
 document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;estado.pagina=1;renderTudo();});
 document.querySelectorAll('th[data-ord]').forEach(function(th){
   th.onclick=function(){
