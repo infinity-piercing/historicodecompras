@@ -85,6 +85,7 @@
   .tabela-scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
   th{background:var(--verde3);color:var(--verde);text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap;user-select:none}
+  th .seta{font-size:10px;opacity:.85}
   td{padding:9px 12px;border-top:1px solid var(--borda);white-space:nowrap;vertical-align:top}
   td.prod-nome{white-space:normal;word-break:break-word;min-width:280px;max-width:460px;line-height:1.35}
   td.prod-sku{font-weight:700;color:var(--verde2);font-size:12px;min-width:110px}
@@ -125,7 +126,6 @@
       <button class="btn-ver" id="btnVerFoco" onclick="verFoco()">Ver lista completa →</button>
     </div>
 
-    <!-- Barra de filtros compartilhada: vale para as 3 abas -->
     <div class="filtros">
       <div class="linha"><label id="lblPeriodo">Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
       <div class="linha">
@@ -173,8 +173,11 @@
         <div class="tabela-scroll">
           <table>
             <thead><tr>
-              <th data-ord="sku" id="thProdSku">SKU</th><th data-ord="nome" id="thProdNome">Produto (Lineitem name)</th><th data-ord="qtd" id="thProdQtd">Qtd vendida</th>
-              <th data-ord="receita" id="thProdReceita">Receita</th><th data-ord="pct" id="thProdPct">% da receita</th>
+              <th data-ordp="sku" id="thProdSku">SKU <span class="seta"></span></th>
+              <th data-ordp="nome" id="thProdNome">Produto (Lineitem name) <span class="seta"></span></th>
+              <th data-ordp="qtd" id="thProdQtd">Qtd vendida <span class="seta"></span></th>
+              <th data-ordp="receita" id="thProdReceita">Receita <span class="seta"></span></th>
+              <th data-ordp="pct" id="thProdPct">% da receita <span class="seta"></span></th>
             </tr></thead>
             <tbody id="tbodyProdutos"></tbody>
           </table>
@@ -191,9 +194,15 @@
         <div class="tabela-scroll">
           <table>
             <thead><tr>
-              <th data-ord="nome" id="thNome">Cliente</th><th data-ord="email" id="thEmail">E-mail</th><th data-ord="tel" id="thTel">Telefone</th><th data-ord="cidade" id="thCidade">Cidade</th>
-              <th data-ord="sit" id="thSit">Situação</th><th data-ord="pedidos" id="thPedidos">Pedidos</th><th data-ord="total" id="thTotal">Total</th>
-              <th data-ord="ultima" id="thUltima">Última compra</th><th data-ord="meses" id="thMeses">Meses</th>
+              <th data-ord="nome" id="thNome">Cliente <span class="seta"></span></th>
+              <th data-ord="email" id="thEmail">E-mail <span class="seta"></span></th>
+              <th data-ord="tel" id="thTel">Telefone <span class="seta"></span></th>
+              <th data-ord="cidade" id="thCidade">Cidade <span class="seta"></span></th>
+              <th data-ord="sit" id="thSit">Situação <span class="seta"></span></th>
+              <th data-ord="pedidos" id="thPedidos">Pedidos <span class="seta"></span></th>
+              <th data-ord="total" id="thTotal">Total <span class="seta"></span></th>
+              <th data-ord="ultima" id="thUltima">Última compra <span class="seta"></span></th>
+              <th data-ord="meses" id="thMeses">Meses <span class="seta"></span></th>
             </tr></thead>
             <tbody id="tbodyClientes"></tbody>
           </table>
@@ -313,7 +322,7 @@ function aplicarIdioma(){
     btnCsv:t('exportar'), btnCsvProdutos:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
     diagTitulo:t('diagTitulo'), rodape:t('rodape')
   };
-  for(var k in m){ var el=document.getElementById(k); if(el) el.textContent=m[k]; }
+  for(var k in m){ var el=document.getElementById(k); if(el){ var seta=el.querySelector('.seta'); if(seta){ seta.textContent=''; el.replaceChild(seta,el.lastChild); } el.insertBefore(document.createTextNode(m[k]),el.firstChild); } }
   var b=document.getElementById('busca'); if(b) b.placeholder=t('buscar');
   var sp=document.getElementById('selectProduto');
   if(sp&&sp.options[0]) sp.options[0].textContent=t('todosProdutos');
@@ -384,7 +393,7 @@ var ALIASES={
   total:['total','valor','valordacompra','valorcompra','amount','preco','price','totalpago','valordopedido','totaldopedido','paymentamount','totaldacompra'],
   status:['status','statusdacompra','statusfinancial','statusdopagamento','situation','paymentstatus','financialstatus'],
   produto:['lineitemname','lineiteimname','lineitem','produto','product','nomedoproduto','productname','item','nomeproduto','produtos'],
-  sku:['lineitemsku','lineiteimsku','lineitemsku','produtosku','productsku','sku','codigo','code','variant sku','sku'],
+  sku:['lineitemsku','lineiteimsku','produtosku','productsku','sku','codigo','code','variantsku','variantsku'],
   qtd:['lineitemquantity','lineiteimquantity','quantidade','qty','quantity','pecas','npecas','quant'],
   preco:['lineitemprice','lineiteimprice','precounitario','valorunitario','preco'],
   cidade:['cidade','city','defaultaddresscity','addresscity'],
@@ -551,14 +560,14 @@ function processarMes(colunas,linhas){
 }
 
 /* ============ CARREGAMENTO ============ */
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
   txt.textContent=t('lendoRepo');
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
     if(!arquivos.length){ txt.textContent=t('nenhumCsv'); pill.className='pill err'; return; }
@@ -683,11 +692,20 @@ function rankingProdutos(){
   map.forEach(function(v,k){ arr.push({nome:k,sku:v.sku||'',qtd:v.qtd,receita:v.receita}); });
   var totalReceita=arr.reduce(function(s,p){ return s+p.receita; },0)||1;
   arr.forEach(function(p){ p.pct=totalReceita?Math.round((p.receita/totalReceita)*100):0; });
-  arr.sort(function(a,b){ return b.receita-a.receita; });
   return arr;
 }
 
 /* ============ RENDER ============ */
+function marcarOrdem(){
+  document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
+    var seta=th.querySelector('.seta');
+    if(seta) seta.textContent=(estado.ordem.chave===th.dataset.ord)?((estado.ordem.dir===-1)?' ▼':' ▲'):'';
+  });
+  document.querySelectorAll('#produtos th[data-ordp]').forEach(function(th){
+    var seta=th.querySelector('.seta');
+    if(seta) seta.textContent=(estado.ordemProd.chave===th.dataset.ordp)?((estado.ordemProd.dir===-1)?' ▼':' ▲'):'';
+  });
+}
 function montarFoco(){
   var el=document.getElementById('foco');
   if(!estado.base){ el.style.display='none'; return; }
@@ -705,7 +723,7 @@ function verFoco(){
   document.getElementById('produtos').style.display='none';
   document.getElementById('clientes').style.display='';
   estado.segmento='SEMCOMPRA'; estado.pagina=1;
-  atualizarChipsSegmento(); montarTabela();
+  atualizarChipsSegmento(); montarTabela(); marcarOrdem();
 }
 function atualizarChipsSegmento(){
   var chips=document.getElementById('chipsSegmento').querySelectorAll('.chip');
@@ -812,6 +830,14 @@ function montarTabelaProdutos(){
   var arr=rankingProdutos();
   var b=norm(estado.busca);
   if(b){ arr=arr.filter(function(p){ return norm(p.nome).indexOf(b)>-1||norm(p.sku).indexOf(b)>-1; }); }
+  var ch=estado.ordemProd.chave, dir=estado.ordemProd.dir;
+  arr.sort(function(a,z){
+    var va=a[ch], vz=z[ch];
+    if(va==null||va==='') va='';
+    if(vz==null||vz==='') vz='';
+    if(typeof va==='number'&&typeof vz==='number') return (va-vz)*dir;
+    return String(va).localeCompare(String(vz),'pt-BR')*dir;
+  });
   estado.linhasProdutos=arr;
   document.getElementById('contadorProdutos').textContent=numero(arr.length)+' '+t('produtosSufixo')+' · '+(estado.periodo==='TODOS'?t('detTodosMeses'):rotuloExibido(estado.periodo));
   var tb=document.getElementById('tbodyProdutos'); tb.innerHTML='';
@@ -892,7 +918,7 @@ function renderTudo(){
   document.getElementById('conteudo').style.display=temDados?'':'none';
   aplicarIdioma();
   if(!temDados) return;
-  montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela(); montarTabelaProdutos();
+  montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela(); montarTabelaProdutos(); marcarOrdem();
 }
 function exportarCsv(){
   if(!estado.linhasTabela.length){ alert(t('nenhumCliente')); return; }
@@ -923,13 +949,20 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.getElementById('produtos').style.display=t.dataset.tab==='produtos'?'':'none';
   };
 });
-document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();montarTabelaProdutos();});
+document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();montarTabelaProdutos();marcarOrdem();});
 document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;estado.pagina=1;renderTudo();});
-document.querySelectorAll('th[data-ord]').forEach(function(th){
+document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
   th.onclick=function(){
     var k=th.dataset.ord;
     if(estado.ordem.chave===k){estado.ordem.dir*=-1;} else {estado.ordem.chave=k;estado.ordem.dir=-1;}
-    estado.pagina=1; montarTabela();
+    estado.pagina=1; montarTabela(); marcarOrdem();
+  };
+});
+document.querySelectorAll('#produtos th[data-ordp]').forEach(function(th){
+  th.onclick=function(){
+    var k=th.dataset.ordp;
+    if(estado.ordemProd.chave===k){estado.ordemProd.dir*=-1;} else {estado.ordemProd.chave=k;estado.ordemProd.dir=-1;}
+    montarTabelaProdutos(); marcarOrdem();
   };
 });
 document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
