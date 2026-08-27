@@ -308,6 +308,9 @@ var I18N = {
 };
 function t(k){ return (I18N[LANG]&&I18N[LANG][k])||I18N.pt[k]||k; }
 function tpl(s,o){ return String(s).replace(/\{(\w+)\}/g,function(m,k){ return o[k]!=null?o[k]:m; }); }
+
+/* CORREÇÃO: aplica o texto SEM acumular. Remove os nós de texto antigos
+   e preserva apenas a seta de ordenação (.seta). */
 function aplicarIdioma(){
   var m={
     subTitulo:t('subTitulo'), btnAtualizar:t('atualizar'),
@@ -322,7 +325,21 @@ function aplicarIdioma(){
     btnCsv:t('exportar'), btnCsvProdutos:t('exportar'), btnAnterior:t('anterior'), btnProxima:t('proxima'),
     diagTitulo:t('diagTitulo'), rodape:t('rodape')
   };
-  for(var k in m){ var el=document.getElementById(k); if(el){ var seta=el.querySelector('.seta'); if(seta){ seta.textContent=''; el.replaceChild(seta,el.lastChild); } el.insertBefore(document.createTextNode(m[k]),el.firstChild); } }
+  for(var k in m){
+    var el=document.getElementById(k);
+    if(!el) continue;
+    var seta=el.querySelector('.seta');
+    if(seta){
+      /* remove todos os nós de texto antigos, mantém a seta */
+      var nos=el.childNodes;
+      for(var i=nos.length-1;i>=0;i--){
+        if(nos[i].nodeType===3) el.removeChild(nos[i]);
+      }
+      el.insertBefore(document.createTextNode(m[k]+' '),seta);
+    } else {
+      el.textContent=m[k];
+    }
+  }
   var b=document.getElementById('busca'); if(b) b.placeholder=t('buscar');
   var sp=document.getElementById('selectProduto');
   if(sp&&sp.options[0]) sp.options[0].textContent=t('todosProdutos');
