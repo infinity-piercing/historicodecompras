@@ -61,6 +61,21 @@
   .kpi.destaque .valor{color:var(--amber)}
   .kpi .detalhe{font-size:11px;color:var(--cinza);margin-top:4px;line-height:1.3}
   .kpi .ico{position:absolute;right:9px;top:10px;font-size:16px;opacity:.4}
+  /* Painel da aba Contatos: duas colunas com itens empilhados */
+  .painel-contatos{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .painel-contatos .col{flex:1;min-width:250px;background:#fff;border:1px solid var(--borda);border-radius:14px;padding:12px 14px}
+  .painel-contatos .col h4{font-size:12px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+  .item-kpi{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:10px;background:var(--creme);margin-bottom:8px;font-size:13px}
+  .item-kpi:last-child{margin-bottom:0}
+  .item-kpi .rot{color:#374151;font-weight:600;line-height:1.3}
+  .item-kpi .sub{font-size:11px;color:var(--cinza);font-weight:400;display:block}
+  .item-kpi .val{font-weight:800;color:var(--verde);font-size:17px;white-space:nowrap}
+  .item-kpi.destaque{background:var(--amberbg);border:1px solid #fcd34d}
+  .item-kpi.destaque .val{color:var(--amber)}
+  /* Checkbox Sim/Não */
+  .cb-grupo{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer}
+  .cb-grupo .txt-cb-sim{color:var(--verde);font-weight:700}
+  .cb-grupo .txt-cb-nao{color:var(--cinza);font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:16px}
@@ -96,9 +111,7 @@
   .b-recorrente{background:var(--roxobg);color:var(--roxo)}
   .b-historico{background:var(--azulbg);color:var(--azul)}
   .b-fora{background:var(--redbg);color:var(--red)}
-  /* Cabeçalho congelado ao rolar */
   .tabela-scroll thead th{position:sticky;top:0;z-index:5;background:var(--verde3);box-shadow:0 1px 0 rgba(0,0,0,.07)}
-  /* Controles da aba Contatos — compactos, sem rolagem lateral */
   .cb{width:17px;height:17px;cursor:pointer;accent-color:var(--verde);vertical-align:middle}
   .inp-data{border:1px solid var(--borda);border-radius:7px;padding:4px 6px;font-size:11.5px;background:#fff;color:#374151;max-width:130px}
   .sel-atend{border:1px solid var(--borda);border-radius:7px;padding:4px 6px;font-size:11.5px;background:#fff;color:#374151;min-width:100px;max-width:140px;cursor:pointer}
@@ -227,7 +240,10 @@
     </section>
 
     <section id="contatos" style="display:none">
-      <div class="kpis" id="kpisContatos"></div>
+      <div class="painel-contatos">
+        <div class="col" id="colEsqContatos"></div>
+        <div class="col" id="colDirContatos"></div>
+      </div>
       <div class="tabela-box">
         <div class="tabela-top">
           <div class="contador" id="contadorContatos">—</div>
@@ -301,7 +317,9 @@ var I18N = {
     thNome:'Cliente', thEmail:'E-mail', thTel:'Telefone', thCidade:'Cidade', thSit:'Situação', thPedidos:'Pedidos', thTotal:'Total', thUltima:'Última compra', thMeses:'Meses',
     thProdSku:'SKU', thProdNome:'Produto (Lineitem name)', thProdQtd:'Qtd vendida', thProdReceita:'Receita', thProdPct:'% da receita',
     thContNome:'Cliente', thContEmail:'E-mail', thContTel:'Telefone', thContCidade:'Cidade', thContContato:'Cliente Contatado', thContRetorno:'Houve Retorno?', thContData:'Data do contato', thContAtendente:'Atendente',
-    kpiContTotal:'Sem compra', kpiContTel:'Com telefone', kpiContFeito:'Contatados', kpiContRetorno:'Deram retorno', kpiContAtendDet:'clientes contatados',
+    painelGeral:'Geral', painelAtend:'Atendentes',
+    kpiContTotal:'Sem compras', kpiContTel:'Com telefone', kpiContFeito:'Contatados', kpiContRetorno:'Deram retorno',
+    kpiAtendCont:'contatados', kpiAtendRet:'retorno', kpiPct:'com telefone',
     bSemCompra:'Cadastrado sem compra', bComprou:'Comprou no período', bRecorrente:'Recompra (2+ meses)', bNaoRec:'Não recomprou', bFora:'Fora da base',
     exportar:'⬇ Exportar CSV', anterior:'Anterior', proxima:'Próxima',
     clientesSufixo:'cliente(s)', paginaDe:'Página {p} de {t}', nenhumCliente:'Nenhum cliente encontrado.',
@@ -336,7 +354,9 @@ var I18N = {
     thNome:'客户', thEmail:'邮箱', thTel:'电话', thCidade:'城市', thSit:'状态', thPedidos:'订单数', thTotal:'总计', thUltima:'最后购买', thMeses:'月份数',
     thProdSku:'SKU', thProdNome:'产品 (Lineitem name)', thProdQtd:'销量', thProdReceita:'收入', thProdPct:'收入占比',
     thContNome:'客户', thContEmail:'邮箱', thContTel:'电话', thContCidade:'城市', thContContato:'已联系客户', thContRetorno:'有回复?', thContData:'联系日期', thContAtendente:'客服',
-    kpiContTotal:'未购买', kpiContTel:'有电话', kpiContFeito:'已联系', kpiContRetorno:'有回复', kpiContAtendDet:'已联系客户',
+    painelGeral:'概况', painelAtend:'客服',
+    kpiContTotal:'未购买', kpiContTel:'有电话', kpiContFeito:'已联系', kpiContRetorno:'有回复',
+    kpiAtendCont:'已联系', kpiAtendRet:'回复', kpiPct:'有电话',
     bSemCompra:'已注册未购买', bComprou:'期间内购买', bRecorrente:'复购（2+ 个月）', bNaoRec:'未复购', bFora:'不在客户库',
     exportar:'⬇ 导出 CSV', anterior:'上一页', proxima:'下一页',
     clientesSufixo:'位客户', paginaDe:'第 {p} 页 / 共 {t} 页', nenhumCliente:'未找到客户。',
@@ -754,9 +774,7 @@ function rankingProdutos(){
   return arr;
 }
 
-/* ============ ABA CONTATOS ============
-   Concentra clientes que NUNCA compraram OU deixaram de comprar em algum dos meses.
-   Ordem padrão: quem tem telefone disponível primeiro. */
+/* ============ ABA CONTATOS ============ */
 function contatosAlvo(){
   var totalM=totalMesesCarregados();
   var arr=[];
@@ -801,8 +819,8 @@ function montarTabelaContatos(){
       '<td class="cel-wrap">'+esc(r.email)+'</td>'+
       '<td class="cel-wrap">'+esc(r.telefone||'—')+'</td>'+
       '<td class="cel-wrap">'+esc(r.cidade||'—')+'</td>'+
-      '<td class="cel-c"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="contato"'+(r.contato?' checked':'')+'></td>'+
-      '<td class="cel-c"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="retorno"'+(r.retorno?' checked':'')+'></td>'+
+      '<td class="cel-c"><label class="cb-grupo"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="contato"'+(r.contato?' checked':'')+'><span class="'+(r.contato?'txt-cb-sim':'txt-cb-nao')+'" data-txt="'+i+'-contato">'+(r.contato?'Sim':'Não')+'</span></label></td>'+
+      '<td class="cel-c"><label class="cb-grupo"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="retorno"'+(r.retorno?' checked':'')+'><span class="'+(r.retorno?'txt-cb-sim':'txt-cb-nao')+'" data-txt="'+i+'-retorno">'+(r.retorno?'Sim':'Não')+'</span></label></td>'+
       '<td class="cel-c"><input type="date" class="inp-data" data-i="'+i+'" data-campo="data" value="'+esc(r.data)+'"></td>'+
       '<td><select class="sel-atend" data-i="'+i+'" data-campo="atendente"><option value=""></option>'+ATENDENTES.map(function(a){return '<option value="'+a+'"'+(r.atendente===a?' selected':'')+'>'+a+'</option>';}).join('')+'</select></td>';
     tb.appendChild(tr);
@@ -810,7 +828,14 @@ function montarTabelaContatos(){
   tb.querySelectorAll('.cb').forEach(function(el){
     el.addEventListener('change',function(){
       var i=parseInt(el.dataset.i,10);
-      if(estado.linhasContatos[i]) estado.linhasContatos[i][el.dataset.campo]=el.checked;
+      if(!estado.linhasContatos[i]) return;
+      estado.linhasContatos[i][el.dataset.campo]=el.checked;
+      var sp=el.parentNode.querySelector('span[data-txt]');
+      if(sp){
+        sp.textContent=el.checked?'Sim':'Não';
+        sp.className=el.checked?'txt-cb-sim':'txt-cb-nao';
+      }
+      montarKpisContatos();
     });
   });
   tb.querySelectorAll('.inp-data').forEach(function(el){
@@ -823,25 +848,30 @@ function montarTabelaContatos(){
     el.addEventListener('change',function(){
       var i=parseInt(el.dataset.i,10);
       if(estado.linhasContatos[i]) estado.linhasContatos[i].atendente=el.value;
+      montarKpisContatos();
     });
   });
 }
+function itemKpi(rot,val,sub,destaque){
+  return '<div class="item-kpi'+(destaque?' destaque':'')+'"><span class="rot">'+rot+(sub?'<span class="sub">'+sub+'</span>':'')+'</span><span class="val">'+val+'</span></div>';
+}
 function montarKpisContatos(){
   var arr=estado.linhasContatos||[];
-  var total=arr.length;
-  var tel=0,cont=0,ret=0;
+  var total=arr.length,tel=0,cont=0,ret=0;
   arr.forEach(function(r){ if(r.telefone) tel++; if(r.contato) cont++; if(r.retorno) ret++; });
-  var cards=[
-    {rotulo:t('kpiContTotal'),valor:numero(total),ico:'👥',detalhe:''},
-    {rotulo:t('kpiContTel'),valor:numero(tel),ico:'📞',detalhe:total?Math.round(tel/total*100)+'%':'0%',destaque:true},
-    {rotulo:t('kpiContFeito'),valor:numero(cont),ico:'✅',detalhe:''},
-    {rotulo:t('kpiContRetorno'),valor:numero(ret),ico:'💬',detalhe:''}
-  ];
+  var esq='<h4>'+esc(t('painelGeral'))+'</h4>';
+  esq+=itemKpi(t('kpiContTotal'),numero(total),'',false);
+  esq+=itemKpi(t('kpiContTel'),numero(tel),total?Math.round(tel/total*100)+'% '+t('kpiPct'):'0%',true);
+  esq+=itemKpi(t('kpiContFeito'),numero(cont),'',false);
+  esq+=itemKpi(t('kpiContRetorno'),numero(ret),'',false);
+  document.getElementById('colEsqContatos').innerHTML=esq;
+  var dir='<h4>'+esc(t('painelAtend'))+'</h4>';
   ATENDENTES.forEach(function(a){
-    var n=arr.filter(function(r){return r.atendente===a;}).length;
-    cards.push({rotulo:a,valor:numero(n),ico:'🧑‍💼',detalhe:t('kpiContAtendDet')});
+    var c=arr.filter(function(r){return r.atendente===a;}).length;
+    var r2=arr.filter(function(r){return r.atendente===a&&r.retorno;}).length;
+    dir+=itemKpi(esc(a),numero(c),t('kpiAtendCont')+': '+numero(c)+' · '+t('kpiAtendRet')+': '+numero(r2),false);
   });
-  document.getElementById('kpisContatos').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
+  document.getElementById('colDirContatos').innerHTML=dir;
 }
 
 /* ============ RENDER ============ */
