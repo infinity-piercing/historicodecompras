@@ -273,7 +273,7 @@
 /* ============================================================
    CONFIGURAÇÃO
    repo = repositório no GitHub
-   apiUrl = URL do Apps Script (já configurada com a sua URL)
+   apiUrl = URL do Apps Script (já configurada)
    ============================================================ */
 var CONFIG = {
   repo: 'infinity-piercing/historicodecompras',
@@ -804,7 +804,7 @@ function contatosAlvo(){
 }
 function carregarContatosSalvos(){
   if(!CONFIG.apiUrl){ return Promise.resolve(); }
-  return fetch(CONFIG.apiUrl).then(function(r){ return r.json(); }).then(function(lista){
+  return fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.json(); }).then(function(lista){
     var map={};
     (lista||[]).forEach(function(linha){
       var em=norm(linha.email);
@@ -819,13 +819,19 @@ function carregarContatosSalvos(){
     estado.contatosSalvos=map;
   }).catch(function(){ /* sem conexão: segue com vazio */ });
 }
+/* CORREÇÃO CORS: envia como text/plain (sem pré-checagem OPTIONS) */
 function salvarContato(r){
   if(!CONFIG.apiUrl){ avisar('info',t('salvando'),t('semApi')); return; }
   var payload={
     email:r.email,nome:r.nome,telefone:r.telefone,cidade:r.cidade,
     contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente
   };
-  fetch(CONFIG.apiUrl,{method:'POST',body:JSON.stringify(payload)})
+  fetch(CONFIG.apiUrl,{
+    method:'POST',
+    redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  })
     .then(function(res){ return res.json(); })
     .then(function(){ estado.contatosSalvos[norm(r.email)]={contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente}; })
     .catch(function(){ avisar('erro','Erro',esc('Não foi possível salvar o contato.')); });
