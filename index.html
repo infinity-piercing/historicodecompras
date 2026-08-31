@@ -61,7 +61,6 @@
   .kpi.destaque .valor{color:var(--amber)}
   .kpi .detalhe{font-size:11px;color:var(--cinza);margin-top:4px;line-height:1.3}
   .kpi .ico{position:absolute;right:9px;top:10px;font-size:16px;opacity:.4}
-  /* Painel da aba Contatos: duas colunas com itens empilhados */
   .painel-contatos{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
   .painel-contatos .col{flex:1;min-width:250px;background:#fff;border:1px solid var(--borda);border-radius:14px;padding:12px 14px}
   .painel-contatos .col h4{font-size:12px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
@@ -72,7 +71,6 @@
   .item-kpi .val{font-weight:800;color:var(--verde);font-size:17px;white-space:nowrap}
   .item-kpi.destaque{background:var(--amberbg);border:1px solid #fcd34d}
   .item-kpi.destaque .val{color:var(--amber)}
-  /* Checkbox Sim/Não */
   .cb-grupo{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer}
   .cb-grupo .txt-cb-sim{color:var(--verde);font-weight:700}
   .cb-grupo .txt-cb-nao{color:var(--cinza);font-weight:600}
@@ -273,9 +271,14 @@
 
 <script>
 /* ============================================================
-   CONFIGURAÇÃO — nome do repositório no GitHub
+   CONFIGURAÇÃO
+   repo = repositório no GitHub
+   apiUrl = URL do Apps Script (já configurada com a sua URL)
    ============================================================ */
-var CONFIG = { repo: 'infinity-piercing/historicodecompras' };
+var CONFIG = {
+  repo: 'infinity-piercing/historicodecompras',
+  apiUrl: 'https://script.google.com/macros/s/AKfycbyWhqKajKLM_MUhakjAo8d2g1iNHvRLt9TxWxTHh39yhdcbg6noxRc_evKHCUDoz3jwXQ/exec'
+};
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 
 /* ============ IDIOMA (PT ⇄ 中文) ============ */
@@ -327,6 +330,7 @@ var I18N = {
     diagTitulo:'🔎 Arquivos lidos do repositório',
     semColunaEmail:'sem coluna de e-mail', semArquivoBase:'nenhum arquivo com "base"/"cliente"/"customer" no nome',
     pedidosWord:'pedidos', produtosSufixo:'produto(s)', contatosSufixo:'cliente(s)',
+    salvando:'Salvando…', salvo:'Salvo', semApi:'Apps Script não configurado (CONFIG.apiUrl vazio)',
     rodape:'Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing'
   },
   zh: {
@@ -364,6 +368,7 @@ var I18N = {
     diagTitulo:'🔎 从仓库读取的文件',
     semColunaEmail:'缺少邮箱列', semArquivoBase:'未找到包含 base/cliente/customer 的文件',
     pedidosWord:'笔订单', produtosSufixo:'个产品', contatosSufixo:'位客户',
+    salvando:'保存中…', salvo:'已保存', semApi:'未配置 Apps Script (CONFIG.apiUrl 为空)',
     rodape:'数据动态读取自 GitHub 仓库的 CSV · Infinity Piercing'
   }
 };
@@ -636,14 +641,14 @@ function processarMes(colunas,linhas){
 }
 
 /* ============ CARREGAMENTO ============ */
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],diag:[]};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},diag:[]};
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
   txt.textContent=t('lendoRepo');
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],diag:[]};
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
     if(!arquivos.length){ txt.textContent=t('nenhumCsv'); pill.className='pill err'; return; }
@@ -754,7 +759,7 @@ function situacao(email,comprou){
 }
 function dadoBase(email){ return estado.base?estado.base.map.get(email)||null:null; }
 
-/* ============ PRODUTOS (ranking por Lineitem name + SKU) ============ */
+/* ============ PRODUTOS ============ */
 function rankingProdutos(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
@@ -774,7 +779,7 @@ function rankingProdutos(){
   return arr;
 }
 
-/* ============ ABA CONTATOS ============ */
+/* ============ ABA CONTATOS (com persistência via Apps Script) ============ */
 function contatosAlvo(){
   var totalM=totalMesesCarregados();
   var arr=[];
@@ -782,10 +787,11 @@ function contatosAlvo(){
   estado.base.map.forEach(function(v,em){
     var meses=mesesComCompra(em);
     if(totalM===0||meses<totalM){
+      var salvo=estado.contatosSalvos[em]||{};
       arr.push({
         email:v.email,nome:v.nome||v.email,telefone:v.telefone||'',cidade:v.cidade||'',
         meses:meses,totalM:totalM,
-        contato:false,retorno:false,data:'',atendente:''
+        contato:!!salvo.contato,retorno:!!salvo.retorno,data:salvo.data||'',atendente:salvo.atendente||''
       });
     }
   });
@@ -795,6 +801,34 @@ function contatosAlvo(){
     return String(a.nome).localeCompare(String(b.nome),'pt-BR');
   });
   return arr;
+}
+function carregarContatosSalvos(){
+  if(!CONFIG.apiUrl){ return Promise.resolve(); }
+  return fetch(CONFIG.apiUrl).then(function(r){ return r.json(); }).then(function(lista){
+    var map={};
+    (lista||[]).forEach(function(linha){
+      var em=norm(linha.email);
+      if(!em) return;
+      map[em]={
+        contato: String(linha.contato||'').toLowerCase()==='sim'||linha.contato===true,
+        retorno: String(linha.retorno||'').toLowerCase()==='sim'||linha.retorno===true,
+        data: linha.data||'',
+        atendente: linha.atendente||''
+      };
+    });
+    estado.contatosSalvos=map;
+  }).catch(function(){ /* sem conexão: segue com vazio */ });
+}
+function salvarContato(r){
+  if(!CONFIG.apiUrl){ avisar('info',t('salvando'),t('semApi')); return; }
+  var payload={
+    email:r.email,nome:r.nome,telefone:r.telefone,cidade:r.cidade,
+    contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente
+  };
+  fetch(CONFIG.apiUrl,{method:'POST',body:JSON.stringify(payload)})
+    .then(function(res){ return res.json(); })
+    .then(function(){ estado.contatosSalvos[norm(r.email)]={contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente}; })
+    .catch(function(){ avisar('erro','Erro',esc('Não foi possível salvar o contato.')); });
 }
 function montarTabelaContatos(){
   var arr=contatosAlvo();
@@ -831,24 +865,21 @@ function montarTabelaContatos(){
       if(!estado.linhasContatos[i]) return;
       estado.linhasContatos[i][el.dataset.campo]=el.checked;
       var sp=el.parentNode.querySelector('span[data-txt]');
-      if(sp){
-        sp.textContent=el.checked?'Sim':'Não';
-        sp.className=el.checked?'txt-cb-sim':'txt-cb-nao';
-      }
+      if(sp){ sp.textContent=el.checked?'Sim':'Não'; sp.className=el.checked?'txt-cb-sim':'txt-cb-nao'; }
+      salvarContato(estado.linhasContatos[i]);
       montarKpisContatos();
     });
   });
   tb.querySelectorAll('.inp-data').forEach(function(el){
     el.addEventListener('change',function(){
       var i=parseInt(el.dataset.i,10);
-      if(estado.linhasContatos[i]) estado.linhasContatos[i].data=el.value;
+      if(estado.linhasContatos[i]){ estado.linhasContatos[i].data=el.value; salvarContato(estado.linhasContatos[i]); }
     });
   });
   tb.querySelectorAll('.sel-atend').forEach(function(el){
     el.addEventListener('change',function(){
       var i=parseInt(el.dataset.i,10);
-      if(estado.linhasContatos[i]) estado.linhasContatos[i].atendente=el.value;
-      montarKpisContatos();
+      if(estado.linhasContatos[i]){ estado.linhasContatos[i].atendente=el.value; salvarContato(estado.linhasContatos[i]); montarKpisContatos(); }
     });
   });
 }
@@ -1174,7 +1205,7 @@ document.getElementById('btnCsvContatos').onclick=exportarCsvContatos;
 
 /* ============ INÍCIO ============ */
 aplicarIdioma();
-carregarDados();
+carregarContatosSalvos().then(function(){ carregarDados(); });
 </script>
 </body>
 </html>
