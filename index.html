@@ -645,7 +645,28 @@ function rankingProdutos(){
   return arr;
 }
 
-/* ============ ABA CONTATOS — persistência via Apps Script ============ */
+/* ============ ABA CONTATOS — persistência via Apps Script ============
+   LEITURA: JSONP (tag <script>) — o navegador NÃO bloqueia.
+   GRAVAÇÃO: POST no-cors — o navegador envia e o Apps Script grava. */
+function jsonp(url, cbName, timeout){
+  return new Promise(function(resolve, reject){
+    var sep = url.indexOf('?') > -1 ? '&' : '?';
+    var script = document.createElement('script');
+    var done = false;
+    var timer = setTimeout(function(){ cleanup(); reject(new Error('timeout')); }, 15000);
+    function cleanup(){
+      if(done) return;
+      done = true;
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){ cleanup(); resolve(data); };
+    script.src = url + sep + 'callback=' + cbName;
+    script.onerror = function(){ cleanup(); reject(new Error('network')); };
+    document.head.appendChild(script);
+  });
+}
 function contatosAlvo(){
   var totalM=totalMesesCarregados();
   var arr=[];
@@ -670,19 +691,9 @@ function contatosAlvo(){
 }
 function carregarContatosSalvos(){
   if(!CONFIG.apiUrl){ estado.apiOk=false; return Promise.resolve(); }
-  return fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.text(); }).then(function(txt){
-    var lista;
-    try { lista=JSON.parse(txt); }
-    catch(e){
-      estado.apiOk=false;
-      avisar('erro','API','A resposta não é JSON. A URL provavelmente ainda serve a versão antiga do script (HTML). Resposta: '+esc(txt.slice(0,200)));
-      return;
-    }
-    if(!Array.isArray(lista)){
-      estado.apiOk=false;
-      avisar('erro','API',esc(lista.erro||'Resposta inesperada da API.'));
-      return;
-    }
+  var cb = 'cb_' + Date.now();
+  return jsonp(CONFIG.apiUrl, cb).then(function(lista){
+    if(!Array.isArray(lista)){ estado.apiOk=false; return; }
     var map={};
     lista.forEach(function(linha){
       var em=norm(linha.email);
@@ -696,20 +707,18 @@ function carregarContatosSalvos(){
     });
     estado.contatosSalvos=map;
     estado.apiOk=true;
-  }).catch(function(err){ estado.apiOk=false; avisar('erro','API','Falha ao ler a planilha: '+esc(err.message)); });
+  }).catch(function(){ estado.apiOk=false; });
 }
 function testarConexao(){
   if(!CONFIG.apiUrl){ avisar('erro','API','CONFIG.apiUrl está vazio.'); return; }
-  fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.text(); }).then(function(txt){
-    var lista;
-    try { lista=JSON.parse(txt); }
-    catch(e){ avisar('erro','API','Resposta não é JSON (versão antiga do script?): '+esc(txt.slice(0,200))); return; }
+  var cb = 'cb_' + Date.now();
+  jsonp(CONFIG.apiUrl, cb).then(function(lista){
     if(Array.isArray(lista)){
       estado.apiOk=true;
       avisar('ok','API','Conectado! '+lista.length+' registro(s) na aba Contatos da planilha.');
     } else {
       estado.apiOk=false;
-      avisar('erro','API',esc(lista.erro||'Resposta inesperada.'));
+      avisar('erro','API',esc(lista&&lista.erro?lista.erro:'Resposta inesperada.'));
     }
     renderTudo();
   }).catch(function(err){ estado.apiOk=false; avisar('erro','API','Falha: '+esc(err.message)); });
