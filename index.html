@@ -121,6 +121,8 @@
   .paginacao{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--borda);font-size:12.5px;color:var(--cinza);flex-wrap:wrap}
   .paginacao .btn:disabled{opacity:.4;cursor:default}
   footer{max-width:1280px;margin:20px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
+  .status-api{font-size:11px;color:var(--cinza);padding:6px 16px;border-bottom:1px solid var(--borda);word-break:break-all;line-height:1.5}
+  .status-api b{color:var(--verde)}
 </style>
 </head>
 <body>
@@ -249,6 +251,7 @@
           <button class="btn" id="btnRecarregarContatos">↻ Recarregar</button>
           <button class="btn" id="btnCsvContatos">⬇ Exportar CSV</button>
         </div>
+        <div class="status-api" id="statusApi">—</div>
         <div class="tabela-scroll">
           <table>
             <thead><tr>
@@ -281,12 +284,19 @@ var CONFIG = {
 };
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+var ultimaAtualizacao = '—';
 
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function dinheiro(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0); }catch(e){ return 'R$ '+(v||0); } }
 function numero(v){ try{ return new Intl.NumberFormat('pt-BR').format(v||0); }catch(e){ return String(v||0); } }
 function avisar(tipo,titulo,texto){ var box=document.getElementById('avisos'); var d=document.createElement('div'); d.className='aviso show '+tipo; d.innerHTML='<b>'+titulo+'</b>'+texto; box.appendChild(d); }
+function agora(){ try{ return new Date().toLocaleTimeString('pt-BR'); }catch(e){ return new Date().toTimeString().slice(0,8); } }
+function atualizarStatusApi(){
+  var el=document.getElementById('statusApi');
+  if(!el) return;
+  el.innerHTML='API: <b>'+esc(CONFIG.apiUrl)+'</b> · Última atualização: <b>'+esc(ultimaAtualizacao)+'</b>';
+}
 
 function parseMoney(v){
   if(v==null) return 0;
@@ -644,14 +654,15 @@ function rankingProdutos(){
 }
 
 /* ============ ABA CONTATOS — persistência via Apps Script ============
-   LEITURA: JSONP (tag <script>) — o navegador NÃO bloqueia.
-   GRAVAÇÃO: formulário nativo em iframe oculto — sem CORS, sem perda. */
+   LEITURA: JSONP com cache-buster (sempre dados frescos da planilha).
+   GRAVAÇÃO: formulário nativo em iframe oculto (sem CORS, sem perda).
+   ATUALIZAÇÃO: auto-refresh a cada 30s + ao voltar para a aba. */
 function jsonp(url, cbName, timeout){
   return new Promise(function(resolve, reject){
     var sep = url.indexOf('?') > -1 ? '&' : '?';
     var script = document.createElement('script');
     var done = false;
-    var timer = setTimeout(function(){ cleanup(); reject(new Error('timeout')); }, 15000);
+    var timer = setTimeout(function(){ cleanup(); reject(new Error('timeout')); }, 20000);
     function cleanup(){
       if(done) return;
       done = true;
@@ -660,7 +671,7 @@ function jsonp(url, cbName, timeout){
       if(script.parentNode) script.parentNode.removeChild(script);
     }
     window[cbName] = function(data){ cleanup(); resolve(data); };
-    script.src = url + sep + 'callback=' + cbName;
+    script.src = url + sep + 'callback=' + cbName + '&_=' + Date.now();
     script.onerror = function(){ cleanup(); reject(new Error('network')); };
     document.head.appendChild(script);
   });
@@ -705,6 +716,8 @@ function carregarContatosSalvos(){
     });
     estado.contatosSalvos=map;
     estado.apiOk=true;
+    ultimaAtualizacao=agora();
+    atualizarStatusApi();
   }).catch(function(){ estado.apiOk=false; });
 }
 function testarConexao(){
@@ -729,9 +742,6 @@ function flashSalvo(){
   clearTimeout(flashSalvo._t);
   flashSalvo._t=setTimeout(function(){ el.textContent=base; },2500);
 }
-/* GRAVAÇÃO DEFINITIVA: formulário nativo em iframe oculto.
-   O navegador envia o POST como navegação (sem CORS, sem pré-checagem,
-   sem perder o corpo no redirect). O Apps Script recebe e grava. */
 function salvarContato(r){
   if(!CONFIG.apiUrl){ avisar('info','Salvando…','Apps Script não configurado (CONFIG.apiUrl vazio)'); return; }
   var iframe = document.getElementById('iframeSalvar');
@@ -769,6 +779,8 @@ function salvarContato(r){
   estado.contatosSalvos[norm(r.email)] = {contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
   estado.apiOk = true;
   flashSalvo();
+  /* Confirma lendo de volta da planilha após gravar */
+  setTimeout(function(){ carregarContatosSalvos().then(function(){ renderTudo(); }); }, 1500);
 }
 function montarTabelaContatos(){
   var arr=contatosAlvo();
@@ -1148,7 +1160,23 @@ document.getElementById('btnRecarregarContatos').onclick=function(){
   carregarContatosSalvos().then(function(){ renderTudo(); });
 };
 
+/* ============ INÍCIO + ESPELHAMENTO CONTÍNUO ============ */
+atualizarStatusApi();
 carregarContatosSalvos().then(function(){ carregarDados(); });
+
+/* Atualiza os contatos automaticamente a cada 30s (todas as abas ficam espelhadas) */
+setInterval(function(){
+  carregarContatosSalvos().then(function(){
+    if(document.getElementById('conteudo').style.display !== 'none') renderTudo();
+  });
+}, 30000);
+
+/* Ao voltar para a aba, atualiza na hora */
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden){
+    carregarContatosSalvos().then(function(){ renderTudo(); });
+  }
+});
 </script>
 </body>
 </html>
