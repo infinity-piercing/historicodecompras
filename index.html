@@ -285,6 +285,7 @@ var CONFIG = {
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var ultimaAtualizacao = '—';
+var JANELA_EDICAO_LOCAL = 10000; /* 10s: edição local não pode ser sobrescrita */
 
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -517,14 +518,14 @@ function processarMes(colunas,linhas){
   return {saida:saida,idxProduto:idx.produto,idxSku:idx.sku,colunas:colunas};
 }
 
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,diag:[]};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},edicaoLocal:{},apiOk:false,diag:[]};
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
   txt.textContent='Lendo repositório…';
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,diag:[]};
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},edicaoLocal:{},apiOk:false,diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
     if(!arquivos.length){ txt.textContent='Nenhum CSV encontrado'; pill.className='pill err'; return; }
@@ -654,9 +655,9 @@ function rankingProdutos(){
 }
 
 /* ============ ABA CONTATOS — persistência via Apps Script ============
-   LEITURA: JSONP com cache-buster (sempre dados frescos da planilha).
+   LEITURA: JSONP com cache-buster + MERGE anti-sobrescrita.
    GRAVAÇÃO: formulário nativo em iframe oculto (sem CORS, sem perda).
-   ATUALIZAÇÃO: auto-refresh a cada 30s + ao voltar para a aba. */
+   ATUALIZAÇÃO: refresh leve a cada 60s + ao voltar para a aba. */
 function jsonp(url, cbName, timeout){
   return new Promise(function(resolve, reject){
     var sep = url.indexOf('?') > -1 ? '&' : '?';
@@ -704,15 +705,24 @@ function carregarContatosSalvos(){
   return jsonp(CONFIG.apiUrl, cb).then(function(lista){
     if(!Array.isArray(lista)){ estado.apiOk=false; return; }
     var map={};
+    var agoraMs=Date.now();
     lista.forEach(function(linha){
       var em=norm(linha.email);
       if(!em) return;
-      map[em]={
+      var remoto={
         contato: String(linha.contato||'').toLowerCase()==='sim'||linha.contato===true,
         retorno: String(linha.retorno||'').toLowerCase()==='sim'||linha.retorno===true,
         data: linha.data||'',
         atendente: linha.atendente||''
       };
+      /* MERGE ANTI-SOBRESCRITA: se o usuário editou este cliente nos últimos 10s,
+         mantém a edição local em vez do valor remoto (que pode estar desatualizado). */
+      var editadoEm=estado.edicaoLocal[em];
+      if(editadoEm && (agoraMs-editadoEm) < JANELA_EDICAO_LOCAL && estado.contatosSalvos[em]){
+        map[em]=estado.contatosSalvos[em];
+      } else {
+        map[em]=remoto;
+      }
     });
     estado.contatosSalvos=map;
     estado.apiOk=true;
@@ -775,12 +785,12 @@ function salvarContato(r){
     inp.value = campos[k] || '';
     form.appendChild(inp);
   }
-  form.submit();
+  /* Marca a edição local para o merge anti-sobrescrita proteger */
+  estado.edicaoLocal[norm(r.email)] = Date.now();
   estado.contatosSalvos[norm(r.email)] = {contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
   estado.apiOk = true;
+  form.submit();
   flashSalvo();
-  /* Confirma lendo de volta da planilha após gravar */
-  setTimeout(function(){ carregarContatosSalvos().then(function(){ renderTudo(); }); }, 1500);
 }
 function montarTabelaContatos(){
   var arr=contatosAlvo();
@@ -1089,6 +1099,16 @@ function renderTudo(){
   if(!temDados) return;
   montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela(); montarTabelaProdutos(); montarTabelaContatos(); montarKpisContatos(); marcarOrdem();
 }
+/* Refresh LEVE: só atualiza a aba de contatos, sem re-renderizar gráficos/tabelas pesadas */
+function refreshLeve(){
+  carregarContatosSalvos().then(function(){
+    var sec=document.getElementById('contatos');
+    if(sec && sec.style.display!=='none'){
+      montarTabelaContatos();
+      montarKpisContatos();
+    }
+  });
+}
 function exportarCsv(){
   if(!estado.linhasTabela.length){ alert('Nenhum cliente encontrado.'); return; }
   var linhas=estado.linhasTabela.map(function(r){
@@ -1160,22 +1180,16 @@ document.getElementById('btnRecarregarContatos').onclick=function(){
   carregarContatosSalvos().then(function(){ renderTudo(); });
 };
 
-/* ============ INÍCIO + ESPELHAMENTO CONTÍNUO ============ */
+/* ============ INÍCIO + ESPELHAMENTO LEVE ============ */
 atualizarStatusApi();
 carregarContatosSalvos().then(function(){ carregarDados(); });
 
-/* Atualiza os contatos automaticamente a cada 30s (todas as abas ficam espelhadas) */
-setInterval(function(){
-  carregarContatosSalvos().then(function(){
-    if(document.getElementById('conteudo').style.display !== 'none') renderTudo();
-  });
-}, 30000);
+/* Refresh leve a cada 60s: só a aba de contatos, sem sobrescrever edições recentes */
+setInterval(refreshLeve, 60000);
 
-/* Ao voltar para a aba, atualiza na hora */
+/* Ao voltar para a aba, atualiza na hora (leve) */
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden){
-    carregarContatosSalvos().then(function(){ renderTudo(); });
-  }
+  if(!document.hidden) refreshLeve();
 });
 </script>
 </body>
