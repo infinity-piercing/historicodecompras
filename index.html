@@ -19,8 +19,6 @@
   .pill.err .dot{background:#f87171}
   .btn{border:1px solid var(--borda);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
   .btn:hover{border-color:var(--verde2);color:var(--verde)}
-  .btn-lang{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5)}
-  .btn-lang:hover{background:rgba(255,255,255,.32);color:#fff;border-color:#fff}
   main{max-width:1280px;margin:0 auto;padding:18px 16px}
   .avisos{margin-bottom:14px}
   .aviso{border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:13.5px;line-height:1.5;display:none}
@@ -78,7 +76,6 @@
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:16px}
   .card h3{font-size:14.5px;color:#111827;margin-bottom:12px}
-  .card h3 .hint{font-size:11px;color:var(--cinza);font-weight:400}
   canvas{width:100%;height:235px}
   .barras .barra{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
   .barras .nome{width:48%;text-align:left;color:#374151;font-size:11.5px;line-height:1.35;white-space:normal;word-break:break-word;overflow:visible}
@@ -248,7 +245,8 @@
       <div class="tabela-box">
         <div class="tabela-top">
           <div class="contador" id="contadorContatos">—</div>
-          <button class="btn" id="btnRecarregarContatos">↻ Recarregar contatos</button>
+          <button class="btn" id="btnTestarConexao">🔌 Testar conexão</button>
+          <button class="btn" id="btnRecarregarContatos">↻ Recarregar</button>
           <button class="btn" id="btnCsvContatos">⬇ Exportar CSV</button>
         </div>
         <div class="tabela-scroll">
@@ -277,7 +275,7 @@
 /* ============================================================
    CONFIGURAÇÃO
    repo = repositório no GitHub
-   apiUrl = URL do Apps Script (cole a URL /exec aqui)
+   apiUrl = URL do Apps Script (cole a URL /exec atual)
    ============================================================ */
 var CONFIG = {
   repo: 'infinity-piercing/historicodecompras',
@@ -286,7 +284,6 @@ var CONFIG = {
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-/* ============ UTILITÁRIOS ============ */
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function dinheiro(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0); }catch(e){ return 'R$ '+(v||0); } }
@@ -386,7 +383,6 @@ function acharColunaSku(cab){
   return acharColuna(cab,'sku');
 }
 
-/* ============ LEITURA DOS CSVs DO GITHUB ============ */
 function listarArquivosRepo(repo){
   return fetch('https://api.github.com/repos/'+repo+'/contents/').then(function(r){
     if(!r.ok) throw new Error('GitHub API HTTP '+r.status);
@@ -441,7 +437,6 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   return nomeArquivo||'Mês';
 }
 
-/* ============ PROCESSAMENTO ============ */
 function processarBase(b){
   if(!b||!b.colunas||!b.linhas) return null;
   var iEmail=acharColuna(b.colunas,'email');
@@ -514,7 +509,6 @@ function processarMes(colunas,linhas){
   return {saida:saida,idxProduto:idx.produto,idxSku:idx.sku,colunas:colunas};
 }
 
-/* ============ CARREGAMENTO ============ */
 var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,diag:[]};
 
 function carregarDados(){
@@ -588,7 +582,6 @@ function chaveMes(rot){
   return 0;
 }
 
-/* ============ ANÁLISE ============ */
 function pedidosDoPeriodo(){
   if(estado.periodo==='TODOS'){ var t2=[]; estado.meses.forEach(function(m){ if(m.ok) t2=t2.concat(m.pedidos); }); return t2; }
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
@@ -633,7 +626,6 @@ function situacao(email,comprou){
 }
 function dadoBase(email){ return estado.base?estado.base.map.get(email)||null:null; }
 
-/* ============ PRODUTOS ============ */
 function rankingProdutos(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
@@ -678,8 +670,19 @@ function contatosAlvo(){
 }
 function carregarContatosSalvos(){
   if(!CONFIG.apiUrl){ estado.apiOk=false; return Promise.resolve(); }
-  return fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.json(); }).then(function(lista){
-    if(!Array.isArray(lista)){ estado.apiOk=false; return; }
+  return fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.text(); }).then(function(txt){
+    var lista;
+    try { lista=JSON.parse(txt); }
+    catch(e){
+      estado.apiOk=false;
+      avisar('erro','API','A resposta não é JSON. A URL provavelmente ainda serve a versão antiga do script (HTML). Resposta: '+esc(txt.slice(0,200)));
+      return;
+    }
+    if(!Array.isArray(lista)){
+      estado.apiOk=false;
+      avisar('erro','API',esc(lista.erro||'Resposta inesperada da API.'));
+      return;
+    }
     var map={};
     lista.forEach(function(linha){
       var em=norm(linha.email);
@@ -693,7 +696,23 @@ function carregarContatosSalvos(){
     });
     estado.contatosSalvos=map;
     estado.apiOk=true;
-  }).catch(function(){ estado.apiOk=false; });
+  }).catch(function(err){ estado.apiOk=false; avisar('erro','API','Falha ao ler a planilha: '+esc(err.message)); });
+}
+function testarConexao(){
+  if(!CONFIG.apiUrl){ avisar('erro','API','CONFIG.apiUrl está vazio.'); return; }
+  fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.text(); }).then(function(txt){
+    var lista;
+    try { lista=JSON.parse(txt); }
+    catch(e){ avisar('erro','API','Resposta não é JSON (versão antiga do script?): '+esc(txt.slice(0,200))); return; }
+    if(Array.isArray(lista)){
+      estado.apiOk=true;
+      avisar('ok','API','Conectado! '+lista.length+' registro(s) na aba Contatos da planilha.');
+    } else {
+      estado.apiOk=false;
+      avisar('erro','API',esc(lista.erro||'Resposta inesperada.'));
+    }
+    renderTudo();
+  }).catch(function(err){ estado.apiOk=false; avisar('erro','API','Falha: '+esc(err.message)); });
 }
 function flashSalvo(){
   var el=document.getElementById('contadorContatos');
@@ -703,8 +722,6 @@ function flashSalvo(){
   clearTimeout(flashSalvo._t);
   flashSalvo._t=setTimeout(function(){ el.textContent=base; },2500);
 }
-/* GRAVAÇÃO DEFINITIVA: text/plain evita pré-checagem CORS;
-   no-cors envia mesmo sem ler resposta (o Apps Script grava). */
 function salvarContato(r){
   if(!CONFIG.apiUrl){ avisar('info','Salvando…','Apps Script não configurado (CONFIG.apiUrl vazio)'); return; }
   var payload={email:r.email,nome:r.nome,telefone:r.telefone,cidade:r.cidade,contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
@@ -802,7 +819,6 @@ function montarKpisContatos(){
   document.getElementById('colDirContatos').innerHTML=dir;
 }
 
-/* ============ RENDER ============ */
 function marcarOrdem(){
   document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
     var seta=th.querySelector('.seta');
@@ -1059,7 +1075,6 @@ function exportarCsvContatos(){
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='contatos_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 
-/* ============ EVENTOS ============ */
 document.querySelectorAll('.tab').forEach(function(t){
   t.onclick=function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('ativo');});
@@ -1098,14 +1113,11 @@ document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabe
 document.getElementById('btnCsv').onclick=exportarCsv;
 document.getElementById('btnCsvProdutos').onclick=exportarCsvProdutos;
 document.getElementById('btnCsvContatos').onclick=exportarCsvContatos;
+document.getElementById('btnTestarConexao').onclick=testarConexao;
 document.getElementById('btnRecarregarContatos').onclick=function(){
-  carregarContatosSalvos().then(function(){
-    renderTudo();
-    avisar('ok','Contatos','Lista de contatos atualizada da planilha.');
-  });
+  carregarContatosSalvos().then(function(){ renderTudo(); });
 };
 
-/* ============ INÍCIO ============ */
 carregarContatosSalvos().then(function(){ carregarDados(); });
 </script>
 </body>
