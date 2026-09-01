@@ -117,6 +117,10 @@
   #contatos th,#contatos td{padding:7px 8px;overflow:hidden;text-overflow:ellipsis}
   #contatos td.cel-wrap{white-space:normal;word-break:break-word}
   #contatos td.cel-c{text-align:center;white-space:nowrap}
+  #contatos tbody tr.linha-contato td{background:#fff8cc}
+  #contatos tbody tr.linha-contato:hover td{background:#fff2a6}
+  #contatos tbody tr.linha-retorno td{background:#d9f5d9}
+  #contatos tbody tr.linha-retorno:hover td{background:#c3eec3}
   .paginacao{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--borda);font-size:12.5px;color:var(--cinza);flex-wrap:wrap}
   .paginacao .btn:disabled{opacity:.4;cursor:default}
   footer{max-width:1280px;margin:20px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
@@ -273,11 +277,11 @@
 /* ============================================================
    CONFIGURAÇÃO
    repo = repositório no GitHub
-   apiUrl = URL do Apps Script (já configurada)
+   apiUrl = URL do Apps Script (NOVA URL)
    ============================================================ */
 var CONFIG = {
   repo: 'infinity-piercing/historicodecompras',
-  apiUrl: 'https://script.google.com/macros/s/AKfycbyWhqKajKLM_MUhakjAo8d2g1iNHvRLt9TxWxTHh39yhdcbg6noxRc_evKHCUDoz3jwXQ/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbxSU0dXRYQVL6eWzzldghm7JqAw3tegIjv79Vd_rFHQ81hAuI4YOLGaSMeWLB6JnlFO8w/exec'
 };
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 
@@ -805,8 +809,9 @@ function contatosAlvo(){
 function carregarContatosSalvos(){
   if(!CONFIG.apiUrl){ return Promise.resolve(); }
   return fetch(CONFIG.apiUrl,{redirect:'follow'}).then(function(r){ return r.json(); }).then(function(lista){
+    if(!Array.isArray(lista)) return;
     var map={};
-    (lista||[]).forEach(function(linha){
+    lista.forEach(function(linha){
       var em=norm(linha.email);
       if(!em) return;
       map[em]={
@@ -819,22 +824,33 @@ function carregarContatosSalvos(){
     estado.contatosSalvos=map;
   }).catch(function(){ /* sem conexão: segue com vazio */ });
 }
-/* CORREÇÃO CORS: envia como text/plain (sem pré-checagem OPTIONS) */
+function flashSalvo(){
+  var el=document.getElementById('contadorContatos');
+  if(!el) return;
+  var base=el.textContent;
+  el.textContent=base+' · ✓ '+t('salvo');
+  clearTimeout(flashSalvo._t);
+  flashSalvo._t=setTimeout(function(){ el.textContent=base; },2500);
+}
 function salvarContato(r){
   if(!CONFIG.apiUrl){ avisar('info',t('salvando'),t('semApi')); return; }
   var payload={
     email:r.email,nome:r.nome,telefone:r.telefone,cidade:r.cidade,
     contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente
   };
-  fetch(CONFIG.apiUrl,{
-    method:'POST',
-    redirect:'follow',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(payload)
-  })
-    .then(function(res){ return res.json(); })
-    .then(function(){ estado.contatosSalvos[norm(r.email)]={contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente}; })
-    .catch(function(){ avisar('erro','Erro',esc('Não foi possível salvar o contato.')); });
+  var corpo=JSON.stringify(payload);
+  function okLocal(){
+    estado.contatosSalvos[norm(r.email)]={contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
+    flashSalvo();
+  }
+  fetch(CONFIG.apiUrl,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo})
+    .then(function(res){ return res.json().catch(function(){ return {}; }); })
+    .then(function(){ okLocal(); })
+    .catch(function(){
+      fetch(CONFIG.apiUrl,{method:'POST',mode:'no-cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo})
+        .then(function(){ okLocal(); })
+        .catch(function(){ avisar('erro','Erro',esc('Não foi possível salvar o contato.')); });
+    });
 }
 function montarTabelaContatos(){
   var arr=contatosAlvo();
@@ -854,6 +870,8 @@ function montarTabelaContatos(){
   if(!arr.length){ tb.innerHTML='<tr><td colspan="8" style="color:var(--cinza);text-align:center;padding:24px">'+t('nenhumCliente')+'</td></tr>'; return; }
   arr.forEach(function(r,i){
     var tr=document.createElement('tr');
+    var cls=r.retorno?'linha-retorno':(r.contato?'linha-contato':'');
+    if(cls) tr.className=cls;
     tr.innerHTML=
       '<td class="cel-wrap">'+esc(r.nome)+'</td>'+
       '<td class="cel-wrap">'+esc(r.email)+'</td>'+
@@ -872,6 +890,8 @@ function montarTabelaContatos(){
       estado.linhasContatos[i][el.dataset.campo]=el.checked;
       var sp=el.parentNode.querySelector('span[data-txt]');
       if(sp){ sp.textContent=el.checked?'Sim':'Não'; sp.className=el.checked?'txt-cb-sim':'txt-cb-nao'; }
+      var tr=el.closest('tr');
+      if(tr) tr.className=estado.linhasContatos[i].retorno?'linha-retorno':(estado.linhasContatos[i].contato?'linha-contato':'');
       salvarContato(estado.linhasContatos[i]);
       montarKpisContatos();
     });
