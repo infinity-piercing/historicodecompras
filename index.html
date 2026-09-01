@@ -645,7 +645,7 @@ function rankingProdutos(){
 
 /* ============ ABA CONTATOS — persistência via Apps Script ============
    LEITURA: JSONP (tag <script>) — o navegador NÃO bloqueia.
-   GRAVAÇÃO: POST no-cors — o navegador envia e o Apps Script grava. */
+   GRAVAÇÃO: formulário nativo em iframe oculto — sem CORS, sem perda. */
 function jsonp(url, cbName, timeout){
   return new Promise(function(resolve, reject){
     var sep = url.indexOf('?') > -1 ? '&' : '?';
@@ -729,23 +729,46 @@ function flashSalvo(){
   clearTimeout(flashSalvo._t);
   flashSalvo._t=setTimeout(function(){ el.textContent=base; },2500);
 }
+/* GRAVAÇÃO DEFINITIVA: formulário nativo em iframe oculto.
+   O navegador envia o POST como navegação (sem CORS, sem pré-checagem,
+   sem perder o corpo no redirect). O Apps Script recebe e grava. */
 function salvarContato(r){
   if(!CONFIG.apiUrl){ avisar('info','Salvando…','Apps Script não configurado (CONFIG.apiUrl vazio)'); return; }
-  var payload={email:r.email,nome:r.nome,telefone:r.telefone,cidade:r.cidade,contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
-  var corpo=JSON.stringify(payload);
-  function okLocal(){
-    estado.contatosSalvos[norm(r.email)]={contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
-    estado.apiOk=true;
-    flashSalvo();
+  var iframe = document.getElementById('iframeSalvar');
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = 'iframeSalvar';
+    iframe.name = 'iframeSalvar';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
   }
-  fetch(CONFIG.apiUrl,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo})
-    .then(function(res){ return res.json().catch(function(){ return {}; }); })
-    .then(function(){ okLocal(); })
-    .catch(function(){
-      fetch(CONFIG.apiUrl,{method:'POST',mode:'no-cors',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo})
-        .then(function(){ okLocal(); })
-        .catch(function(){ avisar('erro','Erro','Não foi possível salvar o contato.'); });
-    });
+  var form = document.getElementById('formSalvar');
+  if(!form){
+    form = document.createElement('form');
+    form.id = 'formSalvar';
+    form.method = 'POST';
+    form.action = CONFIG.apiUrl;
+    form.target = 'iframeSalvar';
+    form.style.display = 'none';
+    document.body.appendChild(form);
+  }
+  form.innerHTML = '';
+  var campos = {
+    email: r.email, nome: r.nome, telefone: r.telefone, cidade: r.cidade,
+    contato: r.contato ? 'Sim' : 'Não', retorno: r.retorno ? 'Sim' : 'Não',
+    data: r.data || '', atendente: r.atendente || ''
+  };
+  for(var k in campos){
+    var inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = k;
+    inp.value = campos[k] || '';
+    form.appendChild(inp);
+  }
+  form.submit();
+  estado.contatosSalvos[norm(r.email)] = {contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
+  estado.apiOk = true;
+  flashSalvo();
 }
 function montarTabelaContatos(){
   var arr=contatosAlvo();
