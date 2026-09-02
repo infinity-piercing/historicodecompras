@@ -267,6 +267,11 @@
             <tbody id="tbodyContatos"></tbody>
           </table>
         </div>
+        <div class="paginacao">
+          <button class="btn" id="prevPagCont">← <span id="btnAnteriorCont">Anterior</span></button>
+          <span id="infoPagCont">—</span>
+          <button class="btn" id="nextPagCont"><span id="btnProximaCont">Próxima</span> →</button>
+        </div>
       </div>
     </section>
   </div>
@@ -285,7 +290,6 @@ var CONFIG = {
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 var NOMES_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var ultimaAtualizacao = '—';
-var JANELA_EDICAO_LOCAL = 10000; /* 10s: edição local não pode ser sobrescrita */
 
 function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -518,14 +522,14 @@ function processarMes(colunas,linhas){
   return {saida:saida,idxProduto:idx.produto,idxSku:idx.sku,colunas:colunas};
 }
 
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},edicaoLocal:{},apiOk:false,diag:[]};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,paginaCont:1,porPaginaCont:200,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,diag:[]};
 
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
   txt.textContent='Lendo repositório…';
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
-  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},edicaoLocal:{},apiOk:false,diag:[]};
+  estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,paginaCont:1,porPaginaCont:200,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,diag:[]};
 
   listarArquivosRepo(CONFIG.repo).then(function(arquivos){
     if(!arquivos.length){ txt.textContent='Nenhum CSV encontrado'; pill.className='pill err'; return; }
@@ -654,10 +658,10 @@ function rankingProdutos(){
   return arr;
 }
 
-/* ============ ABA CONTATOS — persistência via Apps Script ============
-   LEITURA: JSONP com cache-buster + MERGE anti-sobrescrita.
-   GRAVAÇÃO: formulário nativo em iframe oculto (sem CORS, sem perda).
-   ATUALIZAÇÃO: refresh leve a cada 60s + ao voltar para a aba. */
+/* ============ ABA CONTATOS — FONTE ÚNICA: a planilha ============
+   O site apenas LÊ a planilha (JSONP com cache-buster).
+   A edição é feita DIRETO na planilha pelo time.
+   Paginação de 200 linhas para manter o site rápido. */
 function jsonp(url, cbName, timeout){
   return new Promise(function(resolve, reject){
     var sep = url.indexOf('?') > -1 ? '&' : '?';
@@ -677,52 +681,25 @@ function jsonp(url, cbName, timeout){
     document.head.appendChild(script);
   });
 }
-function contatosAlvo(){
-  var totalM=totalMesesCarregados();
-  var arr=[];
-  if(!estado.base) return arr;
-  estado.base.map.forEach(function(v,em){
-    var meses=mesesComCompra(em);
-    if(totalM===0||meses<totalM){
-      var salvo=estado.contatosSalvos[em]||{};
-      arr.push({
-        email:v.email,nome:v.nome||v.email,telefone:v.telefone||'',cidade:v.cidade||'',
-        meses:meses,totalM:totalM,
-        contato:!!salvo.contato,retorno:!!salvo.retorno,data:salvo.data||'',atendente:salvo.atendente||''
-      });
-    }
-  });
-  arr.sort(function(a,b){
-    var pa=a.telefone?0:1, pb=b.telefone?0:1;
-    if(pa!==pb) return pa-pb;
-    return String(a.nome).localeCompare(String(b.nome),'pt-BR');
-  });
-  return arr;
-}
 function carregarContatosSalvos(){
   if(!CONFIG.apiUrl){ estado.apiOk=false; return Promise.resolve(); }
   var cb = 'cb_' + Date.now();
   return jsonp(CONFIG.apiUrl, cb).then(function(lista){
     if(!Array.isArray(lista)){ estado.apiOk=false; return; }
     var map={};
-    var agoraMs=Date.now();
     lista.forEach(function(linha){
       var em=norm(linha.email);
       if(!em) return;
-      var remoto={
+      map[em]={
+        email: linha.email||'',
+        nome: linha.nome||'',
+        telefone: linha.telefone||'',
+        cidade: linha.cidade||'',
         contato: String(linha.contato||'').toLowerCase()==='sim'||linha.contato===true,
         retorno: String(linha.retorno||'').toLowerCase()==='sim'||linha.retorno===true,
         data: linha.data||'',
         atendente: linha.atendente||''
       };
-      /* MERGE ANTI-SOBRESCRITA: se o usuário editou este cliente nos últimos 10s,
-         mantém a edição local em vez do valor remoto (que pode estar desatualizado). */
-      var editadoEm=estado.edicaoLocal[em];
-      if(editadoEm && (agoraMs-editadoEm) < JANELA_EDICAO_LOCAL && estado.contatosSalvos[em]){
-        map[em]=estado.contatosSalvos[em];
-      } else {
-        map[em]=remoto;
-      }
     });
     estado.contatosSalvos=map;
     estado.apiOk=true;
@@ -744,56 +721,15 @@ function testarConexao(){
     renderTudo();
   }).catch(function(err){ estado.apiOk=false; avisar('erro','API','Falha: '+esc(err.message)); });
 }
-function flashSalvo(){
-  var el=document.getElementById('contadorContatos');
-  if(!el) return;
-  var base=el.textContent;
-  el.textContent=base+' · ✓ Salvo';
-  clearTimeout(flashSalvo._t);
-  flashSalvo._t=setTimeout(function(){ el.textContent=base; },2500);
-}
-function salvarContato(r){
-  if(!CONFIG.apiUrl){ avisar('info','Salvando…','Apps Script não configurado (CONFIG.apiUrl vazio)'); return; }
-  var iframe = document.getElementById('iframeSalvar');
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = 'iframeSalvar';
-    iframe.name = 'iframeSalvar';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
-  var form = document.getElementById('formSalvar');
-  if(!form){
-    form = document.createElement('form');
-    form.id = 'formSalvar';
-    form.method = 'POST';
-    form.action = CONFIG.apiUrl;
-    form.target = 'iframeSalvar';
-    form.style.display = 'none';
-    document.body.appendChild(form);
-  }
-  form.innerHTML = '';
-  var campos = {
-    email: r.email, nome: r.nome, telefone: r.telefone, cidade: r.cidade,
-    contato: r.contato ? 'Sim' : 'Não', retorno: r.retorno ? 'Sim' : 'Não',
-    data: r.data || '', atendente: r.atendente || ''
-  };
-  for(var k in campos){
-    var inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = k;
-    inp.value = campos[k] || '';
-    form.appendChild(inp);
-  }
-  /* Marca a edição local para o merge anti-sobrescrita proteger */
-  estado.edicaoLocal[norm(r.email)] = Date.now();
-  estado.contatosSalvos[norm(r.email)] = {contato:r.contato,retorno:r.retorno,data:r.data,atendente:r.atendente};
-  estado.apiOk = true;
-  form.submit();
-  flashSalvo();
-}
 function montarTabelaContatos(){
-  var arr=contatosAlvo();
+  var arr=[];
+  Object.keys(estado.contatosSalvos).forEach(function(em){
+    var v=estado.contatosSalvos[em];
+    arr.push({
+      email:v.email||em,nome:v.nome||v.email||em,telefone:v.telefone||'',cidade:v.cidade||'',
+      contato:!!v.contato,retorno:!!v.retorno,data:v.data||'',atendente:v.atendente||''
+    });
+  });
   var b=norm(estado.busca);
   if(b){ arr=arr.filter(function(r){ return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1; }); }
   var ch=estado.ordemCont.chave, dir=estado.ordemCont.dir;
@@ -805,49 +741,32 @@ function montarTabelaContatos(){
     return String(va).localeCompare(String(vz),'pt-BR')*dir;
   });
   estado.linhasContatos=arr;
-  document.getElementById('contadorContatos').textContent=numero(arr.length)+' cliente(s) · não compraram em todos os '+numero(totalMesesCarregados())+' mês(es)'+(estado.apiOk?'':' · ⚠ sem conexão com a planilha');
+  document.getElementById('contadorContatos').textContent=numero(arr.length)+' cliente(s) na planilha'+(estado.apiOk?'':' · ⚠ sem conexão com a planilha');
+  var totalPag=Math.max(1,Math.ceil(arr.length/estado.porPaginaCont));
+  if(estado.paginaCont>totalPag)estado.paginaCont=totalPag;
+  var ini=(estado.paginaCont-1)*estado.porPaginaCont, fatia=arr.slice(ini,ini+estado.porPaginaCont);
   var tb=document.getElementById('tbodyContatos'); tb.innerHTML='';
-  if(!arr.length){ tb.innerHTML='<tr><td colspan="8" style="color:var(--cinza);text-align:center;padding:24px">Nenhum cliente encontrado.</td></tr>'; return; }
-  arr.forEach(function(r,i){
-    var tr=document.createElement('tr');
-    var cls=r.retorno?'linha-retorno':(r.contato?'linha-contato':'');
-    if(cls) tr.className=cls;
-    tr.innerHTML=
-      '<td class="cel-wrap">'+esc(r.nome)+'</td>'+
-      '<td class="cel-wrap">'+esc(r.email)+'</td>'+
-      '<td class="cel-wrap">'+esc(r.telefone||'—')+'</td>'+
-      '<td class="cel-wrap">'+esc(r.cidade||'—')+'</td>'+
-      '<td class="cel-c"><label class="cb-grupo"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="contato"'+(r.contato?' checked':'')+'><span class="'+(r.contato?'txt-cb-sim':'txt-cb-nao')+'" data-txt="'+i+'-contato">'+(r.contato?'Sim':'Não')+'</span></label></td>'+
-      '<td class="cel-c"><label class="cb-grupo"><input type="checkbox" class="cb" data-i="'+i+'" data-campo="retorno"'+(r.retorno?' checked':'')+'><span class="'+(r.retorno?'txt-cb-sim':'txt-cb-nao')+'" data-txt="'+i+'-retorno">'+(r.retorno?'Sim':'Não')+'</span></label></td>'+
-      '<td class="cel-c"><input type="date" class="inp-data" data-i="'+i+'" data-campo="data" value="'+esc(r.data)+'"></td>'+
-      '<td><select class="sel-atend" data-i="'+i+'" data-campo="atendente"><option value=""></option>'+ATENDENTES.map(function(a){return '<option value="'+a+'"'+(r.atendente===a?' selected':'')+'>'+a+'</option>';}).join('')+'</select></td>';
-    tb.appendChild(tr);
-  });
-  tb.querySelectorAll('.cb').forEach(function(el){
-    el.addEventListener('change',function(){
-      var i=parseInt(el.dataset.i,10);
-      if(!estado.linhasContatos[i]) return;
-      estado.linhasContatos[i][el.dataset.campo]=el.checked;
-      var sp=el.parentNode.querySelector('span[data-txt]');
-      if(sp){ sp.textContent=el.checked?'Sim':'Não'; sp.className=el.checked?'txt-cb-sim':'txt-cb-nao'; }
-      var tr=el.closest('tr');
-      if(tr) tr.className=estado.linhasContatos[i].retorno?'linha-retorno':(estado.linhasContatos[i].contato?'linha-contato':'');
-      salvarContato(estado.linhasContatos[i]);
-      montarKpisContatos();
+  if(!fatia.length){ tb.innerHTML='<tr><td colspan="8" style="color:var(--cinza);text-align:center;padding:24px">Nenhum cliente encontrado.</td></tr>'; }
+  else{
+    fatia.forEach(function(r){
+      var tr=document.createElement('tr');
+      var cls=r.retorno?'linha-retorno':(r.contato?'linha-contato':'');
+      if(cls) tr.className=cls;
+      tr.innerHTML=
+        '<td class="cel-wrap">'+esc(r.nome)+'</td>'+
+        '<td class="cel-wrap">'+esc(r.email)+'</td>'+
+        '<td class="cel-wrap">'+esc(r.telefone||'—')+'</td>'+
+        '<td class="cel-wrap">'+esc(r.cidade||'—')+'</td>'+
+        '<td class="cel-c"><span class="'+(r.contato?'txt-cb-sim':'txt-cb-nao')+'">'+(r.contato?'Sim':'Não')+'</span></td>'+
+        '<td class="cel-c"><span class="'+(r.retorno?'txt-cb-sim':'txt-cb-nao')+'">'+(r.retorno?'Sim':'Não')+'</span></td>'+
+        '<td class="cel-c">'+esc(r.data||'—')+'</td>'+
+        '<td>'+esc(r.atendente||'—')+'</td>';
+      tb.appendChild(tr);
     });
-  });
-  tb.querySelectorAll('.inp-data').forEach(function(el){
-    el.addEventListener('change',function(){
-      var i=parseInt(el.dataset.i,10);
-      if(estado.linhasContatos[i]){ estado.linhasContatos[i].data=el.value; salvarContato(estado.linhasContatos[i]); }
-    });
-  });
-  tb.querySelectorAll('.sel-atend').forEach(function(el){
-    el.addEventListener('change',function(){
-      var i=parseInt(el.dataset.i,10);
-      if(estado.linhasContatos[i]){ estado.linhasContatos[i].atendente=el.value; salvarContato(estado.linhasContatos[i]); montarKpisContatos(); }
-    });
-  });
+  }
+  document.getElementById('infoPagCont').textContent='Página '+estado.paginaCont+' de '+totalPag+' · '+numero(arr.length)+' cliente(s)';
+  document.getElementById('prevPagCont').disabled=estado.paginaCont<=1;
+  document.getElementById('nextPagCont').disabled=estado.paginaCont>=totalPag;
 }
 function itemKpi(rot,val,sub,destaque){
   return '<div class="item-kpi'+(destaque?' destaque':'')+'"><span class="rot">'+rot+(sub?'<span class="sub">'+sub+'</span>':'')+'</span><span class="val">'+val+'</span></div>';
@@ -857,7 +776,7 @@ function montarKpisContatos(){
   var total=arr.length,tel=0,cont=0,ret=0;
   arr.forEach(function(r){ if(r.telefone) tel++; if(r.contato) cont++; if(r.retorno) ret++; });
   var esq='<h4>Geral</h4>';
-  esq+=itemKpi('Sem compras',numero(total),'',false);
+  esq+=itemKpi('Total na planilha',numero(total),'',false);
   esq+=itemKpi('Com telefone',numero(tel),total?Math.round(tel/total*100)+'% com telefone':'0%',true);
   esq+=itemKpi('Contatados',numero(cont),'',false);
   esq+=itemKpi('Deram retorno',numero(ret),'',false);
@@ -1099,7 +1018,6 @@ function renderTudo(){
   if(!temDados) return;
   montarFoco(); montarChips(); montarKpis(); montarEvolucao(); montarTopProdutos(); montarDonut(); montarTabela(); montarTabelaProdutos(); montarTabelaContatos(); montarKpisContatos(); marcarOrdem();
 }
-/* Refresh LEVE: só atualiza a aba de contatos, sem re-renderizar gráficos/tabelas pesadas */
 function refreshLeve(){
   carregarContatosSalvos().then(function(){
     var sec=document.getElementById('contatos');
@@ -1147,7 +1065,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.getElementById('contatos').style.display=t.dataset.tab==='contatos'?'':'none';
   };
 });
-document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;montarTabela();montarTabelaProdutos();montarTabelaContatos();montarKpisContatos();marcarOrdem();});
+document.getElementById('busca').addEventListener('input',function(e){estado.busca=e.target.value;estado.pagina=1;estado.paginaCont=1;montarTabela();montarTabelaProdutos();montarTabelaContatos();montarKpisContatos();marcarOrdem();});
 document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;estado.pagina=1;renderTudo();});
 document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
   th.onclick=function(){
@@ -1172,6 +1090,8 @@ document.querySelectorAll('#contatos th[data-ordc]').forEach(function(th){
 });
 document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
 document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
+document.getElementById('prevPagCont').onclick=function(){if(estado.paginaCont>1){estado.paginaCont--;montarTabelaContatos();}};
+document.getElementById('nextPagCont').onclick=function(){estado.paginaCont++;montarTabelaContatos();};
 document.getElementById('btnCsv').onclick=exportarCsv;
 document.getElementById('btnCsvProdutos').onclick=exportarCsvProdutos;
 document.getElementById('btnCsvContatos').onclick=exportarCsvContatos;
@@ -1184,7 +1104,7 @@ document.getElementById('btnRecarregarContatos').onclick=function(){
 atualizarStatusApi();
 carregarContatosSalvos().then(function(){ carregarDados(); });
 
-/* Refresh leve a cada 60s: só a aba de contatos, sem sobrescrever edições recentes */
+/* Refresh leve a cada 60s: só a aba de contatos */
 setInterval(refreshLeve, 60000);
 
 /* Ao voltar para a aba, atualiza na hora (leve) */
