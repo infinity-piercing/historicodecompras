@@ -263,7 +263,9 @@ var ultimaAtualizacao = '—';
 var atualizando = false;
 var debounceBusca = null;
 
+/* CORREÇÃO: ignora "Script error." (erro mascarado do navegador, sem utilidade) */
 window.onerror = function(msg, src, linha){
+  if(!msg || String(msg).indexOf('Script error') > -1) return false;
   var el = document.getElementById('erroGlobal');
   if(el){ el.style.display='block'; el.innerHTML='<b>⚠ Erro de execução:</b> '+esc(msg)+(linha?' (linha '+linha+')':''); }
   return false;
@@ -444,7 +446,6 @@ function parseCSV(texto){
   return linhas.filter(function(l){ return l.some(function(c2){ return String(c2).trim()!==''; }); });
 }
 function ehArquivoBase(nome){ var n=norm(nome); return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1; }
-/* CORREÇÃO: nunca retorna vazio — sempre há um rótulo de mês */
 function detectarRotulo(colunas,linhas,nomeArquivo){
   var iData=acharColuna(colunas,'data');
   if(iData>-1){
@@ -907,7 +908,7 @@ function montarKpis(){
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
-/* CORREÇÃO: rótulos e meses SEMPRE visíveis na evolução */
+/* CORREÇÃO: legenda + rótulos + meses sempre visíveis na evolução */
 function montarEvolucao(){
   var c=document.getElementById('evolucao'); if(!c) return;
   var dpr=Math.min(window.devicePixelRatio||1,2), cssW=c.clientWidth||300, cssH=c.clientHeight||225;
@@ -917,9 +918,16 @@ function montarEvolucao(){
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
   var dados=meses.map(function(m){ var receita=0, clientes=new Set(); m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.total; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size}; });
+  /* LEGENDA */
+  ctx.textBaseline='alphabetic';
+  ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle='#1d4a2e'; ctx.fillRect(10,10,11,11);
+  ctx.fillStyle='#374151'; ctx.fillText('Receita',26,20);
+  ctx.fillStyle='rgba(46,125,79,.42)'; ctx.fillRect(110,10,11,11);
+  ctx.fillStyle='#374151'; ctx.fillText('Clientes',126,20);
   var maxR=Math.max.apply(null,dados.map(function(d){return d.receita;}))||1;
   var maxC=Math.max.apply(null,dados.map(function(d){return d.clientes;}))||1;
-  var padL=12,padT=42,padR=12,padB=30;
+  var padL=12,padT=52,padR=12,padB=30;
   var gw=(W-padL-padR)/dados.length, bw=Math.min(32,gw*0.34);
   var mostrarVals = gw>=40;
   dados.forEach(function(d,i){
@@ -936,7 +944,6 @@ function montarEvolucao(){
       ctx.fillStyle='#1d4a2e'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
       ctx.fillText(rotulo,Math.round(x),Math.round(ty));
     }
-    /* MÊS DE REFERÊNCIA — sempre desenhado */
     ctx.fillStyle='#374151'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
     ctx.fillText(d.rotulo,Math.round(x),H-12);
   });
