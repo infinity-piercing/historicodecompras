@@ -146,7 +146,7 @@
   <div class="avisos" id="avisos"></div>
   <div class="diag" id="diag" style="display:none"><h3>🔎 Arquivos lidos do repositório</h3><div id="diagLinhas"></div></div>
 
-  <div id="conteudo" style="display:none">
+  <div id="conteudo">
     <div class="foco" id="foco" style="display:none">
       <div class="num" id="focoNum">0</div>
       <div class="txt"><b>🎯 Clientes cadastrados que ainda não compraram</b><span id="focoTxt">—</span></div>
@@ -246,9 +246,6 @@
 <footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
 
 <script>
-/* ============================================================
-   CONFIGURAÇÃO
-   ============================================================ */
 var CONFIG = {
   repo: 'infinity-piercing/historicodecompras',
   apiUrl: 'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec'
@@ -259,13 +256,9 @@ var ultimaAtualizacao = '—';
 var atualizando = false;
 var debounceBusca = null;
 
-/* Mostra qualquer erro de JS na tela, em vez de sumir o dashboard */
 window.onerror = function(msg, src, linha){
   var el = document.getElementById('erroGlobal');
-  if(el){
-    el.style.display = 'block';
-    el.innerHTML = '<b>⚠ Erro de execução:</b> ' + esc(msg) + (linha ? ' (linha ' + linha + ')' : '');
-  }
+  if(el){ el.style.display='block'; el.innerHTML='<b>⚠ Erro de execução:</b> '+esc(msg)+(linha?' (linha '+linha+')':''); }
   return false;
 };
 
@@ -542,6 +535,8 @@ function carregarDados(){
       estado.meses.sort(function(a,b){ var ma=chaveMes(a.rotulo), mb=chaveMes(b.rotulo); return (ma||0)-(mb||0); });
       var ok=estado.meses.filter(function(m){return m.ok;}).length;
       if(!estado.base&&ok===0){ txt.textContent='Sem dados legíveis'; pill.className='pill err'; return; }
+      /* LIBERA O PAINEL E RENDERIZA */
+      document.getElementById('conteudo').style.display='';
       renderFiltrosFoco();
       mostrarTab('overview');
       pill.className='pill '+(ok>0?'ok':'err');
@@ -603,7 +598,6 @@ function rankingProdutos(){
   return arr;
 }
 
-/* ============ ABA CONTATOS ============ */
 function jsonp(url,cbName,timeout){
   return new Promise(function(resolve,reject){
     var sep=url.indexOf('?')>-1?'&':'?';
@@ -688,7 +682,6 @@ function montarKpisContatos(){
   document.getElementById('colDirContatos').innerHTML=dir;
 }
 
-/* ============ GRÁFICOS ============ */
 function novoCtx(id,altDefault){
   var c=document.getElementById(id); if(!c) return null;
   var dpr=Math.min(window.devicePixelRatio||1,2);
@@ -759,19 +752,18 @@ function montarComparativos(){
   desenharComparativo('graficoComSemDesconto',meses,comDesc,semDesc,'#7c3aed','#1d4a2e','Com desconto','Sem desconto',fmtCurto);
 }
 
-/* ============ RENDER POR ABA (com proteção: um erro não derruba o resto) ============ */
 function secaoAtiva(){ var t=document.querySelector('.tab.ativo'); return t?t.dataset.tab:'overview'; }
 function renderFiltrosFoco(){ try{ montarFoco(); }catch(e){} try{ montarChips(); }catch(e){} }
 function renderSection(nome){
   try{
     if(nome==='overview'){
-      try{ montarKpis(); }catch(e){ avisar('erro','KPIs',esc(e.message)); }
-      try{ montarEvolucao(); }catch(e){ avisar('erro','Evolução',esc(e.message)); }
-      try{ montarTopProdutos(); }catch(e){ avisar('erro','Produtos',esc(e.message)); }
-      try{ montarDonut(); }catch(e){ avisar('erro','Donut',esc(e.message)); }
-      try{ montarComparativos(); }catch(e){ avisar('erro','Comparativos',esc(e.message)); }
-    } else if(nome==='clientes'){ try{ montarTabela(); }catch(e){ avisar('erro','Clientes',esc(e.message)); } }
-    else if(nome==='produtos'){ try{ montarTabelaProdutos(); }catch(e){ avisar('erro','Produtos',esc(e.message)); } }
+      try{ montarKpis(); }catch(e){}
+      try{ montarEvolucao(); }catch(e){}
+      try{ montarTopProdutos(); }catch(e){}
+      try{ montarDonut(); }catch(e){}
+      try{ montarComparativos(); }catch(e){}
+    } else if(nome==='clientes'){ try{ montarTabela(); }catch(e){} }
+    else if(nome==='produtos'){ try{ montarTabelaProdutos(); }catch(e){} }
     else if(nome==='contatos'){ try{ montarTabelaContatos(); }catch(e){} try{ montarKpisContatos(); }catch(e){} }
   }catch(e){}
   try{ marcarOrdem(); }catch(e){}
