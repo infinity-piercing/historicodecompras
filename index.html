@@ -76,7 +76,7 @@
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:16px}
   .card h3{font-size:14.5px;color:#111827;margin-bottom:12px}
-  canvas{width:100%;height:225px;display:block}
+  canvas{width:100%;height:225px;display:block;cursor:crosshair}
   .barras .barra{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
   .barras .nome{width:48%;text-align:left;color:#374151;font-size:11.5px;line-height:1.35;white-space:normal;word-break:break-word}
   .barras .pista{flex:1;background:var(--creme);border-radius:6px;height:18px;overflow:hidden}
@@ -126,6 +126,10 @@
   .status-api .erro{color:var(--red)}
   .status-api .atualizando{color:var(--amber);font-weight:700}
   .erro-global{background:var(--redbg);border:1px solid #fca5a5;color:var(--red);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5;display:none}
+  #tooltip{position:fixed;background:#1f2937;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.6;pointer-events:none;display:none;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,.3);max-width:280px}
+  #tooltip .tt-titulo{font-weight:700;margin-bottom:2px}
+  #tooltip .tt-linha{display:flex;align-items:center;gap:6px}
+  #tooltip .tt-cor{width:10px;height:10px;border-radius:2px;display:inline-block}
 </style>
 </head>
 <body>
@@ -244,6 +248,7 @@
 </main>
 
 <footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
+<div id="tooltip"></div>
 
 <script>
 var CONFIG = {
@@ -269,6 +274,7 @@ function numero(v){ try{ return new Intl.NumberFormat('pt-BR').format(v||0); }ca
 function avisar(tipo,titulo,texto){ var box=document.getElementById('avisos'); var d=document.createElement('div'); d.className='aviso show '+tipo; d.innerHTML='<b>'+titulo+'</b>'+texto; box.appendChild(d); }
 function agora(){ try{ return new Date().toLocaleTimeString('pt-BR'); }catch(e){ return new Date().toTimeString().slice(0,8); } }
 function fmtCurto(v){ v=Math.round(v||0); if(v>=1000000){ return 'R$'+(v/1000000).toFixed(1).replace('.',',')+'M'; } if(v>=1000){ return 'R$'+(v/1000).toFixed(1).replace('.',',')+'k'; } return 'R$'+v; }
+function fmtCompleto(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(v||0); }catch(e){ return 'R$ '+Math.round(v||0); } }
 
 function mostrarAtualizando(){ atualizando=true; var el=document.getElementById('statusApi'); if(el) el.innerHTML='<span class="atualizando">⏳ Atualizando…</span>'; }
 function ocultarAtualizando(){ atualizando=false; atualizarStatusApi(); }
@@ -284,6 +290,26 @@ function fmtDataContato(v){
   if(!d) return String(v);
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
 }
+
+/* ---------- TOOLTIP ---------- */
+var ttEl = null;
+function ttMostrar(html, x, y){
+  if(!ttEl) ttEl = document.getElementById('tooltip');
+  if(!ttEl) return;
+  ttEl.innerHTML = html;
+  ttEl.style.display = 'block';
+  var pad = 14;
+  var left = x + pad;
+  var top = y + pad;
+  var rect = ttEl.getBoundingClientRect();
+  if(left + rect.width > window.innerWidth - 8) left = x - rect.width - pad;
+  if(top + rect.height > window.innerHeight - 8) top = y - rect.height - pad;
+  if(left < 8) left = 8;
+  if(top < 8) top = 8;
+  ttEl.style.left = left + 'px';
+  ttEl.style.top = top + 'px';
+}
+function ttOcultar(){ if(ttEl) ttEl.style.display = 'none'; }
 
 function parseMoney(v){
   if(v==null) return 0;
@@ -535,7 +561,6 @@ function carregarDados(){
       estado.meses.sort(function(a,b){ var ma=chaveMes(a.rotulo), mb=chaveMes(b.rotulo); return (ma||0)-(mb||0); });
       var ok=estado.meses.filter(function(m){return m.ok;}).length;
       if(!estado.base&&ok===0){ txt.textContent='Sem dados legíveis'; pill.className='pill err'; return; }
-      /* LIBERA O PAINEL E RENDERIZA */
       document.getElementById('conteudo').style.display='';
       renderFiltrosFoco();
       mostrarTab('overview');
@@ -682,6 +707,7 @@ function montarKpisContatos(){
   document.getElementById('colDirContatos').innerHTML=dir;
 }
 
+/* ============ GRÁFICOS — NÍTIDOS, SEM SOBREPOSIÇÃO, COM TOOLTIP ============ */
 function novoCtx(id,altDefault){
   var c=document.getElementById(id); if(!c) return null;
   var dpr=Math.min(window.devicePixelRatio||1,2);
@@ -690,47 +716,76 @@ function novoCtx(id,altDefault){
   var ctx=c.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cssW,cssH);
-  return {ctx:ctx,w:cssW,h:cssH};
+  return {ctx:ctx,w:cssW,h:cssH,canvas:c};
 }
 function desenharComparativo(id,rotulos,s1,s2,cor1,cor2,leg1,leg2,fmt){
-  var dados=[];
+  var dados=[], tot1=0, tot2=0;
   for(var i=0;i<rotulos.length;i++){
     var v1=s1?s1[i]||0:0, v2=s2?s2[i]||0:0;
-    if(v1>0||v2>0) dados.push({rot:rotulos[i],v1:v1,v2:v2});
+    if(v1>0||v2>0){ dados.push({rot:rotulos[i],v1:v1,v2:v2}); tot1+=v1; tot2+=v2; }
   }
   var c=novoCtx(id,230); if(!c) return;
-  var ctx=c.ctx, W=c.w, H=c.h;
+  var ctx=c.ctx, W=c.w, H=c.h, cv=c.canvas;
+  /* LEGENDA COM VALORES TOTAIS */
   ctx.textBaseline='alphabetic';
   ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
   ctx.fillStyle=cor1; ctx.fillRect(10,10,11,11);
-  ctx.fillStyle='#374151'; ctx.fillText(leg1,26,20);
-  if(s2!==null&&s2!==undefined){ ctx.fillStyle=cor2; ctx.fillRect(150,10,11,11); ctx.fillStyle='#374151'; ctx.fillText(leg2,166,20); }
-  if(!dados.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Sem dados no período',W/2,H/2+8); return; }
+  ctx.fillStyle='#374151'; ctx.fillText(leg1+' · '+fmt(tot1),26,20);
+  if(s2!==null&&s2!==undefined){
+    ctx.fillStyle=cor2; ctx.fillRect(150,10,11,11);
+    ctx.fillStyle='#374151'; ctx.fillText(leg2+' · '+fmt(tot2),166,20);
+  }
+  if(!dados.length){
+    ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Sem dados no período',W/2,H/2+8);
+    cv.onmousemove=null; cv.onmouseleave=null;
+    return;
+  }
   var max=1;
   dados.forEach(function(d){ if(d.v1>max)max=d.v1; if(d.v2>max)max=d.v2; });
-  max=max*1.08;
-  var padT=36,padB=22,padL=8,padR=8;
-  var gw=(W-padL-padR)/dados.length, bw=Math.min(24,gw*0.30);
+  max=max*1.12;
+  var padT=44,padB=24,padL=8,padR=8;
+  var gw=(W-padL-padR)/dados.length, bw=Math.min(22,gw*0.28);
+  var mostrarVals = gw>=50; /* só mostra rótulos se houver espaço */
   ctx.strokeStyle='#ede8db'; ctx.lineWidth=1;
   for(var gi=0;gi<=3;gi++){ var gy=padT+(H-padT-padB)*(gi/3); ctx.beginPath(); ctx.moveTo(padL,Math.round(gy)+0.5); ctx.lineTo(W-padR,Math.round(gy)+0.5); ctx.stroke(); }
-  dados.forEach(function(d){
-    var x=padL+gw*dados.indexOf(d)+gw/2;
+  dados.forEach(function(d,di){
+    var x=padL+gw*di+gw/2;
     var h1=(d.v1/max)*(H-padT-padB), h2=(d.v2/max)*(H-padT-padB), yBas=H-padB;
     if(d.v1>0){
       ctx.fillStyle=cor1;
       ctx.fillRect(Math.round(x-bw-2),Math.round(yBas-h1),Math.max(2,Math.round(bw)),Math.round(h1)+1);
-      ctx.fillStyle=cor1; ctx.font='bold 9.5px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(fmt(d.v1),Math.round(x-bw/2-1),Math.round(yBas-h1-5));
+      if(mostrarVals){
+        ctx.fillStyle=cor1; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+        ctx.fillText(fmt(d.v1),Math.round(x-bw/2-1),Math.round(yBas-h1-4));
+      }
     }
     if(s2!==null&&s2!==undefined&&d.v2>0){
       ctx.fillStyle=cor2;
       ctx.fillRect(Math.round(x+2),Math.round(yBas-h2),Math.max(2,Math.round(bw)),Math.round(h2)+1);
-      ctx.fillStyle=cor2; ctx.font='bold 9.5px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(fmt(d.v2),Math.round(x+bw/2+1),Math.round(yBas-h2-5));
+      if(mostrarVals){
+        ctx.fillStyle=cor2; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+        ctx.fillText(fmt(d.v2),Math.round(x+bw/2+1),Math.round(yBas-h2-4));
+      }
     }
     ctx.fillStyle='#374151'; ctx.font='10px sans-serif'; ctx.textAlign='center';
     ctx.fillText(d.rot,x,H-8);
   });
+  /* TOOLTIP */
+  cv.onmousemove=function(ev){
+    var r=cv.getBoundingClientRect();
+    var mx=ev.clientX-r.left, my=ev.clientY-r.top;
+    var di=Math.floor((mx-padL)/gw);
+    if(di<0||di>=dados.length){ ttOcultar(); return; }
+    var d=dados[di];
+    var html='<div class="tt-titulo">'+esc(d.rot)+'</div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:'+cor1+'"></span> '+esc(leg1)+': <b>'+fmtCompleto(d.v1)+'</b></div>';
+    if(s2!==null&&s2!==undefined){
+      html+='<div class="tt-linha"><span class="tt-cor" style="background:'+cor2+'"></span> '+esc(leg2)+': <b>'+fmtCompleto(d.v2)+'</b></div>';
+    }
+    ttMostrar(html,ev.clientX,ev.clientY);
+  };
+  cv.onmouseleave=function(){ ttOcultar(); };
 }
 function somarMes(chave,fn){
   var meses=estado.meses.filter(function(m){return m.ok;});
@@ -846,6 +901,7 @@ function montarEvolucao(){
   var maxC=Math.max.apply(null,dados.map(function(d){return d.clientes;}))||1;
   var padL=12,padT=42,padR=12,padB=30;
   var gw=(W-padL-padR)/dados.length, bw=Math.min(32,gw*0.34);
+  var mostrarVals = gw>=60;
   dados.forEach(function(d,i){
     var x=padL+gw*i+gw/2;
     var hR=(d.receita/maxR)*(H-padT-padB), hC=(d.clientes/maxC)*(H-padT-padB);
@@ -853,14 +909,29 @@ function montarEvolucao(){
     ctx.fillRect(Math.round(x-bw-2),Math.round(H-padB-hR),Math.max(2,Math.round(bw)),Math.round(hR)+1);
     ctx.fillStyle='rgba(46,125,79,.42)';
     ctx.fillRect(Math.round(x+2),Math.round(H-padB-hC),Math.max(2,Math.round(bw)),Math.round(hC)+1);
-    var rx=d.receita>=1000?('R$'+Math.round(d.receita/1000)+'k'):('R$'+Math.round(d.receita));
-    var rotulo=rx+' · '+d.clientes+' cli';
-    var ty=H-padB-Math.max(hR,hC)-10; if(ty<padT+2) ty=padT+2;
-    ctx.fillStyle='#1d4a2e'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
-    ctx.fillText(rotulo,Math.round(x),Math.round(ty));
+    if(mostrarVals){
+      var rx=d.receita>=1000?('R$'+Math.round(d.receita/1000)+'k'):('R$'+Math.round(d.receita));
+      var rotulo=rx+' · '+d.clientes+' cli';
+      var ty=H-padB-Math.max(hR,hC)-10; if(ty<padT+2) ty=padT+2;
+      ctx.fillStyle='#1d4a2e'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
+      ctx.fillText(rotulo,Math.round(x),Math.round(ty));
+    }
     ctx.fillStyle='#374151'; ctx.font='11px sans-serif';
-    ctx.fillText(d.rotulo,Math.round(x),H-12);
+    ctx.fillText(d.rot,Math.round(x),H-12);
   });
+  /* TOOLTIP evolução */
+  c.onmousemove=function(ev){
+    var r=c.getBoundingClientRect();
+    var mx=ev.clientX-r.left;
+    var di=Math.floor((mx-padL)/gw);
+    if(di<0||di>=dados.length){ ttOcultar(); return; }
+    var d=dados[di];
+    var html='<div class="tt-titulo">'+esc(d.rotulo)+'</div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita: <b>'+fmtCompleto(d.receita)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#5b9d74"></span> Clientes: <b>'+numero(d.clientes)+'</b></div>';
+    ttMostrar(html,ev.clientX,ev.clientY);
+  };
+  c.onmouseleave=function(){ ttOcultar(); };
 }
 function montarTopProdutos(){
   var arr=rankingProdutos(), top=arr.slice(0,10), max=top.length?Math.max(top[0].receita,1):1;
@@ -1005,7 +1076,6 @@ document.getElementById('btnCsvContatos').onclick=exportarCsvContatos;
 document.getElementById('btnTestarConexao').onclick=testarConexao;
 document.getElementById('btnRecarregarContatos').onclick=function(){ carregarContatosSalvos().then(function(){ renderSection('contatos'); }); };
 
-/* ============ INÍCIO ============ */
 atualizarStatusApi();
 carregarContatosSalvos();
 carregarDados();
