@@ -198,8 +198,7 @@
         <div class="card"><h3>🚚 Vendas com e sem frete</h3><canvas id="graficoFrete"></canvas></div>
         <div class="card"><h3>🏷️ Total de descontos aplicados</h3><canvas id="graficoDescontos"></canvas></div>
         <div class="card"><h3>⚖️ Vendas com e sem desconto</h3><canvas id="graficoComSemDesconto"></canvas></div>
-        <div class="card"><h3>🎫 Ticket médio (por pedido × por cliente)</h3><canvas id="graficoTicket"></canvas></div>
-        <div class="card"><h3>📦 Vendas brutas (Subtotal) mês a mês</h3><canvas id="graficoBruto"></canvas></div>
+        <div class="card largo"><h3>📦 Vendas brutas (Subtotal) mês a mês</h3><canvas id="graficoBruto"></canvas></div>
       </div>
     </section>
 
@@ -360,12 +359,18 @@ function fmtData(d){ if(!d) return '—'; try{ return d.toLocaleDateString('pt-B
 function ehPago(st){ st=String(st||'').toLowerCase(); return st.indexOf('paid')>-1||st.indexOf('pago')>-1||st.indexOf('aprovado')>-1||st.indexOf('complete')>-1||st.indexOf('conclu')>-1||st.indexOf('entregue')>-1||st.indexOf('success')>-1; }
 function ehExpirado(st){ st=String(st||'').toLowerCase(); return st.indexOf('expired')>-1||st.indexOf('expirado')>-1||st.indexOf('cancelado')>-1||st.indexOf('canceled')>-1||st.indexOf('refunded')>-1||st.indexOf('chargeback')>-1||st.indexOf('voided')>-1||st.indexOf('falhou')>-1; }
 
+/* ============================================================
+   CORREÇÃO PRINCIPAL — Detecção estrita de colunas.
+   total ⚠ ignora qualquer coluna de item/lineitem/preço de linha.
+   pedido ⚠ ignora "Lineitem name" (que contém "name").
+   Alias ambíguos (preco, price, valor, amount) removidos do total.
+   ============================================================ */
 var ALIASES={
   email:['email','e-mail','emailcomprador','buyeremail','emailcliente','emaildocliente','clienteemail','customeremail','mail'],
-  nome:['nome','nomecomprador','buyername','nomecliente','nomedocliente','cliente','customer'],
-  pedido:['name','order','ordername','order name','orderid','order id','ordernumber','order number','npedido','n do pedido','numero do pedido','numerodopedido','pedido','pedidonumero','numero pedido','numpedido','ordem'],
+  nome:['nome','nomecomprador','buyername','nomecliente','nomedocliente','cliente','customer','lastname'],
+  pedido:['name','ordername','pedido','numerodopedido','numero do pedido','ordernumber','order','orderid','npedido','ordem'],
   data:['datadacompra','datadacompr','purchasedate','paiddate','paidat','datadopagamento','datapagamento','paymentdate','datadopedido','createdat','data','datacompra'],
-  total:['total','valor','valordacompra','valorcompra','amount','preco','price','totalpago','valordopedido','totaldopedido','paymentamount','totaldacompra'],
+  total:['total','totaldopedido','totalpago','totaldacompra','valortotal','totalfinal','totalgeral','grandtotal','paymentamount'],
   subtotal:['subtotal','subtotaldacompra','subtotaldopedido','valorprodutos','valoritens','itens'],
   frete:['shipping','frete','valorfrete','shippingamount','shippingcost','transporte','shippingprice'],
   desconto:['discount','discountamount','totaldiscounts','discounts','desconto','codigodesconto'],
@@ -378,28 +383,37 @@ var ALIASES={
   telefone:['telefone','phone','fone','defaultaddressphone','celular'],
   historico:['totalpedidos','totalorders','npedidos','numerodepedidos','pedidos','historicodecompras','historico']
 };
-/* CORREÇÃO: normaliza os aliases (espaço/acento) e exclui falsos positivos */
 function acharColuna(cab,chave){
   var alvos=ALIASES[chave]||[];
-  var alvosN=[];
-  for(var a=0;a<alvos.length;a++){ alvosN.push(norm(alvos[a])); }
   var excluir=[];
-  if(chave==='total'){ excluir=['desconto','discount','tax','frete','shipping','subtotal']; }
-  if(chave==='pedido'){ excluir=['lineitem','billing','shipping','first','last','full','customer','buyer','product','item','variant']; }
+  if(chave==='total'){ excluir=['desconto','discount','tax','frete','shipping','subtotal','lineitem','item']; }
+  if(chave==='pedido'){ excluir=['lineitem','produto','product','sku']; }
+  if(chave==='nome'){ excluir=['lineitem','produto','product']; }
+  if(chave==='email'){ excluir=['lineitem']; }
   function limpo(h){
     if(!h) return false;
     for(var e=0;e<excluir.length;e++){ if(h.indexOf(excluir[e])>-1) return false; }
     return true;
   }
+  /* 1º: casamento EXATO */
   for(var i=0;i<cab.length;i++){
     var h=norm(cab[i]);
     if(!limpo(h)) continue;
-    for(var j=0;j<alvosN.length;j++){ if(h===alvosN[j]) return i; }
+    for(var j=0;j<alvos.length;j++){ if(h===alvos[j]) return i; }
   }
+  /* 2º: substring com prioridade à coluna que NÃO começa com lineitem */
+  var melhor=-1;
   for(var i2=0;i2<cab.length;i2++){
     var h2=norm(cab[i2]);
     if(!limpo(h2)) continue;
-    for(var j2=0;j2<alvosN.length;j2++){ if(h2.indexOf(alvosN[j2])>-1) return i2; }
+    if(h2.indexOf('lineitem')===0) continue;
+    for(var j2=0;j2<alvos.length;j2++){ if(h2.indexOf(alvos[j2])>-1){ return i2; } }
+  }
+  /* 3º: substring ampla (aceita inclusive lineitem) como último recurso */
+  for(var i3=0;i3<cab.length;i3++){
+    var h3=norm(cab[i3]);
+    if(!limpo(h3)) continue;
+    for(var j3=0;j3<alvos.length;j3++){ if(h3.indexOf(alvos[j3])>-1){ return i3; } }
   }
   return -1;
 }
@@ -490,7 +504,6 @@ function processarBase(b){
   });
   return {map:map};
 }
-/* CORREÇÃO PRINCIPAL: agrupamento real de pedidos (não conta item como pedido) */
 function processarMes(colunas,linhas){
   var idx={
     email:acharColuna(colunas,'email'), pedido:acharColuna(colunas,'pedido'), data:acharColuna(colunas,'data'),
@@ -499,26 +512,19 @@ function processarMes(colunas,linhas){
     sku:acharColunaSku(colunas), qtd:acharColuna(colunas,'qtd'), preco:acharColuna(colunas,'preco'), nome:acharColuna(colunas,'nome')
   };
   var temPedido=idx.pedido>-1;
-  var temEmail=idx.email>-1;
-  var temData=idx.data>-1;
-  var temTotal=idx.total>-1;
   var ordens=new Map(),seq=0;
   linhas.forEach(function(r){
-    var chave='';
-    if(temPedido){ chave=norm(r[idx.pedido]); }
-    if(!chave && temEmail && temData && temTotal){
-      var em=norm(r[idx.email]);
-      var dt=parseData(r[idx.data]);
-      var dtk=dt?dt.getTime():'';
-      var tot=parseMoney(r[idx.total]);
-      chave='fb|'+em+'|'+dtk+'|'+tot;
-    }
+    var chave=temPedido?norm(r[idx.pedido]):('linha_'+(seq++));
     if(!chave) chave='linha_'+(seq++);
     var o=ordens.get(chave);
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    if(idx.total>-1&&!o.total) o.total=parseMoney(r[idx.total]);
+    /* Total do PEDIDO: pega o maior valor encontrado na coluna Total (valor total real, ≥ mínimo da loja) */
+    if(idx.total>-1){
+      var vt=parseMoney(r[idx.total]);
+      if(vt>o.total) o.total=vt;
+    }
     if(idx.subtotal>-1&&!o.subtotal) o.subtotal=parseMoney(r[idx.subtotal]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
     if(idx.desconto>-1&&!o.desconto) o.desconto=parseMoney(r[idx.desconto]);
@@ -572,16 +578,17 @@ function carregarDados(){
         var rot=detectarRotulo(d.colunas,d.linhas,f.name) || 'Mês';
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
+        /* DIAGNÓSTICO DETALHADO */
         var diagDet='('+proc.saida.length+' pedidos)';
-        if(proc.idx.pedido>-1) diagDet+=' · pedido: '+esc(d.colunas[proc.idx.pedido]);
-        else diagDet+=' · pedido: agrupou por email+data+total';
-        if(proc.idx.email>-1) diagDet+=' · email: '+esc(d.colunas[proc.idx.email]);
-        if(proc.idx.total>-1) diagDet+=' · total: '+esc(d.colunas[proc.idx.total]);
-        if(proc.idx.status>-1) diagDet+=' · status: '+esc(d.colunas[proc.idx.status]);
-        if(proc.idx.subtotal>-1) diagDet+=' · subtotal: '+esc(d.colunas[proc.idx.subtotal]);
-        if(proc.idx.frete>-1) diagDet+=' · frete: '+esc(d.colunas[proc.idx.frete]);
-        if(proc.idx.desconto>-1) diagDet+=' · desc: '+esc(d.colunas[proc.idx.desconto]);
+        diagDet+=' · pedido: '+esc(proc.idx.pedido>-1?(d.colunas[proc.idx.pedido]||'?'):'NÃO ENCONTRADO ⚠');
+        diagDet+=' · total: '+esc(proc.idx.total>-1?(d.colunas[proc.idx.total]||'?'):'NÃO ENCONTRADO ⚠');
+        diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
+        diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
+        diagDet+=' · subtotal: '+esc(proc.idx.subtotal>-1?(d.colunas[proc.idx.subtotal]||'?'):'—');
+        diagDet+=' · frete: '+esc(proc.idx.frete>-1?(d.colunas[proc.idx.frete]||'?'):'—');
+        diagDet+=' · desc: '+esc(proc.idx.desconto>-1?(d.colunas[proc.idx.desconto]||'?'):'—');
         if(proc.idx.total===-1) diagDet+=' ⚠ SEM COLUNA DE TOTAL';
+        if(proc.idx.pedido===-1) diagDet+=' ⚠ SEM COLUNA DE PEDIDO — cada linha virou um pedido (causa do ticket médio baixo)';
         var md=mesesDistintos(d.colunas,d.linhas);
         if(md.length>1) diagDet+=' ⚠ CONTÉM '+md.length+' MESES ('+md.map(fmtMesChave).join(', ')+') — export sem filtro de data?';
         estado.diag.push({nome:f.name+' → '+rot,ok:true,det:diagDet});
@@ -832,36 +839,16 @@ function somarMes(chave,fn){
     return s;
   });
 }
-function contarPedidosMes(){
-  var meses=estado.meses.filter(function(m){return m.ok;});
-  return meses.map(function(m){
-    var c=0;
-    m.pedidos.forEach(function(o){ if(o.pago) c++; });
-    return c;
-  });
-}
-function contarClientesMes(){
-  var meses=estado.meses.filter(function(m){return m.ok;});
-  return meses.map(function(m){
-    var set=new Set();
-    m.pedidos.forEach(function(o){ if(o.pago && o.email) set.add(o.email); });
-    return set.size;
-  });
-}
 function montarComparativos(){
   var meses=estado.meses.filter(function(m){return m.ok;}).map(function(m){return m.rotulo||'Mês';});
   var subt=somarMes('subtotal'), tot=somarMes('total'), fre=somarMes('frete'), desc=somarMes('desconto');
   var comDesc=somarMes(null,function(o){return o.desconto>0?o.total:0;});
   var semDesc=somarMes(null,function(o){return o.desconto<=0?o.total:0;});
   var semFrete=tot.map(function(v,i){return v-fre[i];});
-  var nPed=contarPedidosMes(), nCli=contarClientesMes();
-  var tickPed=tot.map(function(v,i){ return nPed[i]? v/nPed[i] : 0; });
-  var tickCli=tot.map(function(v,i){ return nCli[i]? v/nCli[i] : 0; });
   desenharComparativo('graficoLiquido',meses,tot,null,'#1d4a2e',null,'Vendas líquidas (Total)',null,fmtCurto);
   desenharComparativo('graficoFrete',meses,tot,semFrete,'#1d4a2e','#3b82f6','Com frete (total)','Sem frete',fmtCurto);
   desenharComparativo('graficoDescontos',meses,desc,null,'#b45309',null,'Descontos',null,fmtCurto);
   desenharComparativo('graficoComSemDesconto',meses,comDesc,semDesc,'#7c3aed','#1d4a2e','Com desconto','Sem desconto',fmtCurto);
-  desenharComparativo('graficoTicket',meses,tickPed,tickCli,'#0e7490','#f59e0b','Por pedido','Por cliente',fmtCurto);
   desenharComparativo('graficoBruto',meses,subt,null,'#f59e0b',null,'Vendas brutas (Subtotal)',null,fmtCurto);
 }
 
@@ -928,23 +915,24 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
+/* Ticket médio: valor total do pedido (e por cliente) — soma REAL do Total, sem contar linha de produto */
 function montarKpis(){
   var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, bruto=0, desc=0;
   pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; bruto+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
   var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, naorec=0, ultimo=ultimoMesLabel();
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; if(ultimo&&!comprouNoMes(em,ultimo)) naorec++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
-  var tickPed=nPagos?receita/nPagos:0;
-  var tickCli=compradores.size?receita/compradores.size:0;
+  var nClientes = compradores.size;
+  var ticketPedido = nPagos ? receita/nPagos : 0;
+  var ticketCliente = nClientes ? receita/nClientes : 0;
   var cards=[
-    {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+nPagos+' pedidos',destaque:true},
+    {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
+    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'vendas ÷ nº de pedidos (valor total do pedido)',destaque:false},
+    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'vendas ÷ clientes que compraram',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
     {rotulo:'Vendas brutas (subtotal)',valor:dinheiro(bruto),ico:'📦',detalhe:'valor dos produtos',destaque:false},
-    {rotulo:'Ticket médio por pedido',valor:dinheiro(tickPed),ico:'🎫',detalhe:nPagos+' pedidos pagos',destaque:false},
-    {rotulo:'Ticket médio por cliente',valor:dinheiro(tickCli),ico:'👥',detalhe:compradores.size+' clientes únicos',destaque:false},
-    {rotulo:'Clientes que compraram',valor:numero(compradores.size),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
+    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
-    {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:false},
     {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
@@ -957,7 +945,7 @@ function montarEvolucao(){
   var W=cssW, H=cssH; ctx.clearRect(0,0,W,H);
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
-  var dados=meses.map(function(m){ var receita=0, clientes=new Set(); m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.total; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size}; });
+  var dados=meses.map(function(m){ var receita=0, clientes=new Set(), nped=0; m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.total; nped++; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size,pedidos:nped}; });
   ctx.textBaseline='alphabetic';
   ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
   ctx.fillStyle='#1d4a2e'; ctx.fillRect(10,10,11,11);
@@ -995,6 +983,8 @@ function montarEvolucao(){
     var html='<div class="tt-titulo">'+esc(d.rotulo)+'</div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita: <b>'+fmtCompleto(d.receita)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#5b9d74"></span> Clientes: <b>'+numero(d.clientes)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#b45309"></span> Ticket médio/pedido: <b>'+fmtCompleto(d.pedidos?d.receita/d.pedidos:0)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#7c3aed"></span> Ticket médio/cliente: <b>'+fmtCompleto(d.clientes?d.receita/d.clientes:0)+'</b></div>';
     ttMostrar(html,ev.clientX,ev.clientY);
   };
   c.onmouseleave=function(){ ttOcultar(); };
