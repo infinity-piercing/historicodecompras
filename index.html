@@ -356,15 +356,10 @@ function parseData(v){
   return isNaN(g.getTime())?null:g;
 }
 function fmtData(d){ if(!d) return '—'; try{ return d.toLocaleDateString('pt-BR'); }catch(e){ return String(d); } }
+function chaveData(v){ var d=parseData(v); if(!d) return ''; return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 function ehPago(st){ st=String(st||'').toLowerCase(); return st.indexOf('paid')>-1||st.indexOf('pago')>-1||st.indexOf('aprovado')>-1||st.indexOf('complete')>-1||st.indexOf('conclu')>-1||st.indexOf('entregue')>-1||st.indexOf('success')>-1; }
 function ehExpirado(st){ st=String(st||'').toLowerCase(); return st.indexOf('expired')>-1||st.indexOf('expirado')>-1||st.indexOf('cancelado')>-1||st.indexOf('canceled')>-1||st.indexOf('refunded')>-1||st.indexOf('chargeback')>-1||st.indexOf('voided')>-1||st.indexOf('falhou')>-1; }
 
-/* ============================================================
-   CORREÇÃO PRINCIPAL — Detecção estrita de colunas.
-   total ⚠ ignora qualquer coluna de item/lineitem/preço de linha.
-   pedido ⚠ ignora "Lineitem name" (que contém "name").
-   Alias ambíguos (preco, price, valor, amount) removidos do total.
-   ============================================================ */
 var ALIASES={
   email:['email','e-mail','emailcomprador','buyeremail','emailcliente','emaildocliente','clienteemail','customeremail','mail'],
   nome:['nome','nomecomprador','buyername','nomecliente','nomedocliente','cliente','customer','lastname'],
@@ -395,21 +390,17 @@ function acharColuna(cab,chave){
     for(var e=0;e<excluir.length;e++){ if(h.indexOf(excluir[e])>-1) return false; }
     return true;
   }
-  /* 1º: casamento EXATO */
   for(var i=0;i<cab.length;i++){
     var h=norm(cab[i]);
     if(!limpo(h)) continue;
     for(var j=0;j<alvos.length;j++){ if(h===alvos[j]) return i; }
   }
-  /* 2º: substring com prioridade à coluna que NÃO começa com lineitem */
-  var melhor=-1;
   for(var i2=0;i2<cab.length;i2++){
     var h2=norm(cab[i2]);
     if(!limpo(h2)) continue;
     if(h2.indexOf('lineitem')===0) continue;
     for(var j2=0;j2<alvos.length;j2++){ if(h2.indexOf(alvos[j2])>-1){ return i2; } }
   }
-  /* 3º: substring ampla (aceita inclusive lineitem) como último recurso */
   for(var i3=0;i3<cab.length;i3++){
     var h3=norm(cab[i3]);
     if(!limpo(h3)) continue;
@@ -442,7 +433,7 @@ function faixa(prom,ms){
     prom.then(function(v){ clearTimeout(t); res(v); },function(e){ clearTimeout(t); rej(e); });
   });
 }
-function baixarCSV(url){ return faixa(fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }),15000); }
+function baixarCSV(url){ return faixa(fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }),20000); }
 function parseCSV(texto){
   var primeira=texto.split('\n')[0]||'';
   var v1=(primeira.match(/,/g)||[]).length, v2=(primeira.match(/;/g)||[]).length;
@@ -504,27 +495,50 @@ function processarBase(b){
   });
   return {map:map};
 }
-function processarMes(colunas,linhas){
+/* ============================================================
+   PROCESSAMENTO DOS PEDIDOS — DEFINITIVO
+   - Coluna A (índice 0) = número do pedido (Name)
+   - Total do pedido = SOMA dos produtos (preço × qtd) das linhas
+     com o mesmo número de pedido (conforme instrução do usuário)
+   - Ticket médio por pedido = soma dos totais ÷ nº de pedidos únicos
+   ============================================================ */
+function processarMes(colunas, linhas){
+  /* Identifica a coluna do número do pedido: prioriza a Coluna A */
+  var idxPedido = -1;
+  if(colunas.length>0){
+    var h0 = norm(colunas[0]||'');
+    if(h0==='name'||h0==='ordername'||h0==='pedido'||h0.indexOf('pedido')>-1||h0.indexOf('order')>-1||h0.indexOf('npedido')>-1){
+      idxPedido = 0;
+    }
+  }
+  if(idxPedido===-1){
+    idxPedido = acharColuna(colunas,'pedido');
+    if(idxPedido===-1 && colunas.length>0) idxPedido = 0; /* fallback: Coluna A */
+  }
   var idx={
-    email:acharColuna(colunas,'email'), pedido:acharColuna(colunas,'pedido'), data:acharColuna(colunas,'data'),
-    total:acharColuna(colunas,'total'), subtotal:acharColuna(colunas,'subtotal'), frete:acharColuna(colunas,'frete'),
-    desconto:acharColuna(colunas,'desconto'), status:acharColuna(colunas,'status'), produto:acharColunaProduto(colunas),
-    sku:acharColunaSku(colunas), qtd:acharColuna(colunas,'qtd'), preco:acharColuna(colunas,'preco'), nome:acharColuna(colunas,'nome')
+    email:acharColuna(colunas,'email'),
+    pedido:idxPedido,
+    data:acharColuna(colunas,'data'),
+    total:acharColuna(colunas,'total'),
+    subtotal:acharColuna(colunas,'subtotal'),
+    frete:acharColuna(colunas,'frete'),
+    desconto:acharColuna(colunas,'desconto'),
+    status:acharColuna(colunas,'status'),
+    produto:acharColunaProduto(colunas),
+    sku:acharColunaSku(colunas),
+    qtd:acharColuna(colunas,'qtd'),
+    preco:acharColuna(colunas,'preco'),
+    nome:acharColuna(colunas,'nome')
   };
-  var temPedido=idx.pedido>-1;
-  var ordens=new Map(),seq=0;
+  var ordens=new Map();
   linhas.forEach(function(r){
-    var chave=temPedido?norm(r[idx.pedido]):('linha_'+(seq++));
-    if(!chave) chave='linha_'+(seq++);
+    var chave = idx.pedido>-1 ? norm(r[idx.pedido]) : '';
+    if(!chave) chave = 'L:'+(ordens.size);
     var o=ordens.get(chave);
-    if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
+    if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,totalColuna:0,subtotal:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    /* Total do PEDIDO: pega o maior valor encontrado na coluna Total (valor total real, ≥ mínimo da loja) */
-    if(idx.total>-1){
-      var vt=parseMoney(r[idx.total]);
-      if(vt>o.total) o.total=vt;
-    }
+    if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.subtotal>-1&&!o.subtotal) o.subtotal=parseMoney(r[idx.subtotal]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
     if(idx.desconto>-1&&!o.desconto) o.desconto=parseMoney(r[idx.desconto]);
@@ -540,11 +554,16 @@ function processarMes(colunas,linhas){
   });
   var saida=[];
   ordens.forEach(function(o){
+    /* TOTAL DO PEDIDO = soma dos produtos (preço × qtd) por número de pedido */
+    var totalCalc=0;
+    o.items.forEach(function(it){ totalCalc += (it.preco||0)*(it.qtd||1); });
+    /* Fallback: se não houver itens com preço, usa o Total da coluna */
+    if(totalCalc<=0 && o.totalColuna>0) totalCalc=o.totalColuna;
     var st=String(o.status||'').toLowerCase();
     var pago=st===''?true:ehPago(st);
-    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?o.total:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
+    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?totalCalc:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
-  return {saida:saida, idx:idx, colunas:colunas};
+  return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length};
 }
 
 var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,paginaCont:1,porPaginaCont:200,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,ultimoErro:'',diag:[]};
@@ -578,26 +597,20 @@ function carregarDados(){
         var rot=detectarRotulo(d.colunas,d.linhas,f.name) || 'Mês';
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
-        /* DIAGNÓSTICO DETALHADO */
-        var diagDet='('+proc.saida.length+' pedidos)';
-        diagDet+=' · pedido: '+esc(proc.idx.pedido>-1?(d.colunas[proc.idx.pedido]||'?'):'NÃO ENCONTRADO ⚠');
-        diagDet+=' · total: '+esc(proc.idx.total>-1?(d.colunas[proc.idx.total]||'?'):'NÃO ENCONTRADO ⚠');
+        var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) agrupado(s) pela Coluna A';
+        diagDet+=' · pedido: '+esc(proc.idx.pedido>-1?(d.colunas[proc.idx.pedido]||'Coluna A'):'Coluna A');
+        diagDet+=' · total: soma dos produtos (preço × qtd) por pedido';
         diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
         diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
-        diagDet+=' · subtotal: '+esc(proc.idx.subtotal>-1?(d.colunas[proc.idx.subtotal]||'?'):'—');
-        diagDet+=' · frete: '+esc(proc.idx.frete>-1?(d.colunas[proc.idx.frete]||'?'):'—');
-        diagDet+=' · desc: '+esc(proc.idx.desconto>-1?(d.colunas[proc.idx.desconto]||'?'):'—');
-        if(proc.idx.total===-1) diagDet+=' ⚠ SEM COLUNA DE TOTAL';
-        if(proc.idx.pedido===-1) diagDet+=' ⚠ SEM COLUNA DE PEDIDO — cada linha virou um pedido (causa do ticket médio baixo)';
         var md=mesesDistintos(d.colunas,d.linhas);
-        if(md.length>1) diagDet+=' ⚠ CONTÉM '+md.length+' MESES ('+md.map(fmtMesChave).join(', ')+') — export sem filtro de data?';
+        if(md.length>1) diagDet+=' ⚠ CONTÉM '+md.length+' MESES ('+md.map(fmtMesChave).join(', ')+')';
         estado.diag.push({nome:f.name+' → '+rot,ok:true,det:diagDet});
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
     Promise.all(prom).then(function(){
       var vistos={};
       estado.meses.forEach(function(m){
-        if(vistos[m.rotulo]){ estado.diag.push({nome:'⚠ MÊS DUPLICADO',ok:false,det:'Há mais de um arquivo identificado como '+m.rotulo+' — os pedidos estão sendo somados em dobro. Remova o arquivo duplicado do repositório.'}); }
+        if(vistos[m.rotulo]){ estado.diag.push({nome:'⚠ MÊS DUPLICADO',ok:false,det:'Há mais de um arquivo identificado como '+m.rotulo+' — remova o duplicado do repositório.'}); }
         vistos[m.rotulo]=true;
       });
       var diagBox=document.getElementById('diag');
@@ -915,7 +928,7 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* Ticket médio: valor total do pedido (e por cliente) — soma REAL do Total, sem contar linha de produto */
+/* Ticket médio por pedido = soma dos totais dos pedidos (Coluna A) ÷ nº de pedidos */
 function montarKpis(){
   var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, bruto=0, desc=0;
   pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; bruto+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
@@ -927,7 +940,7 @@ function montarKpis(){
   var ticketCliente = nClientes ? receita/nClientes : 0;
   var cards=[
     {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
-    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'vendas ÷ nº de pedidos (valor total do pedido)',destaque:false},
+    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'soma dos produtos por pedido (Coluna A) ÷ nº de pedidos',destaque:false},
     {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'vendas ÷ clientes que compraram',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
     {rotulo:'Vendas brutas (subtotal)',valor:dinheiro(bruto),ico:'📦',detalhe:'valor dos produtos',destaque:false},
