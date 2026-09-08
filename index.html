@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infinity Piercing · Dashboard de Compras</title>
 <style>
-  :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2;}
+  :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
   header{background:linear-gradient(135deg,var(--v),var(--v2));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -77,11 +77,12 @@
 </header>
 <main>
   <div id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + valores conferidos</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + valores</h3><div id="diagLinhas"></div></div>
   <div id="conteudo">
     <div class="filtros">
       <label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div>
       <label>Filtros de navegação</label><div class="chips" id="chipsSegmento"></div>
+      <div class="busca" style="margin-top:6px"><input id="busca" type="text" placeholder="🔍 Buscar cliente, e-mail ou produto…"><select id="selectProduto"><option value="">Todos os produtos</option></select></div>
     </div>
     <div style="display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap">
       <button class="btn tab ativo" data-tab="overview">📊 Visão geral</button>
@@ -102,50 +103,43 @@
     <section id="clientes" style="display:none">
       <div class="tabela-box">
         <div class="tabela-top"><div class="contador" id="contadorTabela">—</div><button class="btn" id="btnCsv">⬇ Exportar CSV</button></div>
-        <div style="overflow:auto;max-height:calc(100vh - 250px)">
-          <table><thead><tr><th data-ord="nome">Cliente</th><th data-ord="email">E-mail</th><th data-ord="sit">Situação</th><th data-ord="pedidos">Pedidos</th><th data-ord="total">Total (líquido)</th><th data-ord="ultima">Última compra</th><th data-ord="meses">Meses</th></tr></thead><tbody id="tbodyClientes"></tbody></table>
-        </div>
+        <div style="overflow:auto;max-height:calc(100vh - 250px)"><table><thead><tr><th data-ord="nome">Cliente</th><th data-ord="email">E-mail</th><th data-ord="sit">Situação</th><th data-ord="pedidos">Pedidos</th><th data-ord="total">Total (líquido)</th><th data-ord="ultima">Última compra</th><th data-ord="meses">Meses</th></tr></thead><tbody id="tbodyClientes"></tbody></table></div>
         <div class="paginacao"><button class="btn" id="prevPag">← Anterior</button><span id="infoPag">—</span><button class="btn" id="nextPag">Próxima →</button></div>
       </div>
     </section>
     <section id="produtos" style="display:none">
       <div class="tabela-box">
         <div class="tabela-top"><div class="contador" id="contadorProdutos">—</div><button class="btn" id="btnCsvProdutos">⬇ Exportar CSV</button></div>
-        <div style="overflow:auto;max-height:calc(100vh - 250px)">
-          <table><thead><tr><th data-ordp="produto">Produto</th><th data-ordp="qtd">Qtd</th><th data-ordp="receita">Receita</th></tr></thead><tbody id="tbodyProdutos"></tbody></table>
-        </div>
+        <div style="overflow:auto;max-height:calc(100vh - 250px)"><table><thead><tr><th data-ordp="produto">Produto</th><th data-ordp="qtd">Qtd</th><th data-ordp="receita">Receita</th></tr></thead><tbody id="tbodyProdutos"></tbody></table></div>
       </div>
     </section>
     <section id="contatos" style="display:none">
       <div class="tabela-box">
-        <div class="tabela-top">
-          <div class="contador" id="contadorContatos">—</div>
-          <button class="btn" id="btnTestarConexao">🔌 Testar conexão</button>
-          <button class="btn" id="btnCsvContatos">⬇ Exportar CSV</button>
-        </div>
-        <div style="overflow:auto;max-height:calc(100vh - 250px)">
-          <table><thead><tr><th>Cliente</th><th>E-mail</th><th>Telefone</th><th>Cidade</th><th>Contatado</th><th>Retorno</th><th>Data</th><th>Atendente</th></tr></thead><tbody id="tbodyContatos"></tbody></table>
-        </div>
+        <div class="tabela-top"><div class="contador" id="contadorContatos">—</div><button class="btn" id="btnTestarConexao">🔌 Testar conexão</button><button class="btn" id="btnCsvContatos">⬇ Exportar CSV</button></div>
+        <div style="overflow:auto;max-height:calc(100vh - 250px)"><table><thead><tr><th>Cliente</th><th>E-mail</th><th>Telefone</th><th>Cidade</th><th>Contatado</th><th>Retorno</th><th>Data</th><th>Atendente</th></tr></thead><tbody id="tbodyContatos"></tbody></table></div>
       </div>
     </section>
   </div>
 </main>
 <footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
 <script>
+/* ============ DIAGNÓSTICO GLOBAL: qualquer erro de script aparece na tela ============ */
+window.onerror=function(msg,src,lin){var el=document.getElementById('erroGlobal');try{var b=document.createElement('div');b.className='aviso show erro';b.innerHTML='<b>⚠ Erro de execução do script</b>'+esc(msg||'erro desconhecido')+(lin?' (linha '+lin+')':'')+' — confira se o arquivo index.html no GitHub termina com &lt;/html&gt; e sem cortes.';document.getElementById('avisos').appendChild(b);}catch(e){}return false;};
+
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  /* Forçar coluna por LETRA (ex.: 'A','I'). Vazio = automático por NOME EXATO + validação de conteúdo. */
+  /* Colunas por LETRA (ex.: 'A','I'). Vazio = automático por NOME EXATO + conteúdo. */
   pedidoCol:'',subtotalCol:'',totalCol:'',descontoCol:'',freteCol:'',dataCol:'',statusCol:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false};
 function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function dinheiro(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);}catch(e){return 'R$ '+(v||0);}}
 function numero(v){try{return new Intl.NumberFormat('pt-BR').format(v||0);}catch(e){return String(v||0);}}
 function fmtCurto(v){v=Math.round(v||0);if(v>=1000000)return 'R$'+(v/1000000).toFixed(1).replace('.',',')+'M';if(v>=1000)return 'R$'+(v/1000).toFixed(1).replace('.',',')+'k';return 'R$'+v;}
-function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
+function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');if(!el)return;var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
 function fmtData(d){if(!d)return '—';try{return d.toLocaleDateString('pt-BR');}catch(e){return String(d);}}
 function parseMoney(v){
   if(v==null)return 0;if(typeof v==='number')return isFinite(v)?v:0;
@@ -220,7 +214,7 @@ function resolverColunas(colunas,linhas){
   map.email=-1;map.nome=-1;map.produto=-1;map.sku=-1;map.qtd=-1;map.preco=-1;
   for(var cc=0;cc<colunas.length;cc++){
     var hh=String(colunas[cc]||'').trim(),hnn=norm(hh);
-    if(hnn==='email'||hnn==='e-mail'||hnn==='emailcomprador'||hnn==='buyeremail'||hnn==='buyeremail'||hnn==='emaildocomprador')map.email=cc;
+    if(hnn==='email'||hnn==='e-mail'||hnn==='emailcomprador'||hnn==='buyeremail'||hnn==='emaildocomprador')map.email=cc;
     if((hnn==='nome'||hnn==='buyername'||hnn==='nomecomprador'||hnn==='namecomprador'||hnn==='cliente')&&map.nome<0)map.nome=cc;
     if(hnn==='lineitemname'||hnn==='lineiteimname')map.produto=cc;
     if(hnn==='lineitemsku'||hnn==='lineiteimsku')map.sku=cc;
@@ -306,11 +300,22 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
 }
 function fmtMesChave(k){return NOMES[(k%100)-1]+'/'+String(Math.floor(k/100)).slice(2);}
 function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;}
-function listarArquivosRepo(repo){
-  return fetch('https://api.github.com/repos/'+repo+'/contents/',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('GitHub API HTTP '+r.status);return r.json();})
-    .then(function(lista){return(lista||[]).filter(function(f){return/\.csv$/i.test(f.name||'')&&!/over[_ ]?time/i.test(f.name||'');});});
+/* ============ FETCH COM TIMEOUT (nunca trava no "Carregando…") ============ */
+function fetchT(url,ms){
+  return new Promise(function(res,rej){
+    var t=setTimeout(function(){rej(new Error('timeout de '+Math.round(ms/1000)+'s ao acessar '+url.split('/').pop()+' — verifique a internet e se o repositório está público'));},ms);
+    fetch(url,{cache:'no-store'}).then(function(r){clearTimeout(t);res(r);},function(e){clearTimeout(t);rej(e);});
+  });
 }
-function baixarCSV(url){return fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});}
+function listarArquivosRepo(){
+  return fetchT('https://api.github.com/repos/'+CONFIG.repo+'/contents/',25000).then(function(r){
+    if(r.status===403)throw new Error('GitHub API retornou 403 (limite de requisições não logadas do seu IP). Espere ~1h ou use o botão Atualizar mais tarde.');
+    if(r.status===404)throw new Error('Repositório não encontrado ou privado. Confirme o nome em CONFIG.repo e que o repositório é PÚBLICO.');
+    if(!r.ok)throw new Error('GitHub API HTTP '+r.status);
+    return r.json();
+  }).then(function(lista){return(lista||[]).filter(function(f){return/\.csv$/i.test(f.name||'')&&!/over[_ ]?time/i.test(f.name||'');});});
+}
+function baixarCSV(url){return fetchT(url,35000).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' ao baixar '+url.split('/').pop());return r.text();});}
 function parseCSV(texto){
   var primeira=(texto.split('\n')[0]||'').trim();
   var v1=(primeira.match(/,/g)||[]).length,v2=(primeira.match(/;/g)||[]).length;
@@ -335,66 +340,74 @@ function processarBase(b){
 }
 function carregarDados(){
   var pill=document.getElementById('pill'),txt=document.getElementById('pillTexto');
-  txt.textContent='Lendo repositório…';
+  txt.textContent='Carregando…';pill.className='pill';
   document.getElementById('avisos').innerHTML='';
   document.getElementById('diag').style.display='none';
+  document.getElementById('conteudo').style.display='none';
   estado.meses=[];estado.base=null;
-  listarArquivosRepo(CONFIG.repo).then(function(arquivos){
-    if(!arquivos.length){txt.textContent='Nenhum CSV';pill.className='pill err';return;}
+  listarArquivosRepo().then(function(arquivos){
+    if(!arquivos.length){txt.textContent='Nenhum CSV';pill.className='pill err';avisar('erro','GitHub','Nenhum arquivo .csv encontrado na raiz do repositório.');return;}
     var baseArq=arquivos.filter(function(f){return ehArquivoBase(f.name);})[0];
     var mesArqs=arquivos.filter(function(f){return !ehArquivoBase(f.name);});
     var prom=[];
-    if(baseArq){prom.push(baixarCSV(baseArq.download_url).then(function(t){
-      var L=parseCSV(t);var d={colunas:L[0].map(function(h){return String(h).trim();}),linhas:L.slice(1)};
-      estado.base=processarBase(d);
-    }).catch(function(){}));}
+    if(baseArq){prom.push(baixarCSV(baseArq.download_url).then(function(t){var L=parseCSV(t);estado.base=processarBase({colunas:L[0].map(function(h){return String(h).trim();}),linhas:L.slice(1)});}).catch(function(){}));}
     mesArqs.forEach(function(f){
       prom.push(baixarCSV(f.download_url).then(function(t){
         var L=parseCSV(t);var d={colunas:L[0].map(function(h){return String(h).trim();}),linhas:L.slice(1)};
+        if(!d.colunas.filter(function(x){return x;}).length)throw new Error('CSV vazio');
         var rot=detectarRotulo(d.colunas,d.linhas,f.name)||'Mês';
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,uso:proc.uso,colunas:d.colunas,arquivo:f.name,
           nLinhas:proc.nLinhas,nPedidos:proc.nPedidos,mesclado:proc.mesclado,mesAlvo:proc.mesAlvo,
           removidos:proc.removidos,razao:proc.razao,suspeitos:proc.suspeitos,statusOk:proc.map.status>-1});
-      }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:e.message});}));
+      }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:(e&&e.message)||e});}));
     });
+    /* Um CSV com erro não congela o resto: Promise.all coleta todos, ok ou não */
     Promise.all(prom).then(function(){
-      var vistos=new Set(),dups=0;
-      estado.meses.forEach(function(m){if(!m.ok)return;var novos=[];m.pedidos.forEach(function(o){var k=String(o.chave||'');if(k&&vistos.has(k)){dups++;return;}if(k)vistos.add(k);novos.push(o);});m.pedidos=novos;});
-      var porMes={};estado.meses.forEach(function(m){if(!m.ok)return;(porMes[m.rotulo]=porMes[m.rotulo]||[]).push(m);});
-      var manter=new Set();
-      Object.keys(porMes).forEach(function(rot){var l=porMes[rot];if(l.length<=1){manter.add(l[0]);return;}l.sort(function(a,b){var al=a.mesclado?0:1,bl=b.mesclado?0:1;if(al!==bl)return bl-al;return a.pedidos.length-b.pedidos.length;});manter.add(l[0]);for(var i=1;i<l.length;i++)dups+=l[i].pedidos.length;});
-      estado.meses=estado.meses.filter(function(m){return manter.has(m);});
-      var html='';
-      estado.meses.forEach(function(m){
-        if(!m.ok){html+='<div class="linha"><span class="bad">❌ '+esc(m.rotulo)+'</span><span>'+esc(m.erro)+'</span></div>';return;}
-        var sLiq=0,sBru=0,sDesc=0,sFre=0,sTot=0,cli=new Set(),pagos=0,naoPagos=0;
-        m.pedidos.forEach(function(o){if(!o.pago){naoPagos++;return;}sLiq+=o.liquido;sBru+=o.bruto||0;sDesc+=o.desc||0;sFre+=o.frete||0;sTot+=o.totalPago||0;pagos++;if(o.email)cli.add(o.email);});
-        var lin='<div class="linha"><span class="'+(m.statusOk?'ok':'bad')+'">'+(m.statusOk?'✅':'❌')+' '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
-        lin+=String(m.nLinhas)+' linhas → '+String(m.nPedidos)+' pedidos · '+(m.razao?m.razao.toFixed(1):'1')+' linhas/pedido';
-        lin+=' · colunas: pedido['+esc(m.uso.pedido||'—')+'] subtotal['+esc(m.uso.subtotal||'—')+'] total['+esc(m.uso.total||'—')+'] desconto['+esc(m.uso.desconto||'—')+'] frete['+esc(m.uso.frete||'—')+'] status['+esc(m.uso.status||'—')+']';
-        if(!m.statusOk)lin+=' ⚠⚠ STATUS NÃO ENCONTRADO — todos considerados pagos';
-        if(m.mesclado)lin+=' ⚠ vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
-        if(m.suspeitos>0)lin+=' ⚠ '+m.suspeitos+' pedido(s) com total<subtotal';
-        lin+=' · pagos: '+pagos+' · não pagos: '+naoPagos;
-        lin+=' · brutas: '+fmtCurto(sBru)+' · líquidas: '+fmtCurto(sLiq)+' · descontos: '+fmtCurto(sDesc)+' · total pago: '+fmtCurto(sTot)+' · frete: '+fmtCurto(sFre);
-        lin+=' · clientes: '+cli.size+' · ticket/cliente: '+fmtCurto(cli.size?sLiq/cli.size:0);
-        lin+='</span></div>';
-        html+=lin;
-      });
-      if(dups>0)html+='<div class="linha"><span class="bad">⚠ '+dups+' pedido(s) repetido(s) entre arquivos descartados</span></div>';
-      document.getElementById('diag').style.display='block';
-      document.getElementById('diagLinhas').innerHTML=html;
-      estado.meses.sort(function(a,b){var ma=chaveMes(a.rotulo),mb=chaveMes(b.rotulo);return(ma||0)-(mb||0);});
-      var ok=estado.meses.filter(function(m){return m.ok;}).length;
-      if(ok===0&&!estado.base){txt.textContent='Sem dados legíveis';pill.className='pill err';return;}
-      document.getElementById('conteudo').style.display='';
-      montarChips();montarKpis();montarEvolucao();montarComparativosG();montarTopProdutos();
-      pill.className='pill '+(ok>0?'ok':'err');
-      txt.textContent=ok>0?('✓ '+ok+' meses'+(estado.base?' + base ✓':'')):'Somente base';
-      carregarContatosSalvos();
+      try{
+        var vistos=new Set(),dups=0;
+        estado.meses.forEach(function(m){if(!m.ok)return;var novos=[];m.pedidos.forEach(function(o){var k=String(o.chave||'');if(k&&vistos.has(k)){dups++;return;}if(k)vistos.add(k);novos.push(o);});m.pedidos=novos;});
+        var porMes={};estado.meses.forEach(function(m){if(!m.ok)return;(porMes[m.rotulo]=porMes[m.rotulo]||[]).push(m);});
+        var manter=new Set();
+        Object.keys(porMes).forEach(function(rot){var l=porMes[rot];if(l.length<=1){manter.add(l[0]);return;}l.sort(function(a,b){var al=a.mesclado?0:1,bl=b.mesclado?0:1;if(al!==bl)return bl-al;return a.pedidos.length-b.pedidos.length;});manter.add(l[0]);for(var i=1;i<l.length;i++)dups+=l[i].pedidos.length;});
+        estado.meses=estado.meses.filter(function(m){return manter.has(m);});
+        var html='';
+        estado.meses.forEach(function(m){
+          if(!m.ok){html+='<div class="linha"><span class="bad">❌ '+esc(m.rotulo)+'</span><span>'+esc(m.erro)+'</span></div>';return;}
+          var sLiq=0,sBru=0,sDesc=0,sFre=0,sTot=0,cli=new Set(),pagos=0,naoPagos=0;
+          m.pedidos.forEach(function(o){if(!o.pago){naoPagos++;return;}sLiq+=o.liquido;sBru+=o.bruto||0;sDesc+=o.desc||0;sFre+=o.frete||0;sTot+=o.totalPago||0;pagos++;if(o.email)cli.add(o.email);});
+          var lin='<div class="linha"><span class="'+(m.statusOk?'ok':'bad')+'">'+(m.statusOk?'✅':'❌')+' '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
+          lin+=String(m.nLinhas)+' linhas → '+String(m.nPedidos)+' pedidos · '+(m.razao?m.razao.toFixed(1):'1')+' linhas/pedido';
+          lin+=' · colunas: pedido['+esc(m.uso.pedido||'—')+'] subtotal['+esc(m.uso.subtotal||'—')+'] total['+esc(m.uso.total||'—')+'] desconto['+esc(m.uso.desconto||'—')+'] frete['+esc(m.uso.frete||'—')+'] status['+esc(m.uso.status||'—')+']';
+          if(!m.statusOk)lin+=' ⚠ STATUS NÃO ENCONTRADO — todos considerados pagos';
+          if(m.mesclado)lin+=' ⚠ vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
+          if(m.suspeitos>0)lin+=' ⚠ '+m.suspeitos+' pedido(s) com total<subtotal';
+          lin+=' · pagos: '+pagos+' · não pagos: '+naoPagos;
+          lin+=' · brutas: '+fmtCurto(sBru)+' · líquidas: '+fmtCurto(sLiq)+' · descontos: '+fmtCurto(sDesc)+' · total pago: '+fmtCurto(sTot)+' · frete: '+fmtCurto(sFre);
+          lin+=' · clientes: '+cli.size+' · ticket/cliente: '+fmtCurto(cli.size?sLiq/cli.size:0);
+          lin+='</span></div>';
+          html+=lin;
+        });
+        if(dups>0)html+='<div class="linha"><span class="bad">⚠ '+dups+' pedido(s) repetido(s) entre arquivos descartados</span></div>';
+        document.getElementById('diag').style.display='block';
+        document.getElementById('diagLinhas').innerHTML=html;
+        document.getElementById('conteudo').style.display='';
+        estado.meses.sort(function(a,b){var ma=chaveMes(a.rotulo),mb=chaveMes(b.rotulo);return(ma||0)-(mb||0);});
+        var ok=estado.meses.filter(function(m){return m.ok;}).length;
+        if(ok===0&&!estado.base){txt.textContent='Sem dados legíveis';pill.className='pill err';return;}
+        montarChips();montarKpis();montarEvolucao();montarComparativosG();montarTopProdutos();
+        pill.className='pill '+(ok>0?'ok':'err');
+        txt.textContent=ok>0?('✓ '+ok+' meses'+(estado.base?' + base ✓':'')):'Somente base';
+        carregarContatosSalvos();
+        if(ok<mesArqs.length)avisar('info','Atenção','Um ou mais arquivos não puderam ser lidos (veja o diagnóstico). O restante foi carregado.');
+      }catch(e2){
+        avisar('erro','Erro ao montar o painel','Erro durante a renderização: '+(e2&&e2.message?e2.message:e2)+'. Recarregue com Ctrl+F5 e, se persistir, cole o texto deste aviso.');
+      }
     });
-  }).catch(function(e){txt.textContent='Erro ao ler repositório';pill.className='pill err';avisar('erro','GitHub',esc(e.message));});
+  }).catch(function(e){
+    txt.textContent='Erro ao ler repositório';pill.className='pill err';
+    avisar('erro','GitHub',esc((e&&e.message)?e.message:e));
+  });
 }
 function chaveMes(rot){var m=String(rot||'').match(/^([A-Za-z]{3})\/(\d{2})$/);if(m){var idx=NOMES.indexOf(m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase());if(idx>-1)return parseInt(m[2],10)*100+(idx+1);}return 0;}
 function pedidosDoPeriodo(){
