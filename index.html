@@ -50,7 +50,6 @@
   .chip.ativo{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600}
   .busca input{border:1px solid var(--borda);border-radius:999px;padding:8px 16px;font-size:13px;width:260px;max-width:100%;outline:none}
   .busca select{border:1px solid var(--borda);border-radius:999px;padding:8px 12px;font-size:13px;background:#fff}
-  /* 8 KPIs em 2 linhas de 4 */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
   @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
   .kpi{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:13px 12px;position:relative;overflow:hidden}
@@ -408,10 +407,10 @@ function acharColuna(cab,chave){
   return -1;
 }
 /* ============================================================
-   DETECÇÃO AUTOMÁTICA DA COLUNA DO Nº DO PEDIDO
-   Um nº de pedido real se REPETE em várias linhas; um ID de item
-   aparece 1 única vez. Escolhe a coluna com MENOR taxa de valores
-   únicos (com bônus para cabeçalhos de pedido).
+   DETECÇÃO DA COLUNA DO Nº DO PEDIDO (REFORÇADA)
+   - Ignora colunas de status/país/canal (poucos valores distintos)
+   - Ignora colunas quase 100% únicas (ID de item)
+   - Bônus para cabeçalho de pedido e valores tipo "#1234" (Shopify)
    ============================================================ */
 function detectarColunaPedido(colunas, linhas){
   var amostra = linhas.length>4000 ? linhas.slice(0,4000) : linhas;
@@ -422,19 +421,23 @@ function detectarColunaPedido(colunas, linhas){
     if(h.indexOf('lineitem')>-1 || h==='sku' || h.indexOf('sku')>-1 || h==='codigo' || h==='code') continue;
     if(h==='email' || h==='e-mail' || h.indexOf('email')>-1) continue;
     if(h.indexOf('telefone')>-1 || h.indexOf('phone')>-1) continue;
-    var set = {}, preenchidas = 0;
+    if(h.indexOf('status')>-1 || h.indexOf('fulfillment')>-1 || h.indexOf('metodo')>-1 || h.indexOf('method')>-1 || h.indexOf('pais')>-1 || h.indexOf('country')>-1 || h.indexOf('canal')>-1 || h.indexOf('channel')>-1) continue;
+    var set = {}, preenchidas = 0, comHash = 0;
     for(var r=0;r<amostra.length;r++){
       var v = String(amostra[r][c]||'').trim();
       if(v==='') continue;
       preenchidas++;
       set[v]=true;
+      if(v.charAt(0)==='#') comHash++;
     }
     if(preenchidas < amostra.length*0.5) continue;
     var unicos = Object.keys(set).length;
+    if(unicos < 50) continue; /* status/país/canal têm pouquíssimos valores — não são pedido */
     var uni = unicos/preenchidas;
-    if(uni > 0.95) continue;
+    if(uni > 0.95) continue;  /* quase 100% únicos: ID de item */
     var bonus = 0;
     if(h==='name' || h==='ordername' || h==='pedido' || h==='npedido' || h==='numero do pedido' || h==='numerodopedido' || h.indexOf('pedido')>-1 || h.indexOf('order')>-1 || h.indexOf('numero')>-1) bonus = 0.3;
+    if(comHash/preenchidas > 0.5) bonus += 0.4; /* valores "#1234" = nº do pedido Shopify */
     var score = uni - bonus;
     if(score < melhorScore){ melhorScore = score; melhor = c; }
   }
@@ -522,12 +525,10 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS — CORREÇÃO DEFINITIVA
-   1) Coluna do pedido: DETECTADA automaticamente (repetição).
-   2) MÊS ALVO: mês dominante do arquivo (coluna de data).
-      Se o arquivo contém VÁRIOS MESES (export sem filtro de data),
-      só os pedidos do mês dominante entram — os demais são
-      descartados. Isso elimina a inflação de agosto.
+   PROCESSAMENTO DOS PEDIDOS
+   1) Coluna do pedido: DETECTADA automaticamente (reforçada).
+   2) MÊS ALVO: mês dominante do arquivo — se o arquivo tiver
+      vários meses, só os pedidos do mês dominante entram.
    3) Valor do pedido: Subtotal (Coluna I / cabeçalho, sem frete).
    ============================================================ */
 function processarMes(colunas, linhas){
@@ -553,7 +554,6 @@ function processarMes(colunas, linhas){
     preco:acharColuna(colunas,'preco'),
     nome:acharColuna(colunas,'nome')
   };
-  /* MÊS ALVO (dominante) pela coluna de data */
   var mesAlvo=null, totalDatadas=0, noMesAlvo=0;
   if(idx.data>-1){
     var cont={};
@@ -592,7 +592,6 @@ function processarMes(colunas, linhas){
   });
   var saida=[], removidos=0;
   ordens.forEach(function(o){
-    /* FILTRO DEFINITIVO POR MÊS: arquivo com vários meses → só o mês dominante */
     if(mesclado){
       if(o.data){
         var k2=o.data.getFullYear()*100+(o.data.getMonth()+1);
@@ -642,7 +641,7 @@ function carregarDados(){
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
         var rot=detectarRotulo(d.colunas,d.linhas,f.name) || 'Mês';
         var proc=processarMes(d.colunas,d.linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas,mesclado:proc.mesclado,arquivo:f.name});
         var nomePed = proc.idx.pedido>-1 ? (d.colunas[proc.idx.pedido]||'Coluna '+(proc.idx.pedido+1)) : '—';
         var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s)';
         diagDet+=' · coluna do pedido: '+esc(nomePed);
@@ -660,6 +659,31 @@ function carregarDados(){
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
     Promise.all(prom).then(function(){
+      /* ============================================================
+         CORREÇÃO DA INFLAÇÃO DE AGOSTO — DEDUPE POR MÊS
+         Se dois arquivos caírem no MESMO mês (ex.: arquivo antigo
+         com 4 meses + arquivo novo de agosto), mantém APENAS o
+         melhor arquivo (o que é de 1 mês só, ou o menor) e ignora
+         o duplicado. Sem isso, os valores somam em dobro.
+         ============================================================ */
+      var porMes = {};
+      estado.meses.forEach(function(m){ (porMes[m.rotulo] = porMes[m.rotulo]||[]).push(m); });
+      var manter = new Set();
+      Object.keys(porMes).forEach(function(rot){
+        var lista = porMes[rot];
+        if(lista.length<=1){ manter.add(lista[0]); return; }
+        lista.sort(function(a,b){
+          var aLimpo = a.mesclado?0:1, bLimpo = b.mesclado?0:1;
+          if(aLimpo!==bLimpo) return bLimpo-aLimpo; /* arquivo de 1 mês vence */
+          return a.pedidos.length - b.pedidos.length; /* empate: menor vence */
+        });
+        manter.add(lista[0]);
+        for(var i=1;i<lista.length;i++){
+          estado.diag.push({nome:'⚠ MÊS DUPLICADO ('+rot+')',ok:false,det:'Há mais de um arquivo identificado como '+rot+'. Mantido: '+esc(lista[0].arquivo)+' · ignorado: '+esc(lista[i].arquivo)+' — remova o arquivo duplicado do repositório para evitar soma em dobro.'});
+        }
+      });
+      estado.meses = estado.meses.filter(function(m){ return manter.has(m); });
+
       var diagBox=document.getElementById('diag');
       diagBox.style.display='block';
       var html='';
