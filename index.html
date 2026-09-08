@@ -194,11 +194,11 @@
         <div class="card"><h3>🧭 Como atualizar</h3><div style="font-size:12.5px;color:#374151;line-height:1.7">Suba os CSVs de pedidos na raiz do repositório. O dashboard detecta o mês automaticamente. A aba Contatos é editada na planilha e o site lê como espelho.</div></div>
       </div>
       <div class="grid2" style="margin-top:14px">
-        <div class="card"><h3>💵 Vendas líquidas (Total) mês a mês</h3><canvas id="graficoLiquido"></canvas></div>
+        <div class="card"><h3>💵 Vendas líquidas (Subtotal) mês a mês</h3><canvas id="graficoLiquido"></canvas></div>
         <div class="card"><h3>🚚 Vendas com e sem frete</h3><canvas id="graficoFrete"></canvas></div>
         <div class="card"><h3>🏷️ Total de descontos aplicados</h3><canvas id="graficoDescontos"></canvas></div>
         <div class="card"><h3>⚖️ Vendas com e sem desconto</h3><canvas id="graficoComSemDesconto"></canvas></div>
-        <div class="card largo"><h3>📦 Vendas brutas (Subtotal) mês a mês</h3><canvas id="graficoBruto"></canvas></div>
+        <div class="card largo"><h3>📦 Vendas brutas (Total c/ frete) mês a mês</h3><canvas id="graficoBruto"></canvas></div>
       </div>
     </section>
 
@@ -496,31 +496,34 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS — DEFINITIVO
-   - Coluna A (índice 0) = número do pedido (Name)
-   - Total do pedido = SOMA dos produtos (preço × qtd) das linhas
-     com o mesmo número de pedido (conforme instrução do usuário)
-   - Ticket médio por pedido = soma dos totais ÷ nº de pedidos únicos
+   PROCESSAMENTO DOS PEDIDOS — REGRA DO USUÁRIO
+   - Coluna A (índice 0) = Número do pedido
+   - Coluna I / cabeçalho Subtotal = valor do pedido SEM frete
+   - Ticket médio por pedido = SOMA(Subtotal dos pedidos) ÷ nº pedidos
    ============================================================ */
 function processarMes(colunas, linhas){
-  /* Identifica a coluna do número do pedido: prioriza a Coluna A */
-  var idxPedido = -1;
+  /* 1) Pedido = Coluna A (índice 0); fallback para aliases se a A for vazia */
+  var idxPedido = 0;
   if(colunas.length>0){
-    var h0 = norm(colunas[0]||'');
-    if(h0==='name'||h0==='ordername'||h0==='pedido'||h0.indexOf('pedido')>-1||h0.indexOf('order')>-1||h0.indexOf('npedido')>-1){
-      idxPedido = 0;
+    var h0=norm(colunas[0]||'');
+    if(h0.indexOf('lineitem')>-1 || h0==='email' || h0==='e-mail'){
+      idxPedido = acharColuna(colunas,'pedido');
+      if(idxPedido===-1) idxPedido = 0;
     }
   }
-  if(idxPedido===-1){
-    idxPedido = acharColuna(colunas,'pedido');
-    if(idxPedido===-1 && colunas.length>0) idxPedido = 0; /* fallback: Coluna A */
+  /* 2) Subtotal = coluna com cabeçalho subtotal; fallback: Coluna I (índice 8) se numérica */
+  var idxSubtotal = acharColuna(colunas,'subtotal');
+  if(idxSubtotal===-1 && colunas.length>8){
+    var v4=0;
+    for(var z=0;z<Math.min(linhas.length,200);z++){ if(parseMoney(linhas[z][8])>0) v4++; }
+    if(v4>=30) idxSubtotal=8;
   }
   var idx={
     email:acharColuna(colunas,'email'),
     pedido:idxPedido,
     data:acharColuna(colunas,'data'),
     total:acharColuna(colunas,'total'),
-    subtotal:acharColuna(colunas,'subtotal'),
+    subtotal:idxSubtotal,
     frete:acharColuna(colunas,'frete'),
     desconto:acharColuna(colunas,'desconto'),
     status:acharColuna(colunas,'status'),
@@ -532,14 +535,15 @@ function processarMes(colunas, linhas){
   };
   var ordens=new Map();
   linhas.forEach(function(r){
-    var chave = idx.pedido>-1 ? norm(r[idx.pedido]) : '';
+    var chave = String(r[idxPedido]||'').trim();
     if(!chave) chave = 'L:'+(ordens.size);
     var o=ordens.get(chave);
-    if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,totalColuna:0,subtotal:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
+    if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
+    /* Subtotal = valor do pedido sem frete (base do ticket médio) */
     if(idx.subtotal>-1&&!o.subtotal) o.subtotal=parseMoney(r[idx.subtotal]);
+    if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
     if(idx.desconto>-1&&!o.desconto) o.desconto=parseMoney(r[idx.desconto]);
     if(idx.data>-1&&!o.data) o.data=parseData(r[idx.data]);
@@ -554,14 +558,16 @@ function processarMes(colunas, linhas){
   });
   var saida=[];
   ordens.forEach(function(o){
-    /* TOTAL DO PEDIDO = soma dos produtos (preço × qtd) por número de pedido */
-    var totalCalc=0;
-    o.items.forEach(function(it){ totalCalc += (it.preco||0)*(it.qtd||1); });
-    /* Fallback: se não houver itens com preço, usa o Total da coluna */
-    if(totalCalc<=0 && o.totalColuna>0) totalCalc=o.totalColuna;
+    /* Valor do pedido = Subtotal (Coluna I) quando existir */
+    var venda = o.subtotal>0 ? o.subtotal : o.totalColuna;
+    if(venda<=0){
+      var sItens=0;
+      o.items.forEach(function(it){ sItens+=(it.preco||0)*(it.qtd||1); });
+      if(sItens>0) venda=sItens;
+    }
     var st=String(o.status||'').toLowerCase();
     var pago=st===''?true:ehPago(st);
-    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?totalCalc:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
+    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
   return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length};
 }
@@ -598,8 +604,8 @@ function carregarDados(){
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
         var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) agrupado(s) pela Coluna A';
-        diagDet+=' · pedido: '+esc(proc.idx.pedido>-1?(d.colunas[proc.idx.pedido]||'Coluna A'):'Coluna A');
-        diagDet+=' · total: soma dos produtos (preço × qtd) por pedido';
+        var nomeSub = proc.idx.subtotal>-1 ? (d.colunas[proc.idx.subtotal]||'Coluna I') : 'Coluna I';
+        diagDet+=' · valor do pedido: Subtotal ('+esc(nomeSub)+') c/ fallback p/ itens';
         diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
         diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
         var md=mesesDistintos(d.colunas,d.linhas);
@@ -858,11 +864,11 @@ function montarComparativos(){
   var comDesc=somarMes(null,function(o){return o.desconto>0?o.total:0;});
   var semDesc=somarMes(null,function(o){return o.desconto<=0?o.total:0;});
   var semFrete=tot.map(function(v,i){return v-fre[i];});
-  desenharComparativo('graficoLiquido',meses,tot,null,'#1d4a2e',null,'Vendas líquidas (Total)',null,fmtCurto);
-  desenharComparativo('graficoFrete',meses,tot,semFrete,'#1d4a2e','#3b82f6','Com frete (total)','Sem frete',fmtCurto);
+  desenharComparativo('graficoLiquido',meses,tot,null,'#1d4a2e',null,'Vendas líquidas (Subtotal)',null,fmtCurto);
+  desenharComparativo('graficoFrete',meses,tot,semFrete,'#1d4a2e','#3b82f6','Com frete (total)','Sem frete (subtotal)',fmtCurto);
   desenharComparativo('graficoDescontos',meses,desc,null,'#b45309',null,'Descontos',null,fmtCurto);
   desenharComparativo('graficoComSemDesconto',meses,comDesc,semDesc,'#7c3aed','#1d4a2e','Com desconto','Sem desconto',fmtCurto);
-  desenharComparativo('graficoBruto',meses,subt,null,'#f59e0b',null,'Vendas brutas (Subtotal)',null,fmtCurto);
+  desenharComparativo('graficoBruto',meses,subt,null,'#f59e0b',null,'Vendas brutas',null,fmtCurto);
 }
 
 function secaoAtiva(){ var t=document.querySelector('.tab.ativo'); return t?t.dataset.tab:'overview'; }
@@ -928,23 +934,24 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* Ticket médio por pedido = soma dos totais dos pedidos (Coluna A) ÷ nº de pedidos */
+/* Ticket médio por pedido = SOMA(Subtotal dos pedidos) ÷ nº de pedidos (Valor sem frete) */
 function montarKpis(){
-  var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, bruto=0, desc=0;
-  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; bruto+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
+  var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, subtotalTotal=0;
+  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; subtotalTotal+=o.subtotal||0; nPagos++; });
   var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, naorec=0, ultimo=ultimoMesLabel();
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; if(ultimo&&!comprouNoMes(em,ultimo)) naorec++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
   var nClientes = compradores.size;
-  var ticketPedido = nPagos ? receita/nPagos : 0;
-  var ticketCliente = nClientes ? receita/nClientes : 0;
+  /* Ticket médio por pedido = soma dos Subtotal ÷ nº de pedidos (valor sem frete) */
+  var ticketPedido = nPagos ? subtotalTotal/nPagos : 0;
+  var ticketCliente = nClientes ? subtotalTotal/nClientes : 0;
   var cards=[
-    {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
-    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'soma dos produtos por pedido (Coluna A) ÷ nº de pedidos',destaque:false},
-    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'vendas ÷ clientes que compraram',destaque:false},
+    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
+    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'soma do Subtotal (Coluna I) ÷ nº de pedidos',destaque:false},
+    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'soma do Subtotal ÷ clientes que compraram',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
-    {rotulo:'Vendas brutas (subtotal)',valor:dinheiro(bruto),ico:'📦',detalhe:'valor dos produtos',destaque:false},
-    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
+    {rotulo:'Vendas com frete',valor:dinheiro(receita),ico:'📦',detalhe:'Subtotal + frete (referência)',destaque:false},
+    {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
     {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false}
   ];
@@ -958,11 +965,11 @@ function montarEvolucao(){
   var W=cssW, H=cssH; ctx.clearRect(0,0,W,H);
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
-  var dados=meses.map(function(m){ var receita=0, clientes=new Set(), nped=0; m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.total; nped++; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size,pedidos:nped}; });
+  var dados=meses.map(function(m){ var receita=0, clientes=new Set(), nped=0; m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.subtotal||0; nped++; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size,pedidos:nped}; });
   ctx.textBaseline='alphabetic';
   ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
   ctx.fillStyle='#1d4a2e'; ctx.fillRect(10,10,11,11);
-  ctx.fillStyle='#374151'; ctx.fillText('Receita',26,20);
+  ctx.fillStyle='#374151'; ctx.fillText('Receita (Subtotal)',26,20);
   ctx.fillStyle='rgba(46,125,79,.42)'; ctx.fillRect(110,10,11,11);
   ctx.fillStyle='#374151'; ctx.fillText('Clientes',126,20);
   var maxR=Math.max.apply(null,dados.map(function(d){return d.receita;}))||1;
@@ -994,7 +1001,7 @@ function montarEvolucao(){
     if(di<0||di>=dados.length){ ttOcultar(); return; }
     var d=dados[di];
     var html='<div class="tt-titulo">'+esc(d.rotulo)+'</div>';
-    html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita: <b>'+fmtCompleto(d.receita)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita (Subtotal): <b>'+fmtCompleto(d.receita)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#5b9d74"></span> Clientes: <b>'+numero(d.clientes)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#b45309"></span> Ticket médio/pedido: <b>'+fmtCompleto(d.pedidos?d.receita/d.pedidos:0)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#7c3aed"></span> Ticket médio/cliente: <b>'+fmtCompleto(d.clientes?d.receita/d.clientes:0)+'</b></div>';
