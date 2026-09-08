@@ -496,10 +496,8 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS — TICKET MÉDIO
-   - Coluna A (índice 0) = Número do pedido (agrupa as linhas)
-   - Valor de cada pedido = Subtotal (Coluna I, sem frete)
-   - Ticket médio por pedido = (Σ Subtotal dos pedidos) ÷ nº de pedidos
+   PROCESSAMENTO — Coluna A (nº do pedido) agrupa as linhas;
+   valor de cada pedido = Subtotal (Coluna I / cabeçalho, sem frete).
    ============================================================ */
 function processarMes(colunas, linhas){
   var idxPedido = 0;
@@ -539,7 +537,6 @@ function processarMes(colunas, linhas){
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    /* Subtotal: primeiro valor NÃO vazio do pedido (é o valor do pedido) */
     if(idx.subtotal>-1&&!o.subtotal){ var stV=parseMoney(r[idx.subtotal]); if(stV>0) o.subtotal=stV; }
     if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
@@ -601,11 +598,9 @@ function carregarDados(){
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
         var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) agrupado(s) pela Coluna A';
-        /* PROVA VISÍVEL DO CÁLCULO DO TICKET MÉDIO */
-        var sSub=0, cPago=0;
-        proc.saida.forEach(function(o){ if(o.pago){ sSub+=o.subtotal||0; cPago++; } });
-        var tMed = cPago ? sSub/cPago : 0;
-        diagDet+=' · Σ Subtotal: '+fmtCurto(sSub)+' · pedidos pagos: '+cPago+' · ticket médio: '+fmtCurto(tMed);
+        var sSub=0;
+        proc.saida.forEach(function(o){ if(o.pago) sSub+=o.subtotal||0; });
+        diagDet+=' · Σ Subtotal: '+fmtCurto(sSub);
         diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
         diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
         var md=mesesDistintos(d.colunas,d.linhas);
@@ -934,28 +929,30 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* TICKET MÉDIO: média do valor dos pedidos (Subtotal, sem frete) */
+/* TICKET MÉDIO = MÉDIA do valor gasto por CLIENTE (Subtotal, sem frete).
+   Divisor = nº de CLIENTES que compraram (não o nº de pedidos). */
 function montarKpis(){
-  var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, subtotalTotal=0, desc=0;
-  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; subtotalTotal+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
-  var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, naorec=0, ultimo=ultimoMesLabel();
-  compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; if(ultimo&&!comprouNoMes(em,ultimo)) naorec++; });
+  var pedidos=pedidosDoPeriodo(), nExp=0, subtotalTotal=0, desc=0;
+  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; subtotalTotal+=o.subtotal||0; desc+=o.desconto||0; });
+  var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, ultimo=ultimoMesLabel();
+  compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
   var nClientes = compradores.size;
-  var ticketPedido = nPagos ? subtotalTotal/nPagos : 0;
-  var ticketCliente = nClientes ? subtotalTotal/nClientes : 0;
+  /* MÉDIA: soma do que os clientes gastaram ÷ quantidade de clientes que compraram */
+  var ticketMedio = nClientes ? subtotalTotal/nClientes : 0;
   var cards=[
-    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
-    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'Média do valor dos pedidos (Subtotal, sem frete) ÷ nº de pedidos',destaque:false},
-    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'Média do valor dos pedidos ÷ clientes que compraram',destaque:false},
+    {rotulo:'Ticket médio (por cliente)',valor:dinheiro(ticketMedio),ico:'🎯',detalhe:'média do valor gasto por cliente (Subtotal, sem frete)',destaque:true},
+    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nClientes)+' clientes que compraram',destaque:false},
+    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
-    {rotulo:'Vendas com frete',valor:dinheiro(receita),ico:'📦',detalhe:'Subtotal + frete (referência)',destaque:false},
-    {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
+    {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
-    {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false}
+    {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false},
+    {rotulo:'Pedidos pagos',valor:numero(compradores.size>0?contarPagos(pedidos):0),ico:'🧾',detalhe:'total de pedidos pagos no período',destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
+function contarPagos(pedidos){ var n=0; pedidos.forEach(function(o){ if(o.pago) n++; }); return n; }
 function montarEvolucao(){
   var c=document.getElementById('evolucao'); if(!c) return;
   var dpr=Math.min(window.devicePixelRatio||1,2), cssW=c.clientWidth||300, cssH=c.clientHeight||225;
@@ -964,7 +961,7 @@ function montarEvolucao(){
   var W=cssW, H=cssH; ctx.clearRect(0,0,W,H);
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
-  var dados=meses.map(function(m){ var receita=0, clientes=new Set(), nped=0; m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.subtotal||0; nped++; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size,pedidos:nped}; });
+  var dados=meses.map(function(m){ var receita=0, clientes=new Set(); m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.subtotal||0; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size}; });
   ctx.textBaseline='alphabetic';
   ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
   ctx.fillStyle='#1d4a2e'; ctx.fillRect(10,10,11,11);
@@ -1002,8 +999,7 @@ function montarEvolucao(){
     var html='<div class="tt-titulo">'+esc(d.rotulo)+'</div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita (Subtotal): <b>'+fmtCompleto(d.receita)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#5b9d74"></span> Clientes: <b>'+numero(d.clientes)+'</b></div>';
-    html+='<div class="tt-linha"><span class="tt-cor" style="background:#b45309"></span> Ticket médio/pedido: <b>'+fmtCompleto(d.pedidos?d.receita/d.pedidos:0)+'</b></div>';
-    html+='<div class="tt-linha"><span class="tt-cor" style="background:#7c3aed"></span> Ticket médio/cliente: <b>'+fmtCompleto(d.clientes?d.receita/d.clientes:0)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#b45309"></span> Ticket médio/cliente: <b>'+fmtCompleto(d.clientes?d.receita/d.clientes:0)+'</b></div>';
     ttMostrar(html,ev.clientX,ev.clientY);
   };
   c.onmouseleave=function(){ ttOcultar(); };
