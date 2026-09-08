@@ -502,7 +502,6 @@ function processarBase(b){
    - Ticket médio por pedido = SOMA(Subtotal dos pedidos) ÷ nº pedidos
    ============================================================ */
 function processarMes(colunas, linhas){
-  /* 1) Pedido = Coluna A (índice 0); fallback para aliases se a A for vazia */
   var idxPedido = 0;
   if(colunas.length>0){
     var h0=norm(colunas[0]||'');
@@ -511,7 +510,6 @@ function processarMes(colunas, linhas){
       if(idxPedido===-1) idxPedido = 0;
     }
   }
-  /* 2) Subtotal = coluna com cabeçalho subtotal; fallback: Coluna I (índice 8) se numérica */
   var idxSubtotal = acharColuna(colunas,'subtotal');
   if(idxSubtotal===-1 && colunas.length>8){
     var v4=0;
@@ -541,7 +539,6 @@ function processarMes(colunas, linhas){
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    /* Subtotal = valor do pedido sem frete (base do ticket médio) */
     if(idx.subtotal>-1&&!o.subtotal) o.subtotal=parseMoney(r[idx.subtotal]);
     if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
@@ -558,7 +555,6 @@ function processarMes(colunas, linhas){
   });
   var saida=[];
   ordens.forEach(function(o){
-    /* Valor do pedido = Subtotal (Coluna I) quando existir */
     var venda = o.subtotal>0 ? o.subtotal : o.totalColuna;
     if(venda<=0){
       var sItens=0;
@@ -934,15 +930,14 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* Ticket médio por pedido = SOMA(Subtotal dos pedidos) ÷ nº de pedidos (Valor sem frete) */
+/* CORREÇÃO DO PAINEL: `desc` agora é declarado e acumulado no loop */
 function montarKpis(){
-  var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, subtotalTotal=0;
-  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; subtotalTotal+=o.subtotal||0; nPagos++; });
+  var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, subtotalTotal=0, desc=0;
+  pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; subtotalTotal+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
   var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, naorec=0, ultimo=ultimoMesLabel();
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; if(ultimo&&!comprouNoMes(em,ultimo)) naorec++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
   var nClientes = compradores.size;
-  /* Ticket médio por pedido = soma dos Subtotal ÷ nº de pedidos (valor sem frete) */
   var ticketPedido = nPagos ? subtotalTotal/nPagos : 0;
   var ticketCliente = nClientes ? subtotalTotal/nClientes : 0;
   var cards=[
