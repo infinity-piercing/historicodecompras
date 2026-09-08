@@ -50,7 +50,7 @@
   .chip.ativo{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600}
   .busca input{border:1px solid var(--borda);border-radius:999px;padding:8px 16px;font-size:13px;width:260px;max-width:100%;outline:none}
   .busca select{border:1px solid var(--borda);border-radius:999px;padding:8px 12px;font-size:13px;background:#fff}
-  /* 8 KPIs em 2 linhas de 4 (4 em cima, 4 embaixo) */
+  /* 8 KPIs em 2 linhas de 4 */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
   @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
   .kpi{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:13px 12px;position:relative;overflow:hidden}
@@ -372,9 +372,6 @@ var ALIASES={
   frete:['shipping','frete','valorfrete','shippingamount','shippingcost','transporte','shippingprice'],
   desconto:['discount','discountamount','totaldiscounts','discounts','desconto','codigodesconto'],
   status:['status','statusdacompra','statusfinancial','statusdopagamento','situation','paymentstatus','financialstatus'],
-  produto:['lineitemname','lineiteimname','lineitem','produto','product','nomedoproduto','productname','item','nomeproduto','produtos'],
-  sku:['lineitemsku','lineiteimsku','produtosku','productsku','sku','codigo','code','variantsku','variantsku'],
-  qtd:['lineitemquantity','lineiteimquantity','quantidade','qty','quantity','pecas','npecas','quant'],
   preco:['lineitemprice','lineiteimprice','precounitario','valorunitario','preco'],
   cidade:['cidade','city','defaultaddresscity','addresscity'],
   telefone:['telefone','phone','fone','defaultaddressphone','celular'],
@@ -410,15 +407,44 @@ function acharColuna(cab,chave){
   }
   return -1;
 }
-function acharColunaProduto(cab){
-  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemname'||h==='lineiteimname') return i; }
-  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j; }
-  return acharColuna(cab,'produto');
-}
-function acharColunaSku(cab){
-  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemsku'||h==='lineiteimsku') return i; }
-  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j; }
-  return acharColuna(cab,'sku');
+/* ============================================================
+   DETECÇÃO AUTOMÁTICA DA COLUNA DO Nº DO PEDIDO
+   ------------------------------------------------------------
+   Um nº de pedido real se REPETE em várias linhas (cada pedido
+   tem vários produtos). Um ID de item/sku aparece 1 única vez.
+   Então a coluna escolhida é a que tem MENOR taxa de valores
+   únicos dentre as colunas preenchidas — e preferência para
+   cabeçalhos que pareçam pedido (Name, Pedido, Order...).
+   Isso corrige CSVs onde a Coluna A não é o nº do pedido.
+   ============================================================ */
+function detectarColunaPedido(colunas, linhas){
+  var amostra = linhas.length>4000 ? linhas.slice(0,4000) : linhas;
+  var melhor=-1, melhorScore=999;
+  for(var c=0;c<colunas.length;c++){
+    var h = norm(colunas[c]||'');
+    if(!h) continue;
+    if(h.indexOf('lineitem')>-1 || h==='sku' || h.indexOf('sku')>-1 || h==='codigo' || h==='code') continue;
+    if(h==='email' || h==='e-mail' || h.indexOf('email')>-1) continue;
+    if(h.indexOf('telefone')>-1 || h.indexOf('phone')>-1) continue;
+    var set = {}, preenchidas = 0;
+    for(var r=0;r<amostra.length;r++){
+      var v = String(amostra[r][c]||'').trim();
+      if(v==='') continue;
+      preenchidas++;
+      set[v]=true;
+    }
+    if(preenchidas < amostra.length*0.5) continue;
+    var unicos = Object.keys(set).length;
+    var uni = unicos/preenchidas;
+    if(uni > 0.95) continue; /* quase 100% únicos: ID de item, não pedido */
+    var bonus = 0;
+    if(h==='name' || h==='ordername' || h==='pedido' || h==='npedido' || h==='numero do pedido' || h==='numerodopedido' || h.indexOf('pedido')>-1 || h.indexOf('order')>-1 || h.indexOf('numero')>-1) bonus = 0.3;
+    var score = uni - bonus;
+    if(score < melhorScore){ melhorScore = score; melhor = c; }
+  }
+  /* Fallback: se nada foi encontrado, usa a Coluna A (0) */
+  if(melhor===-1 && colunas.length>0) melhor = 0;
+  return melhor;
 }
 
 function listarArquivosRepo(repo){
@@ -498,18 +524,12 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO — Coluna A (nº do pedido) agrupa as linhas;
-   valor de cada pedido = Subtotal (Coluna I / cabeçalho, sem frete).
+   PROCESSAMENTO DOS PEDIDOS
+   - Coluna do nº do pedido: DETECTADA automaticamente (repetição)
+   - Valor de cada pedido: Subtotal (Coluna I / cabeçalho, sem frete)
    ============================================================ */
 function processarMes(colunas, linhas){
-  var idxPedido = 0;
-  if(colunas.length>0){
-    var h0=norm(colunas[0]||'');
-    if(h0.indexOf('lineitem')>-1 || h0==='email' || h0==='e-mail'){
-      idxPedido = acharColuna(colunas,'pedido');
-      if(idxPedido===-1) idxPedido = 0;
-    }
-  }
+  var idxPedido = detectarColunaPedido(colunas, linhas);
   var idxSubtotal = acharColuna(colunas,'subtotal');
   if(idxSubtotal===-1 && colunas.length>8){
     var v4=0;
@@ -533,7 +553,7 @@ function processarMes(colunas, linhas){
   };
   var ordens=new Map();
   linhas.forEach(function(r){
-    var chave = String(r[idxPedido]||'').trim();
+    var chave = idxPedido>-1 ? String(r[idxPedido]||'').trim() : '';
     if(!chave) chave = 'L:'+(ordens.size);
     var o=ordens.get(chave);
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
@@ -567,6 +587,16 @@ function processarMes(colunas, linhas){
   });
   return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length};
 }
+function acharColunaProduto(cab){
+  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemname'||h==='lineiteimname') return i; }
+  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j; }
+  return acharColuna(cab,'produto');
+}
+function acharColunaSku(cab){
+  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemsku'||h==='lineiteimsku') return i; }
+  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j; }
+  return acharColuna(cab,'sku');
+}
 
 var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,paginaCont:1,porPaginaCont:200,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,ultimoErro:'',diag:[]};
 
@@ -599,7 +629,12 @@ function carregarDados(){
         var rot=detectarRotulo(d.colunas,d.linhas,f.name) || 'Mês';
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
-        var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) agrupado(s) pela Coluna A';
+        var nomePed = proc.idx.pedido>-1 ? (d.colunas[proc.idx.pedido]||'Coluna '+(proc.idx.pedido+1)) : '—';
+        var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s)';
+        diagDet+=' · coluna do pedido: '+esc(nomePed);
+        var razao = proc.nPedidos>0 ? (proc.nLinhas/proc.nPedidos) : 0;
+        diagDet+=' · médio '+razao.toFixed(1)+' item(s)/pedido';
+        if(razao<3){ diagDet+=' ⚠ agrupamento quase 1:1 — a coluna usada parece ser ID de item, não nº do pedido'; }
         var sSub=0;
         proc.saida.forEach(function(o){ if(o.pago) sSub+=o.subtotal||0; });
         diagDet+=' · Σ Subtotal: '+fmtCurto(sSub);
@@ -611,11 +646,6 @@ function carregarDados(){
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
     Promise.all(prom).then(function(){
-      var vistos={};
-      estado.meses.forEach(function(m){
-        if(vistos[m.rotulo]){ estado.diag.push({nome:'⚠ MÊS DUPLICADO',ok:false,det:'Há mais de um arquivo identificado como '+m.rotulo+' — remova o duplicado do repositório.'}); }
-        vistos[m.rotulo]=true;
-      });
       var diagBox=document.getElementById('diag');
       diagBox.style.display='block';
       var html='';
@@ -931,16 +961,16 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* TICKET MÉDIO = MÉDIA do valor gasto por CLIENTE (Subtotal, sem frete).
-   Divisor = nº de CLIENTES que compraram (não o nº de pedidos). */
+/* TICKET MÉDIO = MÉDIA do valor gasto por CLIENTE (Subtotal, sem frete) */
 function montarKpis(){
   var pedidos=pedidosDoPeriodo(), nExp=0, subtotalTotal=0, desc=0;
   pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; subtotalTotal+=o.subtotal||0; desc+=o.desconto||0; });
-  var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, ultimo=ultimoMesLabel();
+  var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0;
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
   var nClientes = compradores.size;
   var ticketMedio = nClientes ? subtotalTotal/nClientes : 0;
+  var nPagos = contarPagos(pedidos);
   var cards=[
     {rotulo:'Ticket médio (por cliente)',valor:dinheiro(ticketMedio),ico:'🎯',detalhe:'média do valor gasto por cliente (Subtotal, sem frete)',destaque:true},
     {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nClientes)+' clientes que compraram',destaque:false},
@@ -949,7 +979,7 @@ function montarKpis(){
     {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
     {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false},
-    {rotulo:'Pedidos pagos',valor:numero(contarPagos(pedidos)),ico:'🧾',detalhe:'total de pedidos pagos no período',destaque:false}
+    {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:'total de pedidos pagos no período',destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
