@@ -496,10 +496,10 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS — REGRA DO USUÁRIO
-   - Coluna A (índice 0) = Número do pedido
-   - Coluna I / cabeçalho Subtotal = valor do pedido SEM frete
-   - Ticket médio por pedido = SOMA(Subtotal dos pedidos) ÷ nº pedidos
+   PROCESSAMENTO DOS PEDIDOS — TICKET MÉDIO
+   - Coluna A (índice 0) = Número do pedido (agrupa as linhas)
+   - Valor de cada pedido = Subtotal (Coluna I, sem frete)
+   - Ticket médio por pedido = (Σ Subtotal dos pedidos) ÷ nº de pedidos
    ============================================================ */
 function processarMes(colunas, linhas){
   var idxPedido = 0;
@@ -539,7 +539,8 @@ function processarMes(colunas, linhas){
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
-    if(idx.subtotal>-1&&!o.subtotal) o.subtotal=parseMoney(r[idx.subtotal]);
+    /* Subtotal: primeiro valor NÃO vazio do pedido (é o valor do pedido) */
+    if(idx.subtotal>-1&&!o.subtotal){ var stV=parseMoney(r[idx.subtotal]); if(stV>0) o.subtotal=stV; }
     if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
     if(idx.desconto>-1&&!o.desconto) o.desconto=parseMoney(r[idx.desconto]);
@@ -600,8 +601,11 @@ function carregarDados(){
         var proc=processarMes(d.colunas,d.linhas);
         estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas});
         var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) agrupado(s) pela Coluna A';
-        var nomeSub = proc.idx.subtotal>-1 ? (d.colunas[proc.idx.subtotal]||'Coluna I') : 'Coluna I';
-        diagDet+=' · valor do pedido: Subtotal ('+esc(nomeSub)+') c/ fallback p/ itens';
+        /* PROVA VISÍVEL DO CÁLCULO DO TICKET MÉDIO */
+        var sSub=0, cPago=0;
+        proc.saida.forEach(function(o){ if(o.pago){ sSub+=o.subtotal||0; cPago++; } });
+        var tMed = cPago ? sSub/cPago : 0;
+        diagDet+=' · Σ Subtotal: '+fmtCurto(sSub)+' · pedidos pagos: '+cPago+' · ticket médio: '+fmtCurto(tMed);
         diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
         diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
         var md=mesesDistintos(d.colunas,d.linhas);
@@ -930,7 +934,7 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
-/* CORREÇÃO DO PAINEL: `desc` agora é declarado e acumulado no loop */
+/* TICKET MÉDIO: média do valor dos pedidos (Subtotal, sem frete) */
 function montarKpis(){
   var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, subtotalTotal=0, desc=0;
   pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; subtotalTotal+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
@@ -942,8 +946,8 @@ function montarKpis(){
   var ticketCliente = nClientes ? subtotalTotal/nClientes : 0;
   var cards=[
     {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
-    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'soma do Subtotal (Coluna I) ÷ nº de pedidos',destaque:false},
-    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'soma do Subtotal ÷ clientes que compraram',destaque:false},
+    {rotulo:'Ticket médio por pedido',valor:dinheiro(ticketPedido),ico:'🧾',detalhe:'Média do valor dos pedidos (Subtotal, sem frete) ÷ nº de pedidos',destaque:false},
+    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'Média do valor dos pedidos ÷ clientes que compraram',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
     {rotulo:'Vendas com frete',valor:dinheiro(receita),ico:'📦',detalhe:'Subtotal + frete (referência)',destaque:false},
     {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
