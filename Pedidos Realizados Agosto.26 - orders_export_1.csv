@@ -1,3 +1,0 @@
-git rm "Pedidos Realizados Agosto.26/order_export_1.csv"
-git commit -m "Removendo arquivo antigo"
-git push
