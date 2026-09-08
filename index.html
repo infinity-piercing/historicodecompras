@@ -66,7 +66,6 @@
   .b-recorrente{background:var(--roxobg);color:var(--roxo)}
   .paginacao{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--borda);font-size:12.5px;color:var(--cinza)}
   .paginacao .btn:disabled{opacity:.4;cursor:default}
-  #tooltip{position:fixed;background:#1f2937;color:#fff;padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.5;pointer-events:none;display:none;z-index:999;max-width:280px}
   footer{max-width:1280px;margin:16px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
 </style>
 </head>
@@ -84,7 +83,7 @@
 
 <main>
   <div id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês (agrupamento e valores conferidos na fonte)</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês (confira agosto aqui)</h3><div id="diagLinhas"></div></div>
 
   <div id="conteudo">
     <div class="filtros">
@@ -134,7 +133,7 @@
         <div class="tabela-top"><div class="contador" id="contadorProdutos">—</div><button class="btn" id="btnCsvProdutos">⬇ Exportar CSV</button></div>
         <div class="tabela-scroll">
           <table>
-            <thead><tr><th data-ordp="sku">SKU</th><th data-ordp="nome">Produto</th><th data-ordp="qtd">Qtd</th><th data-ordp="receita">Receita</th></tr></thead>
+            <thead><tr><th>Produto</th><th data-ordp="qtd">Qtd</th><th data-ordp="receita">Receita</th></tr></thead>
             <tbody id="tbodyProdutos"></tbody>
           </table>
         </div>
@@ -161,13 +160,13 @@
 </main>
 
 <footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
-<div id="tooltip"></div>
 
 <script>
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  /* Sobrescrita manual opcional (base 0: A=0,...,I=8). -1 = detectar pelo nome/valor */
+  /* Colunas (base 0: A=0,...,I=8). -1 = automático.
+     Padrão: pedido = Coluna A (0), subtotal = Coluna I (8). */
   pedidoCol:-1, subtotalCol:-1, totalCol:-1, descontoCol:-1, freteCol:-1, dataCol:-1
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -211,7 +210,7 @@ function parseData(v){
 }
 function ehExpirado(st){st=String(st||'').toLowerCase();return st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('refund')>-1||st.indexOf('chargeback')>-1||st.indexOf('void')>-1||st.indexOf('falhou')>-1;}
 
-/* ============ MAPEAMENTO DE COLUNAS (nomes exatos Shopify + aliases) ============ */
+/* ============ MAPEAMENTO DE COLUNAS ============ */
 var EXATAS={
   pedido:['name','ordername','orderid','pedido','numerodopedido','npedido','numero do pedido'],
   subtotal:['subtotal'],
@@ -264,23 +263,15 @@ function acharColuna(cab,chave){
   return -1;
 }
 function overrideCol(idx,lim){var v=parseInt(idx,10);return(!isNaN(v)&&v>=0&&v<lim)?v:-1;}
-
-/* ============ DETECÇÃO DA COLUNA DO PEDIDO PELOS DADOS ============
-   Um nº de pedido REAL repete em todas as linhas do mesmo pedido
-   (ex.: ~25 linhas/pedido em junho/julho). Escolhemos a coluna com
-   MENOR taxa de valores únicos = maior repetição, excluindo colunas
-   óbvias (SKU, e-mail, status, datas, valores). Isso corrige agosto,
-   onde a coluna do pedido não estava na posição esperada. */
 function detectarColunaPedido(colunas,linhas){
   var amostra=linhas.length>6000?linhas.slice(0,6000):linhas;
   var melhor=-1,melhorRazao=0;
-  var bloqueadas={'subtotal':1,'total':1,'discountamount':1,'shipping':1,'lineitemname':1,'lineitemsku':1,'lineitemquantity':1,'lineitemprice':1,'email':1,'e-mail':1};
   for(var c=0;c<colunas.length;c++){
     var h=norm(colunas[c]||'');if(!h)continue;
-    if(bloqueadas[h])continue;
     if(h.indexOf('lineitem')>-1||h.indexOf('sku')>-1||h.indexOf('email')>-1||h.indexOf('telefone')>-1||h.indexOf('phone')>-1)continue;
     if(h.indexOf('status')>-1||h.indexOf('fulfillment')>-1||h.indexOf('method')>-1||h.indexOf('country')>-1||h.indexOf('pais')>-1||h.indexOf('canal')>-1||h.indexOf('channel')>-1||h.indexOf('tags')>-1)continue;
-    if(h.indexOf('createdat')>-1||h.indexOf('paidat')>-1||h.indexOf('data')>-1&&h.indexOf('datadopedido')===-1)continue;
+    if(h.indexOf('createdat')>-1||h.indexOf('paidat')>-1)continue;
+    if(h==='subtotal'||h==='total'||h==='discountamount'||h==='shipping')continue;
     var set={},preenchidas=0;
     for(var r=0;r<amostra.length;r++){
       var v=String(amostra[r][c]||'').trim();if(v==='')continue;
@@ -288,17 +279,16 @@ function detectarColunaPedido(colunas,linhas){
     }
     if(preenchidas<amostra.length*0.5)continue;
     var unicos=Object.keys(set).length;
-    if(unicos<30)continue; /* status/país/canal têm poucos valores */
-    var razao=preenchidas/unicos; /* repetição média */
-    var bonus=0;
-    if(h==='name'||h==='ordername'||h==='pedido'||h==='numerodopedido'||h==='npedido'||h.indexOf('pedido')>-1||h.indexOf('order')>-1||h.indexOf('numero')>-1)bonus=0.5;
-    if(razao+bonus>melhorRazao){melhorRazao=razao+bonus;melhor=c;}
+    if(unicos<30)continue;
+    var razao=preenchidas/unicos;
+    if(h==='name'||h==='ordername'||h==='pedido'||h==='numerodopedido'||h==='npedido'||h.indexOf('pedido')>-1||h.indexOf('order')>-1||h.indexOf('numero')>-1)razao+=0.5;
+    if(razao>melhorRazao){melhorRazao=razao;melhor=c;}
   }
   if(melhor===-1&&colunas.length>0)melhor=0;
   return melhor;
 }
 
-/* ============ PROCESSAMENTO ============ */
+/* ============ PROCESSAMENTO (CORRIGIDO) ============ */
 function processarMes(colunas,linhas){
   var lim=colunas.length;
   function col(cfg,exata,alias){
@@ -306,8 +296,15 @@ function processarMes(colunas,linhas){
     v=acharColunaExata(colunas,exata);if(v>-1)return v;
     return acharColuna(colunas,alias);
   }
+  /* PEDIDO: Coluna A é o padrão confirmado. Só detecta outra se a A estiver vazia. */
+  var idxPedido=overrideCol(CONFIG.pedidoCol,lim);
+  if(idxPedido===-1){
+    var preench=0,tot=0;
+    for(var r0=0;r0<Math.min(linhas.length,2000);r0++){tot++;if(String(linhas[r0][0]||'').trim()!=='')preench++;}
+    idxPedido=(tot>0&&preench/tot>=0.5)?0:detectarColunaPedido(colunas,linhas);
+  }
   var idx={
-    pedido:overrideCol(CONFIG.pedidoCol,lim)>-1?overrideCol(CONFIG.pedidoCol,lim):detectarColunaPedido(colunas,linhas),
+    pedido:idxPedido,
     subtotal:col('subtotalCol','subtotal','subtotal'),
     total:col('totalCol','total','total'),
     desconto:col('descontoCol','desconto','desconto'),
@@ -323,48 +320,49 @@ function processarMes(colunas,linhas){
   };
   var ordens=new Map();
   linhas.forEach(function(r){
-    var b={};
-    b.pedido=idx.pedido>-1?String(r[idx.pedido]||'').trim():'';
-    b.email=idx.email>-1?String(r[idx.email]||'').trim():'';
-    b.data=idx.data>-1?parseData(r[idx.data]):null;
-    b.subtotal=idx.subtotal>-1?parseMoney(r[idx.subtotal]):0;
-    b.total=idx.total>-1?parseMoney(r[idx.total]):0;
-    b.desconto=idx.desconto>-1?parseMoney(r[idx.desconto]):0;
-    b.frete=idx.frete>-1?parseMoney(r[idx.frete]):0;
-    b.status=idx.status>-1?String(r[idx.status]||'').trim():'';
-    b.nome=idx.nome>-1?String(r[idx.nome]||'').trim():'';
-    b.produto=idx.produto>-1?String(r[idx.produto]||'').trim():'';
-    b.qtd=idx.qtd>-1?parseInt(r[idx.qtd],10)||0:0;
-    b.preco=idx.preco>-1?parseMoney(r[idx.preco]):0;
-    var chave=b.pedido||('L:'+ordens.size);
+    var chave=idx.pedido>-1?String(r[idx.pedido]||'').trim():'';
+    if(!chave)chave='L:'+ordens.size;
     var o=ordens.get(chave);
     if(!o){o={chave:chave,email:'',nome:'',data:null,subtotal:0,total:0,desconto:0,frete:0,status:'',items:[]};ordens.set(chave,o);}
-    if(b.email&&!o.email)o.email=b.email;
-    if(b.nome&&!o.nome)o.nome=b.nome;
-    if(b.subtotal>0&&!o.subtotal)o.subtotal=b.subtotal;
-    if(b.total>0&&!o.total)o.total=b.total;
-    if(b.desconto>0&&!o.desconto)o.desconto=b.desconto;
-    if(b.frete>0&&!o.frete)o.frete=b.frete;
-    if(b.data&&!o.data)o.data=b.data;
-    if(b.status&&!o.status)o.status=b.status;
-    if(b.produto||b.qtd)o.items.push({produto:b.produto||'(sem produto)',qtd:b.qtd||1,preco:b.preco});
+    var email=idx.email>-1?String(r[idx.email]||'').trim():'';
+    var subtotal=idx.subtotal>-1?parseMoney(r[idx.subtotal]):0;
+    var total=idx.total>-1?parseMoney(r[idx.total]):0;
+    var desconto=idx.desconto>-1?parseMoney(r[idx.desconto]):0;
+    var frete=idx.frete>-1?parseMoney(r[idx.frete]):0;
+    var data=idx.data>-1?parseData(r[idx.data]):null;
+    var status=idx.status>-1?String(r[idx.status]||'').trim():'';
+    var nome=idx.nome>-1?String(r[idx.nome]||'').trim():'';
+    var produto=idx.produto>-1?String(r[idx.produto]||'').trim():'';
+    var sku=idx.sku>-1?String(r[idx.sku]||'').trim():'';
+    var qtd=idx.qtd>-1?parseInt(r[idx.qtd],10)||0:0;
+    var preco=idx.preco>-1?parseMoney(r[idx.preco]):0;
+    if(email&&!o.email)o.email=email;
+    if(nome&&!o.nome)o.nome=nome;
+    if(subtotal>0&&!o.subtotal)o.subtotal=subtotal;
+    if(total>0&&!o.total)o.total=total;
+    if(desconto!==0&&!o.desconto)o.desconto=Math.abs(desconto);
+    if(frete>0&&!o.frete)o.frete=frete;
+    if(data&&!o.data)o.data=data;
+    if(status&&!o.status)o.status=status;
+    if(produto||sku||qtd)o.items.push({produto:produto||sku||'(sem produto)',qtd:qtd||1,preco:preco});
   });
-  /* Mês dominante: se o arquivo tem vários meses, só o mês dominante entra */
-  var mesAlvo=null,totalDatas=0,noMes=0,cont={};
+  /* Mês dominante: se o arquivo mistura meses, só o mês dominante entra */
+  var cont={},totalDatas=0;
   ordens.forEach(function(o){if(!o.data)return;var k=o.data.getFullYear()*100+(o.data.getMonth()+1);cont[k]=(cont[k]||0)+1;totalDatas++;});
-  var mel=null,melN=0;for(var kk in cont){if(cont[kk]>melN){melN=cont[kk];mel=parseInt(kk,10);}}
-  if(mel){mesAlvo=mel;noMes=melN;}
+  var mesAlvo=null,noMes=0;
+  for(var kk in cont){if(!mesAlvo){mesAlvo=parseInt(kk,10);noMes=cont[kk];}}
+  if(mesAlvo!==null){for(var k2k in cont){if(cont[k2k]>noMes){noMes=cont[k2k];mesAlvo=parseInt(k2k,10);}}}
   var mesclado=mesAlvo!==null&&totalDatas>0&&(noMes/totalDatas)<0.95;
   var saida=[],removidos=0;
   ordens.forEach(function(o){
     if(mesclado){
-      if(o.data){var k2=o.data.getFullYear()*100+(o.data.getMonth()+1);if(k2!==mesAlvo){removidos++;return;}}
+      if(o.data){var k=o.data.getFullYear()*100+(o.data.getMonth()+1);if(k!==mesAlvo){removidos++;return;}}
       else{removidos++;return;}
     }
     var pago=!ehExpirado(o.status);
     var somaItens=0;o.items.forEach(function(it){somaItens+=it.preco*it.qtd;});
     var venda=o.subtotal>0?o.subtotal:(somaItens>0?somaItens:o.total);
-    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,bruto:pago?o.total:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,status:o.status,pago:pago,items:o.items});
+    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?venda:0,bruto:pago?o.total:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,status:o.status,pago:pago});
   });
   var razao=saida.length?linhas.length/saida.length:1;
   return {saida:saida,idx:idx,colunas:colunas,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,mesclado:mesclado,mesAlvo:mesAlvo,razao:razao};
@@ -374,7 +372,7 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   if(iData>-1){
     var cont={},total=0;
     linhas.forEach(function(r){var d=parseData(r[iData]);if(!d)return;var k=d.getFullYear()*100+(d.getMonth()+1);cont[k]=(cont[k]||0)+1;total++;});
-    if(total){var mel=null,melN=0;for(var kk in cont){if(cont[kk]>melN){melN=cont[kk];mel=parseInt(kk,10);}}return NOMES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2);}
+    if(total){var mel=null,melN=0;for(var k in cont){if(cont[k]>melN){melN=cont[k];mel=parseInt(k,10);}}return NOMES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2);}
   }
   var m=(nomeArquivo||'').match(/([a-z]{3,4})[.\-_]?(\d{2,4})/i);
   if(m)return m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2);
@@ -383,7 +381,7 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
 function fmtMesChave(k){return NOMES[(k%100)-1]+'/'+String(Math.floor(k/100)).slice(2);}
 function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;}
 
-/* ============ LEITURA DO REPOSITÓRIO ============ */
+/* ============ REPOSITÓRIO ============ */
 function listarArquivosRepo(repo){
   return fetch('https://api.github.com/repos/'+repo+'/contents/',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('GitHub API HTTP '+r.status);return r.json();})
     .then(function(lista){return(lista||[]).filter(function(f){return/\.csv$/i.test(f.name||'')&&!/over[_ ]?time/i.test(f.name||'');});});
@@ -441,11 +439,10 @@ function carregarDados(){
         var L=parseCSV(t);var d={colunas:L[0].map(function(h){return String(h).trim();}),linhas:L.slice(1)};
         var rot=detectarRotulo(d.colunas,d.linhas,f.name)||'Mês';
         var proc=processarMes(d.colunas,d.linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:d.colunas,arquivo:f.name,mesAlvo:proc.mesAlvo,removidos:proc.removidos,mesclado:proc.mesclado,razao:proc.razao});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:d.colunas,arquivo:f.name,mesclado:proc.mesclado,mesAlvo:proc.mesAlvo,removidos:proc.removidos,razao:proc.razao});
       }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:e.message});}));
     });
     Promise.all(prom).then(function(){
-      /* Deduplica pedidos iguais entre arquivos */
       var vistos=new Set(),dups=0;
       estado.meses.forEach(function(m){
         if(!m.ok)return;
@@ -453,7 +450,6 @@ function carregarDados(){
         m.pedidos.forEach(function(o){var k=String(o.chave||'');if(k&&vistos.has(k)){dups++;return;}if(k)vistos.add(k);novos.push(o);});
         m.pedidos=novos;
       });
-      if(dups>0)estado.diagExtra=dups;
       var html='';
       estado.meses.forEach(function(m){
         if(!m.ok){html+='<div class="linha"><span class="bad">❌ '+esc(m.rotulo)+'</span><span>'+esc(m.erro)+'</span></div>';return;}
@@ -462,14 +458,14 @@ function carregarDados(){
         m.pedidos.forEach(function(o){if(!o.pago)return;sLiq+=o.total;sBru+=o.bruto||0;sDesc+=o.desconto||0;sFre+=o.frete||0;pagos++;if(o.email)cli.add(o.email);});
         var lin='<div class="linha"><span class="ok">✅ '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
         lin+=m.nLinhas+' linhas → '+m.pedidos.length+' pedidos únicos · '+m.razao.toFixed(1)+' linhas/pedido';
-        lin+=' · pedido: '+esc(nm(m.idx.pedido))+' · líquida: '+esc(nm(m.idx.subtotal))+' · bruta: '+esc(nm(m.idx.total))+' · desconto: '+esc(nm(m.idx.desconto))+' · frete: '+esc(nm(m.idx.frete));
+        lin+=' · pedido: '+esc(nm(m.idx.pedido))+' · líquida: '+esc(nm(m.idx.subtotal))+' · desconto: '+esc(nm(m.idx.desconto));
         if(m.mesclado)lin+=' ⚠ arquivo com vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
         lin+=' · líquidas: '+fmtCurto(sLiq)+' · brutas: '+fmtCurto(sBru)+' · descontos: '+fmtCurto(sDesc)+' · frete: '+fmtCurto(sFre);
         lin+=' · clientes: '+cli.size+' ('+pagos+' pagos) · ticket/cliente: '+fmtCurto(cli.size?sLiq/cli.size:0);
         lin+='</span></div>';
         html+=lin;
       });
-      if(dups>0)html+='<div class="linha"><span class="bad">⚠ '+dups+' pedido(s) repetido(s) entre arquivos foram contados UMA vez</span></div>';
+      if(dups>0)html+='<div class="linha"><span class="bad">⚠ '+dups+' pedido(s) repetido(s) entre arquivos contados UMA vez</span></div>';
       document.getElementById('diag').style.display='block';
       document.getElementById('diagLinhas').innerHTML=html;
       estado.meses.sort(function(a,b){var ma=chaveMes(a.rotulo),mb=chaveMes(b.rotulo);return(ma||0)-(mb||0);});
@@ -488,7 +484,7 @@ function carregarDados(){
 }
 function chaveMes(rot){var m=String(rot||'').match(/^([A-Za-z]{3})\/(\d{2})$/);if(m){var idx=NOMES.indexOf(m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase());if(idx>-1)return parseInt(m[2],10)*100+(idx+1);}return 0;}
 
-/* ============ CONSULTAS ============ */
+/* ============ CONSULTAS E RENDER ============ */
 function pedidosDoPeriodo(){
   if(estado.periodo==='TODOS'){var t=[];estado.meses.forEach(function(m){if(m.ok)t=t.concat(m.pedidos);});return t;}
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
@@ -512,8 +508,6 @@ function situacao(email,comprou){
   if(!estado.base)return 'fora';
   return estado.base.map.has(email)?'semcompra':'fora';
 }
-
-/* ============ RENDER ============ */
 function montarChips(){
   var p=document.getElementById('chipsPeriodo');p.innerHTML='';
   var nomes=estado.meses.filter(function(m){return m.ok;}).map(function(m){return m.rotulo;});
@@ -533,8 +527,8 @@ function montarKpis(){
   var rotPeriodo=estado.periodo==='TODOS'?'todos os meses':estado.periodo;
   var cards=[
     {rotulo:'Ticket médio (por cliente)',valor:dinheiro(nCli?liq/nCli:0),ico:'🎯',detalhe:'Σ Subtotal ÷ clientes que compraram · '+rotPeriodo,destaque:true},
-    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(liq),ico:'💰',detalhe:'1× por pedido, sem frete · '+rotPeriodo,destaque:false},
-    {rotulo:'Vendas brutas (Total)',valor:dinheiro(bru),ico:'📦',detalhe:'com frete · '+rotPeriodo,destaque:false},
+    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(liq),ico:'💰',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
+    {rotulo:'Vendas brutas (Total)',valor:dinheiro(bru),ico:'📦',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
     {rotulo:'Descontos (Discount Amount)',valor:dinheiro(desc),ico:'🏷️',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
     {rotulo:'Frete (Shipping)',valor:dinheiro(fre),ico:'🚚',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
     {rotulo:'Clientes que compraram',valor:numero(nCli),ico:'🛍️',detalhe:rotPeriodo,destaque:false},
@@ -577,8 +571,8 @@ function desenharBarras(id,s1,s2,cor1,cor2,leg1,leg2){
   if(!meses.length){ctx.fillStyle='#9ca3af';ctx.fillText('Sem dados',10,20);return;}
   var dados=[],tot1=0,tot2=0;
   for(var i=0;i<meses.length;i++){
-    var v1=s1?[i]||0:0,v1v=s1?s1[i]||0:0,v2v=s2?s2[i]||0:0;
-    dados.push({rot:meses[i],v1:v1v,v2:v2v});tot1+=v1v;tot2+=v2v;
+    var v1=s1?s1[i]||0:0,v2=s2?s2[i]||0:0;
+    dados.push({rot:meses[i],v1:v1,v2:v2});tot1+=v1;tot2+=v2;
   }
   var max=1;dados.forEach(function(d){if(d.v1>max)max=d.v1;if(d.v2>max)max=d.v2;});max*=1.1;
   ctx.font='bold 10px sans-serif';ctx.textAlign='left';
@@ -630,16 +624,15 @@ function montarTabelaProdutos(){
   estado.linhasProdutos=arr;
   document.getElementById('contadorProdutos').textContent=numero(arr.length)+' produto(s)';
   var tb=document.getElementById('tbodyProdutos');tb.innerHTML='';
-  if(!arr.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--cinza)">Sem produtos no período.</td></tr>';return;}
+  if(!arr.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--cinza)">Sem produtos no período.</td></tr>';return;}
   arr.forEach(function(p){
     var tr=document.createElement('tr');
-    tr.innerHTML='<td>'+esc('—')+'</td><td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';
+    tr.innerHTML='<td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';
     tb.appendChild(tr);
   });
 }
 function montarTabela(){
-  var comp=clientesDoPeriodo(),linhas=[],ultimo=null;
-  estado.meses.forEach(function(m){if(m.ok)ultimo=m.rotulo;});
+  var comp=clientesDoPeriodo(),linhas=[];
   var todos=new Set();comp.forEach(function(v,k){todos.add(k);});
   if(estado.base)estado.base.map.forEach(function(v,k){todos.add(k);});
   todos.forEach(function(em){
@@ -679,7 +672,7 @@ function montarTabela(){
   document.getElementById('nextPag').disabled=estado.pagina>=totalPag;
 }
 
-/* ============ CONTATOS (planilha via API) ============ */
+/* ============ CONTATOS ============ */
 function jsonp(url,cbName){
   return new Promise(function(resolve,reject){
     var sep=url.indexOf('?')>-1?'&':'?';
@@ -745,18 +738,13 @@ function mostrarTab(nome){
   document.getElementById('contatos').style.display=nome==='contatos'?'':'none';
   if(nome==='clientes')montarTabela();
   if(nome==='produtos')montarTabelaProdutos();
-  if(nome==='contatos'){montarTabelaContatos();}
+  if(nome==='contatos')montarTabelaContatos();
 }
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){mostrarTab(t.dataset.tab);};});
 document.getElementById('busca').addEventListener('input',function(e){
   clearTimeout(estado._db);
-  estado._db=setTimeout(function(){estado.busca=e.target.value;estado.pagina=1;mountTabAtiva();},250);
+  estado._db=setTimeout(function(){estado.busca=e.target.value;estado.pagina=1;var at=document.querySelector('.tab.ativo');var nome=at?at.dataset.tab:'overview';if(nome==='clientes')montarTabela();if(nome==='produtos')montarTabelaProdutos();},250);
 });
-function mountTabAtiva(){
-  var at=document.querySelector('.tab.ativo');var nome=at?at.dataset.tab:'overview';
-  if(nome==='clientes')montarTabela();
-  if(nome==='produtos')montarTabelaProdutos();
-}
 document.getElementById('selectProduto')&&document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;});
 document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
 document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
@@ -767,6 +755,9 @@ document.getElementById('btnTestarConexao').onclick=function(){carregarContatosS
 document.getElementById('btnRecarregarContatos').onclick=function(){carregarContatosSalvos().then(montarTabelaContatos);};
 document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
   th.onclick=function(){var k=th.dataset.ord;if(estado.ordem.chave===k)estado.ordem.dir*=-1;else{estado.ordem.chave=k;estado.ordem.dir=-1;}estado.pagina=1;montarTabela();};
+});
+document.querySelectorAll('#produtos th[data-ordp]').forEach(function(th){
+  th.onclick=function(){var k=th.dataset.ordp;if(estado.ordemProd.chave===k)estado.ordemProd.dir*=-1;else{estado.ordemProd.chave=k;estado.ordemProd.dir=-1;}montarTabelaProdutos();};
 });
 
 carregarDados();
