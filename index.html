@@ -263,7 +263,6 @@ var ultimaAtualizacao = '—';
 var atualizando = false;
 var debounceBusca = null;
 
-/* CORREÇÃO: ignora "Script error." (erro mascarado do navegador, sem utilidade) */
 window.onerror = function(msg, src, linha){
   if(!msg || String(msg).indexOf('Script error') > -1) return false;
   var el = document.getElementById('erroGlobal');
@@ -890,25 +889,27 @@ function montarChips(){
     b.onclick=function(){ estado.segmento=it[0]; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; s.appendChild(b);
   });
 }
+/* CORREÇÃO PRINCIPAL: Ticket médio = Vendas líquidas ÷ CLIENTES ÚNICOS que compraram (não ÷ pedidos) */
 function montarKpis(){
   var pedidos=pedidosDoPeriodo(), receita=0, nPagos=0, nExp=0, bruto=0, desc=0;
   pedidos.forEach(function(o){ if(o.expirado) nExp++; if(!o.pago) return; receita+=o.total; bruto+=o.subtotal||0; desc+=o.desconto||0; nPagos++; });
   var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0, naorec=0, ultimo=ultimoMesLabel();
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; if(ultimo&&!comprouNoMes(em,ultimo)) naorec++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
+  var nClientes = compradores.size;
+  var ticketCliente = nClientes ? receita/nClientes : 0;
   var cards=[
-    {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+nPagos+' pedidos',destaque:true},
+    {rotulo:'Vendas líquidas (total)',valor:dinheiro(receita),ico:'💰',detalhe:'entrada real · '+numero(nPagos)+' pedidos · '+numero(nClientes)+' clientes',destaque:true},
+    {rotulo:'Ticket médio por cliente',valor:dinheiro(ticketCliente),ico:'🎯',detalhe:'vendas líquidas ÷ clientes que compraram',destaque:false},
+    {rotulo:'Ticket médio por pedido',valor:nPagos?dinheiro(receita/nPagos):'R$ 0,00',ico:'🧾',detalhe:'vendas líquidas ÷ pedidos pagos',destaque:false},
     {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
     {rotulo:'Vendas brutas (subtotal)',valor:dinheiro(bruto),ico:'📦',detalhe:'valor dos produtos',destaque:false},
-    {rotulo:'Ticket médio',valor:nPagos?dinheiro(receita/nPagos):'R$ 0,00',ico:'🎯',detalhe:'por pedido',destaque:false},
-    {rotulo:'Clientes que compraram',valor:numero(compradores.size),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
+    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
-    {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:false},
     {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
-/* CORREÇÃO: legenda + rótulos + meses sempre visíveis na evolução */
 function montarEvolucao(){
   var c=document.getElementById('evolucao'); if(!c) return;
   var dpr=Math.min(window.devicePixelRatio||1,2), cssW=c.clientWidth||300, cssH=c.clientHeight||225;
@@ -918,7 +919,6 @@ function montarEvolucao(){
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ ctx.fillStyle='#9ca3af'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Nenhum mês carregado',W/2,H/2); return; }
   var dados=meses.map(function(m){ var receita=0, clientes=new Set(); m.pedidos.forEach(function(o){ if(!o.pago) return; receita+=o.total; if(o.email) clientes.add(o.email); }); return {rotulo:(m.rotulo||'Mês'),receita:receita,clientes:clientes.size}; });
-  /* LEGENDA */
   ctx.textBaseline='alphabetic';
   ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
   ctx.fillStyle='#1d4a2e'; ctx.fillRect(10,10,11,11);
@@ -956,6 +956,7 @@ function montarEvolucao(){
     var html='<div class="tt-titulo">'+esc(d.rotulo)+'</div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#1d4a2e"></span> Receita: <b>'+fmtCompleto(d.receita)+'</b></div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:#5b9d74"></span> Clientes: <b>'+numero(d.clientes)+'</b></div>';
+    html+='<div class="tt-linha"><span class="tt-cor" style="background:#b45309"></span> Ticket médio/cliente: <b>'+fmtCompleto(d.clientes?d.receita/d.clientes:0)+'</b></div>';
     ttMostrar(html,ev.clientX,ev.clientY);
   };
   c.onmouseleave=function(){ ttOcultar(); };
