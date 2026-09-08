@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infinity Piercing · Dashboard de Compras</title>
 <style>
-  :root{--verde:#1d4a2e;--verde2:#2e7d4f;--verde3:#eaf3ec;--creme:#f7f4ec;--cinza:#6b7280;--borda:#e5e0d4;--amber:#b45309;--amberbg:#fef3c7;--roxo:#7c3aed;--roxobg:#ede9fe;--red:#b91c1c;--redbg:#fee2e2;}
+  :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
-  header{background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header{background:linear-gradient(135deg,var(--v),var(--v2));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   header .titulo{font-size:19px;font-weight:700}
   header .subtitulo{font-size:12px;opacity:.9}
   header .spacer{flex:1}
@@ -16,57 +16,56 @@
   .pill .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}
   .pill.ok .dot{background:#4ade80}
   .pill.err .dot{background:#f87171}
-  .btn{border:1px solid var(--borda);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
-  .btn:hover{border-color:var(--verde2);color:var(--verde)}
+  .btn{border:1px solid var(--b);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
+  .btn:hover{border-color:var(--v2);color:var(--v)}
   main{max-width:1280px;margin:0 auto;padding:16px}
   .aviso{border-radius:12px;padding:11px 14px;margin-bottom:8px;font-size:13px;line-height:1.5;display:none}
   .aviso.show{display:block}
-  .aviso.erro{background:var(--redbg);border:1px solid #fca5a5;color:var(--red)}
-  .aviso.info{background:var(--amberbg);border:1px solid #fcd34d;color:var(--amber)}
-  .aviso.ok{background:var(--verde3);border:1px solid #bbe7c8;color:var(--verde)}
+  .aviso.erro{background:var(--rdb);border:1px solid #fca5a5;color:var(--rd)}
+  .aviso.info{background:var(--amb);border:1px solid #fcd34d;color:var(--am)}
+  .aviso.ok{background:var(--v3);border:1px solid #bbe7c8;color:var(--v)}
   .aviso b{display:block;margin-bottom:2px}
-  .diag{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:12.5px}
+  .diag{background:#fff;border:1px solid var(--b);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:12.5px}
   .diag h3{font-size:14px;margin:0 0 9px}
   .diag .linha{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;flex-wrap:wrap}
-  .diag .ok{color:var(--verde);font-weight:700}
-  .diag .bad{color:var(--red);font-weight:700}
-  .filtros{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:11px 14px;margin-bottom:14px}
-  .filtros label{font-size:11px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block}
+  .diag .ok{color:var(--v);font-weight:700}
+  .diag .bad{color:var(--rd);font-weight:700}
+  .filtros{background:#fff;border:1px solid var(--b);border-radius:14px;padding:11px 14px;margin-bottom:14px}
+  .filtros label{font-size:11px;color:var(--cin);font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block}
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}
-  .chip{border:1px solid var(--borda);background:#fff;border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:#374151}
-  .chip.ativo{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600}
-  .busca input{border:1px solid var(--borda);border-radius:999px;padding:7px 14px;font-size:13px;width:250px;max-width:100%;outline:none}
-  .busca select{border:1px solid var(--borda);border-radius:999px;padding:7px 10px;font-size:13px;background:#fff}
+  .chip{border:1px solid var(--b);background:#fff;border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:#374151}
+  .chip.ativo{background:var(--v);border-color:var(--v);color:#fff;font-weight:600}
+  .busca input{border:1px solid var(--b);border-radius:999px;padding:7px 14px;font-size:13px;width:250px;max-width:100%;outline:none}
+  .busca select{border:1px solid var(--b);border-radius:999px;padding:7px 10px;font-size:13px;background:#fff}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
   @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
-  .kpi{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:12px;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:96px}
-  .kpi.destaque{background:var(--amberbg);border-color:#fcd34d}
-  .kpi .rotulo{font-size:10.5px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;padding-right:18px;line-height:1.3}
-  .kpi .valor{font-size:clamp(15px,2vw,20px);font-weight:800;color:var(--verde);line-height:1.15;word-break:break-word;overflow-wrap:anywhere}
-  .kpi.destaque .valor{color:var(--amber)}
-  .kpi .detalhe{font-size:10.5px;color:var(--cinza);margin-top:auto;padding-top:3px;line-height:1.3}
+  .kpi{background:#fff;border:1px solid var(--b);border-radius:14px;padding:12px;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:96px}
+  .kpi.destaque{background:var(--amb);border-color:#fcd34d}
+  .kpi .rotulo{font-size:10.5px;color:var(--cin);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;padding-right:18px;line-height:1.3}
+  .kpi .valor{font-size:clamp(15px,2vw,20px);font-weight:800;color:var(--v);line-height:1.15;word-break:break-word;overflow-wrap:anywhere}
+  .kpi.destaque .valor{color:var(--am)}
+  .kpi .detalhe{font-size:10.5px;color:var(--cin);margin-top:auto;padding-top:3px;line-height:1.3}
   .kpi .ico{position:absolute;right:8px;top:9px;font-size:15px;opacity:.4}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-  .card{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:14px}
+  .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:14px}
   .card h3{font-size:14px;margin:0 0 10px}
   .card.largo{grid-column:1/-1}
   canvas{width:100%;height:220px;display:block}
-  .tabela-box{background:#fff;border:1px solid var(--borda);border-radius:14px;overflow:hidden}
-  .tabela-top{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--borda);flex-wrap:wrap}
-  .tabela-top .contador{font-size:13px;color:var(--cinza);flex:1}
+  .tabela-box{background:#fff;border:1px solid var(--b);border-radius:14px;overflow:hidden}
+  .tabela-top{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--b);flex-wrap:wrap}
+  .tabela-top .contador{font-size:13px;color:var(--cin);flex:1}
   table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px}
-  th{background:var(--verde3);color:var(--verde);text-align:left;padding:9px 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;position:sticky;top:0;z-index:2}
-  td{padding:8px 11px;border-top:1px solid var(--borda);white-space:nowrap}
+  th{background:var(--v3);color:var(--v);text-align:left;padding:9px 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;position:sticky;top:0;z-index:2}
+  td{padding:8px 11px;border-top:1px solid var(--b);white-space:nowrap}
   tr:hover td{background:#fafaf7}
   .badge{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700}
-  .b-semcompra{background:var(--amberbg);color:var(--amber)}
-  .b-comprou{background:var(--verde3);color:var(--verde)}
-  .b-recorrente{background:var(--roxobg);color:var(--roxo)}
-  .paginacao{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--borda);font-size:12.5px;color:var(--cinza)}
-  .paginacao .btn:disabled{opacity:.4;cursor:default}
-  .vazio{text-align:center;padding:22px;color:var(--cinza)}
-  footer{max-width:1280px;margin:16px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
+  .b-semcompra{background:var(--amb);color:var(--am)}
+  .b-comprou{background:var(--v3);color:var(--v)}
+  .b-recorrente{background:var(--rob);color:var(--ro)}
+  .paginacao{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--b);font-size:12.5px;color:var(--cin)}
+  .vazio{text-align:center;padding:22px;color:var(--cin)}
+  footer{max-width:1280px;margin:16px auto 0;padding:0 16px;font-size:12px;color:var(--cin);text-align:center}
 </style>
 </head>
 <body>
@@ -78,12 +77,11 @@
 </header>
 <main>
   <div id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + pagos × não pagos</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + valores conferidos</h3><div id="diagLinhas"></div></div>
   <div id="conteudo">
     <div class="filtros">
       <label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div>
       <label>Filtros de navegação</label><div class="chips" id="chipsSegmento"></div>
-      <div class="busca"><input id="busca" type="text" placeholder="🔍 Buscar cliente, e-mail, produto ou SKU…"><select id="selectProduto"><option value="">Todos os produtos</option></select></div>
     </div>
     <div style="display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap">
       <button class="btn tab ativo" data-tab="overview">📊 Visão geral</button>
@@ -94,7 +92,7 @@
     <section id="overview">
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
-        <div class="card"><h3>📈 Evolução mês a mês (líquidas)</h3><canvas id="evolucao"></canvas></div>
+        <div class="card"><h3>📈 Evolução mês a mês (vendas líquidas)</h3><canvas id="evolucao"></canvas></div>
         <div class="card"><h3>🏆 Produtos mais vendidos</h3><div id="topProdutos"></div></div>
         <div class="card"><h3>📦 Vendas brutas (antes desc.) × líquidas</h3><canvas id="graficoBruto"></canvas></div>
         <div class="card"><h3>🏷️ Descontos por mês</h3><canvas id="graficoDescontos"></canvas></div>
@@ -137,23 +135,21 @@
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  /* Opcional — force a coluna pela LETRA (ex.: 'A', 'I'). Vazio = automático. */
+  /* Forçar coluna por LETRA (ex.: 'A','I'). Vazio = automático por NOME EXATO + validação de conteúdo. */
   pedidoCol:'',subtotalCol:'',totalCol:'',descontoCol:'',freteCol:'',dataCol:'',statusCol:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false};
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false};
 function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function dinheiro(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);}catch(e){return 'R$ '+(v||0);}}
 function numero(v){try{return new Intl.NumberFormat('pt-BR').format(v||0);}catch(e){return String(v||0);}}
 function fmtCurto(v){v=Math.round(v||0);if(v>=1000000)return 'R$'+(v/1000000).toFixed(1).replace('.',',')+'M';if(v>=1000)return 'R$'+(v/1000).toFixed(1).replace('.',',')+'k';return 'R$'+v;}
-function avisar(tipo,titulo,texto){var box=document.getElementById('avisos');var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;box.appendChild(d);}
+function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
 function fmtData(d){if(!d)return '—';try{return d.toLocaleDateString('pt-BR');}catch(e){return String(d);}}
 function parseMoney(v){
-  if(v==null)return 0;
-  if(typeof v==='number')return isFinite(v)?v:0;
-  var s=String(v).trim();if(!s)return 0;
-  s=s.split('R$').join('').split(' ').join('');
+  if(v==null)return 0;if(typeof v==='number')return isFinite(v)?v:0;
+  var s=String(v).trim();if(!s)return 0;s=s.split('R$').join('').split(' ').join('');
   var neg=false;if(s.charAt(0)==='('&&s.charAt(s.length-1)===')'){neg=true;s=s.slice(1,-1);}
   var out='';for(var i=0;i<s.length;i++){var c=s.charAt(i);if((c>='0'&&c<='9')||c===','||c==='.'||c==='-')out+=c;}
   if(!out)return 0;
@@ -164,8 +160,7 @@ function parseMoney(v){
   var n=parseFloat(out);return isNaN(n)?0:(neg?-n:n);
 }
 function parseData(v){
-  if(v==null||v==='')return null;
-  if(v instanceof Date)return isNaN(v.getTime())?null:v;
+  if(v==null||v==='')return null;if(v instanceof Date)return isNaN(v.getTime())?null:v;
   if(typeof v==='number'){if(v>100000000000){var a=new Date(v);return isNaN(a.getTime())?null:a;}if(v>20000){var b=new Date(Math.round((v-25569)*86400000));return isNaN(b.getTime())?null:b;}return null;}
   var s=String(v).trim(),esp=s.indexOf(' '),dp=esp>-1?s.substring(0,esp):s,hp=esp>-1?s.substring(esp+1):'';
   var tr=dp.split('-');
@@ -177,19 +172,16 @@ function parseData(v){
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
 function temDinheiro(idx,linhas){if(idx<0)return false;var pos=0;for(var r=0;r<Math.min(linhas.length,300);r++){if(parseMoney(linhas[r][idx])>0)pos++;}return pos>20;}
 function detectarStatus(colunas,linhas){
-  var nomes=['financialstatus','statusdacompra','statusdopagamento','paymentstatus','situation','status','statusdopedido'];
+  var nomes=['financialstatus','statusdacompra','statusdopagamento','paymentstatus','situation','status'];
   for(var c=0;c<colunas.length;c++){var hn=norm(colunas[c]||'');for(var i=0;i<nomes.length;i++){if(hn===nomes[i])return c;}}
-  var amostra=linhas.length>3000?linhas.slice(0,3000):linhas;
-  var re=/paid|pago|entregue|aprovado|completed|conclu|pending|pendente|expired|expirado|cancel|refund|chargeback|void|falhou|abandoned/;
+  var am=linhas.length>3000?linhas.slice(0,3000):linhas;
+  var re=/paid|pago|entregue|aprovado|complete|conclu|pend|expired|expirado|cancel|refund|chargeback|void|falhou|abandoned/;
   for(var c2=0;c2<colunas.length;c2++){
     var hn2=norm(colunas[c2]||'');if(!hn2||hn2.indexOf('lineitem')>-1)continue;
     var hits=0,vals={};
-    for(var r=0;r<amostra.length;r++){
-      var v=String(amostra[r][c2]||'').trim().toLowerCase();if(!v)continue;
-      vals[v]=1;if(re.test(v))hits++;
-    }
+    for(var r=0;r<am.length;r++){var v=String(am[r][c2]||'').trim().toLowerCase();if(!v)continue;vals[v]=1;if(re.test(v))hits++;}
     var keys=Object.keys(vals).length;
-    if(hits>amostra.length*0.25&&keys>2&&keys<25)return c2;
+    if(hits>am.length*0.25&&keys>2&&keys<25)return c2;
   }
   return -1;
 }
@@ -228,7 +220,7 @@ function resolverColunas(colunas,linhas){
   map.email=-1;map.nome=-1;map.produto=-1;map.sku=-1;map.qtd=-1;map.preco=-1;
   for(var cc=0;cc<colunas.length;cc++){
     var hh=String(colunas[cc]||'').trim(),hnn=norm(hh);
-    if(hnn==='email'||hnn==='e-mail'||hnn==='emailcomprador'||hnn==='buyeremail')map.email=cc;
+    if(hnn==='email'||hnn==='e-mail'||hnn==='emailcomprador'||hnn==='buyeremail'||hnn==='buyeremail'||hnn==='emaildocomprador')map.email=cc;
     if((hnn==='nome'||hnn==='buyername'||hnn==='nomecomprador'||hnn==='namecomprador'||hnn==='cliente')&&map.nome<0)map.nome=cc;
     if(hnn==='lineitemname'||hnn==='lineiteimname')map.produto=cc;
     if(hnn==='lineitemsku'||hnn==='lineiteimsku')map.sku=cc;
@@ -237,8 +229,7 @@ function resolverColunas(colunas,linhas){
   }
   var stIdx=letraIdx(CONFIG.statusCol,colunas.length);
   map.status=stIdx>-1?stIdx:detectarStatus(colunas,linhas);
-  if(map.status>-1)uso.status=colunas[map.status]||'';
-  else uso.status='';
+  if(map.status>-1)uso.status=colunas[map.status]||'';else uso.status='';
   return {map:map,uso:uso};
 }
 function ehPago(st){
@@ -381,8 +372,8 @@ function carregarDados(){
         m.pedidos.forEach(function(o){if(!o.pago){naoPagos++;return;}sLiq+=o.liquido;sBru+=o.bruto||0;sDesc+=o.desc||0;sFre+=o.frete||0;sTot+=o.totalPago||0;pagos++;if(o.email)cli.add(o.email);});
         var lin='<div class="linha"><span class="'+(m.statusOk?'ok':'bad')+'">'+(m.statusOk?'✅':'❌')+' '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
         lin+=String(m.nLinhas)+' linhas → '+String(m.nPedidos)+' pedidos · '+(m.razao?m.razao.toFixed(1):'1')+' linhas/pedido';
-        lin+=' · resolução: pedido['+esc(m.uso.pedido||'—')+'] subtotal['+esc(m.uso.subtotal||'—')+'] total['+esc(m.uso.total||'—')+'] desconto['+esc(m.uso.desconto||'—')+'] frete['+esc(m.uso.frete||'—')+'] status['+esc(m.uso.status||'—')+']';
-        if(!m.statusOk)lin+=' ⚠⚠ COLUNA DE STATUS NÃO ENCONTRADA — todos os pedidos foram considerados PAGOS. Os valores podem estar inflados.';
+        lin+=' · colunas: pedido['+esc(m.uso.pedido||'—')+'] subtotal['+esc(m.uso.subtotal||'—')+'] total['+esc(m.uso.total||'—')+'] desconto['+esc(m.uso.desconto||'—')+'] frete['+esc(m.uso.frete||'—')+'] status['+esc(m.uso.status||'—')+']';
+        if(!m.statusOk)lin+=' ⚠⚠ STATUS NÃO ENCONTRADO — todos considerados pagos';
         if(m.mesclado)lin+=' ⚠ vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
         if(m.suspeitos>0)lin+=' ⚠ '+m.suspeitos+' pedido(s) com total<subtotal';
         lin+=' · pagos: '+pagos+' · não pagos: '+naoPagos;
@@ -509,7 +500,7 @@ function montarTopProdutos(){
   top.forEach(function(p){
     var larg=Math.max(4,Math.round(p.qtd/max*100));
     var d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px';
-    d.innerHTML='<span style="width:45%;color:#374151;line-height:1.3;word-break:break-word">'+esc(p.produto)+'</span><span style="flex:1;background:var(--creme);border-radius:6px;height:15px;overflow:hidden"><span style="display:block;height:100%;width:'+larg+'%;background:linear-gradient(90deg,var(--verde2),var(--verde))"></span></span><span style="width:52px;text-align:right;font-weight:700;color:var(--verde)">'+numero(p.qtd)+'</span>';
+    d.innerHTML='<span style="width:45%;color:#374151;line-height:1.3;word-break:break-word">'+esc(p.produto)+'</span><span style="flex:1;background:var(--creme);border-radius:6px;height:15px;overflow:hidden"><span style="display:block;height:100%;width:'+larg+'%;background:linear-gradient(90deg,var(--v2),var(--v))"></span></span><span style="width:52px;text-align:right;font-weight:700;color:var(--v)">'+numero(p.qtd)+'</span>';
     el.appendChild(d);
   });
 }
@@ -582,7 +573,7 @@ function exportarCsvProdutos(){if(!estado.linhasProdutos.length){alert('Sem prod
 function exportarCsvContatos(){if(!estado.linhasContatos.length){alert('Nenhum cliente encontrado.');return;}var linhas=estado.linhasContatos.map(function(r){return['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"','"'+r.telefone.replace(/"/g,'""')+'"','"'+r.cidade.replace(/"/g,'""')+'"',r.contato?'Sim':'Não',r.retorno?'Sim':'Não',r.data||'',r.atendente||''].join(';');});baixar('contatos_infinity_piercing.csv','\uFEFF'+['Cliente','E-mail','Telefone','Cidade','Contatado','Retorno','Data','Atendente'].join(';')+'\n'+linhas.join('\n'));}
 function baixar(nome,csv){var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;a.click();URL.revokeObjectURL(a.href);}
 function mostrarTab(nome){
-  document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('ativo',x.dataset.tab===nome);x.style.background=x.dataset.tab===nome?'var(--verde)':'#fff';x.style.color=x.dataset.tab===nome?'#fff':'#374151';});
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('ativo',x.dataset.tab===nome);x.style.background=x.dataset.tab===nome?'var(--v)':'#fff';x.style.color=x.dataset.tab===nome?'#fff':'#374151';});
   document.getElementById('overview').style.display=nome==='overview'?'':'none';
   document.getElementById('clientes').style.display=nome==='clientes'?'':'none';
   document.getElementById('produtos').style.display=nome==='produtos'?'':'none';
@@ -593,7 +584,6 @@ function mostrarTab(nome){
 }
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){mostrarTab(t.dataset.tab);};});
 document.getElementById('busca').addEventListener('input',function(e){clearTimeout(estado._db);estado._db=setTimeout(function(){estado.busca=e.target.value;estado.pagina=1;var at=document.querySelector('.tab.ativo');var nome=at?at.dataset.tab:'overview';if(nome==='clientes')montarTabela();if(nome==='produtos')montarTabelaProdutos();},250);});
-document.getElementById('selectProduto')&&document.getElementById('selectProduto').addEventListener('change',function(e){estado.produto=e.target.value;});
 document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
 document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
 document.getElementById('btnCsv').onclick=exportarCsv;
