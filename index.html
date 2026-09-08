@@ -107,11 +107,11 @@
     <section id="overview">
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
-        <div class="card"><h3>📈 Evolução mês a mês</h3><canvas id="evolucao"></canvas></div>
+        <div class="card"><h3>📈 Evolução mês a mês (vendas líquidas)</h3><canvas id="evolucao"></canvas></div>
         <div class="card"><h3>🏆 Produtos mais vendidos</h3><div id="topProdutos"></div></div>
-        <div class="card"><h3>📦 Vendas brutas (Total) × líquidas (Subtotal)</h3><canvas id="graficoBruto"></canvas></div>
+        <div class="card"><h3>📦 Vendas brutas (antes desc.) × líquidas</h3><canvas id="graficoBruto"></canvas></div>
         <div class="card"><h3>🏷️ Descontos (Discount Amount) por mês</h3><canvas id="graficoDescontos"></canvas></div>
-        <div class="card largo"><h3>🚚 Frete (Shipping) por mês</h3><canvas id="graficoFrete"></canvas></div>
+        <div class="card"><h3>🚚 Frete (Shipping) por mês</h3><canvas id="graficoFrete"></canvas></div>
       </div>
     </section>
 
@@ -165,8 +165,7 @@
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  /* Colunas (base 0: A=0,...,I=8). -1 = automático.
-     Padrão: pedido = Coluna A (0), subtotal = Coluna I (8). */
+  /* Colunas (base 0: A=0,...,I=8). -1 = automático. */
   pedidoCol:-1, subtotalCol:-1, totalCol:-1, descontoCol:-1, freteCol:-1, dataCol:-1
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -288,7 +287,14 @@ function detectarColunaPedido(colunas,linhas){
   return melhor;
 }
 
-/* ============ PROCESSAMENTO (CORRIGIDO) ============ */
+/* ============ PROCESSAMENTO ============
+   DEFINIÇÕES CORRETAS:
+   - Vendas BRUTAS (antes do desconto) = Subtotal + Discount Amount
+   - Vendas LÍQUIDAS (após desconto)    = Subtotal
+   - Total pago pelo cliente            = coluna Total (líquidas + frete)
+   - Descontos                          = coluna Discount Amount (1× por pedido)
+   - Frete                              = coluna Shipping (1× por pedido)
+   ====================================== */
 function processarMes(colunas,linhas){
   var lim=colunas.length;
   function col(cfg,exata,alias){
@@ -296,7 +302,6 @@ function processarMes(colunas,linhas){
     v=acharColunaExata(colunas,exata);if(v>-1)return v;
     return acharColuna(colunas,alias);
   }
-  /* PEDIDO: Coluna A é o padrão confirmado. Só detecta outra se a A estiver vazia. */
   var idxPedido=overrideCol(CONFIG.pedidoCol,lim);
   if(idxPedido===-1){
     var preench=0,tot=0;
@@ -346,7 +351,6 @@ function processarMes(colunas,linhas){
     if(status&&!o.status)o.status=status;
     if(produto||sku||qtd)o.items.push({produto:produto||sku||'(sem produto)',qtd:qtd||1,preco:preco});
   });
-  /* Mês dominante: se o arquivo mistura meses, só o mês dominante entra */
   var cont={},totalDatas=0;
   ordens.forEach(function(o){if(!o.data)return;var k=o.data.getFullYear()*100+(o.data.getMonth()+1);cont[k]=(cont[k]||0)+1;totalDatas++;});
   var mesAlvo=null,noMes=0;
@@ -361,8 +365,11 @@ function processarMes(colunas,linhas){
     }
     var pago=!ehExpirado(o.status);
     var somaItens=0;o.items.forEach(function(it){somaItens+=it.preco*it.qtd;});
-    var venda=o.subtotal>0?o.subtotal:(somaItens>0?somaItens:o.total);
-    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?venda:0,bruto:pago?o.total:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,status:o.status,pago:pago});
+    var liquido=o.subtotal>0?o.subtotal:(somaItens>0?somaItens:o.total);
+    var bruto=liquido+(o.desconto||0); /* vendas brutas = líquidas + desconto */
+    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,
+      liquido:pago?liquido:0,bruto:pago?bruto:0,totalPago:pago?o.total:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,
+      status:o.status,pago:pago});
   });
   var razao=saida.length?linhas.length/saida.length:1;
   return {saida:saida,idx:idx,colunas:colunas,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,mesclado:mesclado,mesAlvo:mesAlvo,razao:razao};
@@ -454,13 +461,13 @@ function carregarDados(){
       estado.meses.forEach(function(m){
         if(!m.ok){html+='<div class="linha"><span class="bad">❌ '+esc(m.rotulo)+'</span><span>'+esc(m.erro)+'</span></div>';return;}
         var nm=function(i){return i>-1?(m.colunas[i]||'—'):'—';};
-        var sLiq=0,sBru=0,sDesc=0,sFre=0,cli=new Set(),pagos=0;
-        m.pedidos.forEach(function(o){if(!o.pago)return;sLiq+=o.total;sBru+=o.bruto||0;sDesc+=o.desconto||0;sFre+=o.frete||0;pagos++;if(o.email)cli.add(o.email);});
+        var sLiq=0,sBru=0,sDesc=0,sFre=0,sTot=0,cli=new Set(),pagos=0;
+        m.pedidos.forEach(function(o){if(!o.pago)return;sLiq+=o.liquido;sBru+=o.bruto||0;sDesc+=o.desconto||0;sFre+=o.frete||0;sTot+=o.totalPago||0;pagos++;if(o.email)cli.add(o.email);});
         var lin='<div class="linha"><span class="ok">✅ '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
         lin+=m.nLinhas+' linhas → '+m.pedidos.length+' pedidos únicos · '+m.razao.toFixed(1)+' linhas/pedido';
         lin+=' · pedido: '+esc(nm(m.idx.pedido))+' · líquida: '+esc(nm(m.idx.subtotal))+' · desconto: '+esc(nm(m.idx.desconto));
         if(m.mesclado)lin+=' ⚠ arquivo com vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
-        lin+=' · líquidas: '+fmtCurto(sLiq)+' · brutas: '+fmtCurto(sBru)+' · descontos: '+fmtCurto(sDesc)+' · frete: '+fmtCurto(sFre);
+        lin+=' · brutas (antes desc): '+fmtCurto(sBru)+' · líquidas: '+fmtCurto(sLiq)+' · descontos: '+fmtCurto(sDesc)+' · total pago: '+fmtCurto(sTot)+' · frete: '+fmtCurto(sFre);
         lin+=' · clientes: '+cli.size+' ('+pagos+' pagos) · ticket/cliente: '+fmtCurto(cli.size?sLiq/cli.size:0);
         lin+='</span></div>';
         html+=lin;
@@ -496,7 +503,7 @@ function clientesDoPeriodo(){
     if(!o.email)return;
     var c=map.get(o.email);if(!c){c={email:o.emailRaw,nome:o.nome||'',pedidos:0,total:0,ultima:null};map.set(o.email,c);}
     if(!o.pago)return;
-    c.pedidos++;c.total+=o.total;
+    c.pedidos++;c.total+=o.liquido;
     if(o.data&&(!c.ultima||o.data>c.ultima))c.ultima=o.data;
   });
   return map;
@@ -521,19 +528,19 @@ function montarChips(){
   });
 }
 function montarKpis(){
-  var pedidos=pedidosDoPeriodo(),liq=0,bru=0,desc=0,fre=0,nExp=0;
-  pedidos.forEach(function(o){if(!o.pago){nExp++;return;}liq+=o.total;bru+=o.bruto||0;desc+=o.desconto||0;fre+=o.frete||0;});
+  var pedidos=pedidosDoPeriodo(),liq=0,bru=0,desc=0,fre=0,totPago=0,nExp=0;
+  pedidos.forEach(function(o){if(!o.pago){nExp++;return;}liq+=o.liquido;bru+=o.bruto||0;desc+=o.desconto||0;fre+=o.frete||0;totPago+=o.totalPago||0;});
   var comp=clientesDoPeriodo(),nCli=comp.size;
   var rotPeriodo=estado.periodo==='TODOS'?'todos os meses':estado.periodo;
   var cards=[
-    {rotulo:'Ticket médio (por cliente)',valor:dinheiro(nCli?liq/nCli:0),ico:'🎯',detalhe:'Σ Subtotal ÷ clientes que compraram · '+rotPeriodo,destaque:true},
-    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(liq),ico:'💰',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
-    {rotulo:'Vendas brutas (Total)',valor:dinheiro(bru),ico:'📦',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
+    {rotulo:'Ticket médio (por cliente)',valor:dinheiro(nCli?liq/nCli:0),ico:'🎯',detalhe:'Vendas líquidas ÷ clientes que compraram · '+rotPeriodo,destaque:true},
+    {rotulo:'Vendas brutas (antes desc.)',valor:dinheiro(bru),ico:'📦',detalhe:'Subtotal + Descontos · '+rotPeriodo,destaque:false},
+    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(liq),ico:'💰',detalhe:'após desconto, sem frete · '+rotPeriodo,destaque:false},
     {rotulo:'Descontos (Discount Amount)',valor:dinheiro(desc),ico:'🏷️',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
+    {rotulo:'Total pago (com frete)',valor:dinheiro(totPago),ico:'🧾',detalhe:'coluna Total · '+rotPeriodo,destaque:false},
     {rotulo:'Frete (Shipping)',valor:dinheiro(fre),ico:'🚚',detalhe:'1× por pedido · '+rotPeriodo,destaque:false},
     {rotulo:'Clientes que compraram',valor:numero(nCli),ico:'🛍️',detalhe:rotPeriodo,destaque:false},
-    {rotulo:'Pedidos pagos',valor:numero(contarPagos(pedidos)),ico:'🧾',detalhe:'únicos (deduplicados)',destaque:false},
-    {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false}
+    {rotulo:'Pedidos pagos',valor:numero(contarPagos(pedidos)),ico:'✅',detalhe:'únicos (deduplicados)',destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>';}).join('');
 }
@@ -544,7 +551,7 @@ function montarEvolucao(){
   var ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
   var meses=estado.meses.filter(function(m){return m.ok;});
   if(!meses.length){ctx.fillStyle='#9ca3af';ctx.fillText('Sem dados',10,20);return;}
-  var dados=meses.map(function(m){var r=0,cli=new Set();m.pedidos.forEach(function(o){if(!o.pago)return;r+=o.total;if(o.email)cli.add(o.email);});return{rot:m.rotulo,receita:r,clientes:cli.size};});
+  var dados=meses.map(function(m){var r=0,cli=new Set();m.pedidos.forEach(function(o){if(!o.pago)return;r+=o.liquido;if(o.email)cli.add(o.email);});return{rot:m.rotulo,receita:r,clientes:cli.size};});
   var maxR=Math.max.apply(null,dados.map(function(d){return d.receita;}))||1;
   var padL=44,padB=24,padT=12,padR=10,gw=(cv.width-padL-padR)/dados.length;
   dados.forEach(function(d,i){
@@ -588,8 +595,8 @@ function desenharBarras(id,s1,s2,cor1,cor2,leg1,leg2){
   });
 }
 function montarComparativosG(){
-  var liq=somarMes('total'),bru=somarMes('bruto'),desc=somarMes('desconto'),fre=somarMes('frete');
-  desenharBarras('graficoBruto',bru,liq,'#1d4a2e','#3b82f6','Brutas (Total)','Líquidas (Subtotal)');
+  var bru=somarMes('bruto'),liq=somarMes('liquido'),desc=somarMes('desconto'),fre=somarMes('frete');
+  desenharBarras('graficoBruto',bru,liq,'#1d4a2e','#3b82f6','Brutas (antes desc.)','Líquidas');
   desenharBarras('graficoDescontos',desc,null,'#b45309',null,'Descontos',null);
   desenharBarras('graficoFrete',fre,null,'#0e7490',null,'Frete',null);
 }
