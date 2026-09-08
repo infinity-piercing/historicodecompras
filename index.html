@@ -409,13 +409,9 @@ function acharColuna(cab,chave){
 }
 /* ============================================================
    DETECÇÃO AUTOMÁTICA DA COLUNA DO Nº DO PEDIDO
-   ------------------------------------------------------------
-   Um nº de pedido real se REPETE em várias linhas (cada pedido
-   tem vários produtos). Um ID de item/sku aparece 1 única vez.
-   Então a coluna escolhida é a que tem MENOR taxa de valores
-   únicos dentre as colunas preenchidas — e preferência para
-   cabeçalhos que pareçam pedido (Name, Pedido, Order...).
-   Isso corrige CSVs onde a Coluna A não é o nº do pedido.
+   Um nº de pedido real se REPETE em várias linhas; um ID de item
+   aparece 1 única vez. Escolhe a coluna com MENOR taxa de valores
+   únicos (com bônus para cabeçalhos de pedido).
    ============================================================ */
 function detectarColunaPedido(colunas, linhas){
   var amostra = linhas.length>4000 ? linhas.slice(0,4000) : linhas;
@@ -436,15 +432,24 @@ function detectarColunaPedido(colunas, linhas){
     if(preenchidas < amostra.length*0.5) continue;
     var unicos = Object.keys(set).length;
     var uni = unicos/preenchidas;
-    if(uni > 0.95) continue; /* quase 100% únicos: ID de item, não pedido */
+    if(uni > 0.95) continue;
     var bonus = 0;
     if(h==='name' || h==='ordername' || h==='pedido' || h==='npedido' || h==='numero do pedido' || h==='numerodopedido' || h.indexOf('pedido')>-1 || h.indexOf('order')>-1 || h.indexOf('numero')>-1) bonus = 0.3;
     var score = uni - bonus;
     if(score < melhorScore){ melhorScore = score; melhor = c; }
   }
-  /* Fallback: se nada foi encontrado, usa a Coluna A (0) */
   if(melhor===-1 && colunas.length>0) melhor = 0;
   return melhor;
+}
+function acharColunaProduto(cab){
+  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemname'||h==='lineiteimname') return i; }
+  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j; }
+  return acharColuna(cab,'produto');
+}
+function acharColunaSku(cab){
+  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemsku'||h==='lineiteimsku') return i; }
+  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j; }
+  return acharColuna(cab,'sku');
 }
 
 function listarArquivosRepo(repo){
@@ -494,13 +499,6 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   if(m) return m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2);
   return String(nomeArquivo||'Mês').replace(/\.csv$/i,'').replace(/[_-]+/g,' ') || 'Mês';
 }
-function mesesDistintos(colunas,linhas){
-  var iData=acharColuna(colunas,'data');
-  if(iData===-1) return [];
-  var set={};
-  linhas.forEach(function(r){ var d=parseData(r[iData]); if(!d) return; set[d.getFullYear()*100+(d.getMonth()+1)]=true; });
-  return Object.keys(set).map(function(k){ return parseInt(k,10); }).sort(function(a,b){return a-b;});
-}
 function fmtMesChave(k){ return NOMES_MESES[(k%100)-1]+'/'+String(Math.floor(k/100)).slice(2); }
 
 function processarBase(b){
@@ -524,9 +522,13 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS
-   - Coluna do nº do pedido: DETECTADA automaticamente (repetição)
-   - Valor de cada pedido: Subtotal (Coluna I / cabeçalho, sem frete)
+   PROCESSAMENTO DOS PEDIDOS — CORREÇÃO DEFINITIVA
+   1) Coluna do pedido: DETECTADA automaticamente (repetição).
+   2) MÊS ALVO: mês dominante do arquivo (coluna de data).
+      Se o arquivo contém VÁRIOS MESES (export sem filtro de data),
+      só os pedidos do mês dominante entram — os demais são
+      descartados. Isso elimina a inflação de agosto.
+   3) Valor do pedido: Subtotal (Coluna I / cabeçalho, sem frete).
    ============================================================ */
 function processarMes(colunas, linhas){
   var idxPedido = detectarColunaPedido(colunas, linhas);
@@ -551,6 +553,21 @@ function processarMes(colunas, linhas){
     preco:acharColuna(colunas,'preco'),
     nome:acharColuna(colunas,'nome')
   };
+  /* MÊS ALVO (dominante) pela coluna de data */
+  var mesAlvo=null, totalDatadas=0, noMesAlvo=0;
+  if(idx.data>-1){
+    var cont={};
+    linhas.forEach(function(r){
+      var d=parseData(r[idx.data]); if(!d) return;
+      var k=d.getFullYear()*100+(d.getMonth()+1);
+      cont[k]=(cont[k]||0)+1; totalDatadas++;
+    });
+    var mel=null, melN=0;
+    for(var kk in cont){ if(cont[kk]>melN){ melN=cont[kk]; mel=parseInt(kk,10); } }
+    if(mel){ mesAlvo=mel; noMesAlvo=melN; }
+  }
+  var mesclado = mesAlvo!==null && totalDatadas>0 && (noMesAlvo/totalDatadas)<0.95;
+
   var ordens=new Map();
   linhas.forEach(function(r){
     var chave = idxPedido>-1 ? String(r[idxPedido]||'').trim() : '';
@@ -573,8 +590,15 @@ function processarMes(colunas, linhas){
       if(prod||q) o.items.push({produto:prod||'(sem produto)',sku:sku,qtd:q||1,preco:pr});
     }
   });
-  var saida=[];
+  var saida=[], removidos=0;
   ordens.forEach(function(o){
+    /* FILTRO DEFINITIVO POR MÊS: arquivo com vários meses → só o mês dominante */
+    if(mesclado){
+      if(o.data){
+        var k2=o.data.getFullYear()*100+(o.data.getMonth()+1);
+        if(k2!==mesAlvo){ removidos++; return; }
+      } else { removidos++; return; }
+    }
     var venda = o.subtotal>0 ? o.subtotal : o.totalColuna;
     if(venda<=0){
       var sItens=0;
@@ -585,17 +609,7 @@ function processarMes(colunas, linhas){
     var pago=st===''?true:ehPago(st);
     saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
-  return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length};
-}
-function acharColunaProduto(cab){
-  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemname'||h==='lineiteimname') return i; }
-  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j; }
-  return acharColuna(cab,'produto');
-}
-function acharColunaSku(cab){
-  for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemsku'||h==='lineiteimsku') return i; }
-  for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j; }
-  return acharColuna(cab,'sku');
+  return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length, removidos:removidos, mesclado:mesclado, mesAlvo:mesAlvo};
 }
 
 var estado={base:null,meses:[],periodo:'TODOS',segmento:'SEMCOMPRA',busca:'',produto:'',ordem:{chave:'total',dir:-1},ordemProd:{chave:'receita',dir:-1},ordemCont:{chave:'nome',dir:1},pagina:1,porPagina:50,paginaCont:1,porPaginaCont:200,linhasTabela:[],linhasProdutos:[],linhasContatos:[],contatosSalvos:{},apiOk:false,ultimoErro:'',diag:[]};
@@ -634,14 +648,14 @@ function carregarDados(){
         diagDet+=' · coluna do pedido: '+esc(nomePed);
         var razao = proc.nPedidos>0 ? (proc.nLinhas/proc.nPedidos) : 0;
         diagDet+=' · médio '+razao.toFixed(1)+' item(s)/pedido';
-        if(razao<3){ diagDet+=' ⚠ agrupamento quase 1:1 — a coluna usada parece ser ID de item, não nº do pedido'; }
+        if(proc.mesclado){
+          diagDet+=' ⚠ ARQUIVO COM VÁRIOS MESES → filtrado para '+fmtMesChave(proc.mesAlvo)+' · '+proc.removidos+' pedido(s) de outros meses removidos';
+        }
         var sSub=0;
         proc.saida.forEach(function(o){ if(o.pago) sSub+=o.subtotal||0; });
         diagDet+=' · Σ Subtotal: '+fmtCurto(sSub);
         diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
         diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
-        var md=mesesDistintos(d.colunas,d.linhas);
-        if(md.length>1) diagDet+=' ⚠ CONTÉM '+md.length+' MESES ('+md.map(fmtMesChave).join(', ')+')';
         estado.diag.push({nome:f.name+' → '+rot,ok:true,det:diagDet});
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
