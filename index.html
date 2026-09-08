@@ -77,7 +77,7 @@
 </header>
 <main>
   <div id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + valores</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas usadas + status + valores</h3><div id="diagLinhas"></div></div>
   <div id="conteudo">
     <div class="filtros">
       <label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div>
@@ -124,7 +124,7 @@
 <footer>Dados lidos dinamicamente dos CSVs do repositório GitHub · Infinity Piercing</footer>
 <script>
 /* ============ DIAGNÓSTICO GLOBAL: qualquer erro de script aparece na tela ============ */
-window.onerror=function(msg,src,lin){var el=document.getElementById('erroGlobal');try{var b=document.createElement('div');b.className='aviso show erro';b.innerHTML='<b>⚠ Erro de execução do script</b>'+esc(msg||'erro desconhecido')+(lin?' (linha '+lin+')':'')+' — confira se o arquivo index.html no GitHub termina com &lt;/html&gt; e sem cortes.';document.getElementById('avisos').appendChild(b);}catch(e){}return false;};
+window.onerror=function(msg,src,lin){try{var b=document.createElement('div');b.className='aviso show erro';b.innerHTML='<b>⚠ Erro de execução do script</b>'+esc(msg||'erro desconhecido')+(lin?' (linha '+lin+')':'')+' — confira se o arquivo index.html no GitHub termina com &lt;/html&gt; e sem cortes.';document.getElementById('avisos').appendChild(b);}catch(e){}return false;};
 
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
@@ -226,11 +226,16 @@ function resolverColunas(colunas,linhas){
   if(map.status>-1)uso.status=colunas[map.status]||'';else uso.status='';
   return {map:map,uso:uso};
 }
+/* ===== FILTRO DE PEDIDOS PAGOS — WHITELIST EXPLÍCITA =====
+   Só é PAGO se o status contiver uma palavra de pagamento real.
+   Todo o resto (pending, expired, cancelado, refund, vazio...) entra
+   como NÃO pago (valor 0) — nada de inflar. */
 function ehPago(st){
-  st=String(st||'').toLowerCase();
-  if(!st)return true;
-  if(/expired|expirado|cancel|refund|chargeback|void|falhou|abandoned|pending|pendente/.test(st))return false;
-  return true;
+  st=String(st||'').toLowerCase().trim();
+  if(!st)return false; /* sem status: não arrisca inflar */
+  var pagos=['paid','pago','completed','complete','concluido','conclu','entregue','fulfilled','authorized','autorizado','success','succeeded','aprovado'];
+  for(var i=0;i<pagos.length;i++){ if(st.indexOf(pagos[i])>-1) return true; }
+  return false;
 }
 function processarMes(colunas,linhas){
   var resol=resolverColunas(colunas,linhas),map=resol.map;
@@ -362,7 +367,6 @@ function carregarDados(){
           removidos:proc.removidos,razao:proc.razao,suspeitos:proc.suspeitos,statusOk:proc.map.status>-1});
       }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:(e&&e.message)||e});}));
     });
-    /* Um CSV com erro não congela o resto: Promise.all coleta todos, ok ou não */
     Promise.all(prom).then(function(){
       try{
         var vistos=new Set(),dups=0;
@@ -379,10 +383,15 @@ function carregarDados(){
           var lin='<div class="linha"><span class="'+(m.statusOk?'ok':'bad')+'">'+(m.statusOk?'✅':'❌')+' '+esc(m.arquivo)+' → '+esc(m.rotulo)+'</span><span>';
           lin+=String(m.nLinhas)+' linhas → '+String(m.nPedidos)+' pedidos · '+(m.razao?m.razao.toFixed(1):'1')+' linhas/pedido';
           lin+=' · colunas: pedido['+esc(m.uso.pedido||'—')+'] subtotal['+esc(m.uso.subtotal||'—')+'] total['+esc(m.uso.total||'—')+'] desconto['+esc(m.uso.desconto||'—')+'] frete['+esc(m.uso.frete||'—')+'] status['+esc(m.uso.status||'—')+']';
-          if(!m.statusOk)lin+=' ⚠ STATUS NÃO ENCONTRADO — todos considerados pagos';
+          if(!m.statusOk)lin+=' ⚠ STATUS NÃO ENCONTRADO — nenhum pedido foi considerado pago';
           if(m.mesclado)lin+=' ⚠ vários meses → filtrado para '+fmtMesChave(m.mesAlvo)+' ('+m.removidos+' removidos)';
           if(m.suspeitos>0)lin+=' ⚠ '+m.suspeitos+' pedido(s) com total<subtotal';
           lin+=' · pagos: '+pagos+' · não pagos: '+naoPagos;
+          /* Distribuição de status (para calibrar a whitelist se preciso) */
+          var contS={};
+          m.pedidos.forEach(function(o){var k=(o.status||'(vazio)').toLowerCase().trim()||'(vazio)';contS[k]=(contS[k]||0)+1;});
+          var ordS=Object.keys(contS).sort(function(a,b){return contS[b]-contS[a];}).slice(0,8);
+          lin+=' · STATUS: '+ordS.map(function(k){return k+'='+contS[k];}).join(' · ');
           lin+=' · brutas: '+fmtCurto(sBru)+' · líquidas: '+fmtCurto(sLiq)+' · descontos: '+fmtCurto(sDesc)+' · total pago: '+fmtCurto(sTot)+' · frete: '+fmtCurto(sFre);
           lin+=' · clientes: '+cli.size+' · ticket/cliente: '+fmtCurto(cli.size?sLiq/cli.size:0);
           lin+='</span></div>';
