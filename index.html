@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infinity Piercing · Dashboard de Compras</title>
 <style>
-  :root{--verde:#1d4a2e;--verde2:#2e7d4f;--verde3:#eaf3ec;--creme:#f7f4ec;--branco:#fff;--cinza:#6b7280;--borda:#e5e0d4;--amber:#b45309;--amberbg:#fef3c7;--azul:#1d4ed8;--azulbg:#dbeafe;--roxo:#7c3aed;--roxobg:#ede9fe;--cinzabg:#f3f4f6;--red:#b91c1c;--redbg:#fee2e2;}
+  :root{--verde:#1d4a2e;--verde2:#2e7d4f;--verde3:#eaf3ec;--creme:#f7f4ec;--branco:#fff;--cinza:#6b7280;--borda:#e5e0d4;--amber:#b45309;--amberbg:#fef3c7;--azul:#1d4ed8;--azulbg:#dbeafe;--roxo:#7c3aed;--roxobg:#ede9fe;--red:#b91c1c;--redbg:#fee2e2;}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
   header{background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.12)}
   header img{height:44px;background:#fff;border-radius:10px;padding:4px;object-fit:contain}
   header .titulo{font-size:20px;font-weight:700;line-height:1.1}
@@ -70,9 +70,6 @@
   .item-kpi .val{font-weight:800;color:var(--verde);font-size:17px;white-space:nowrap}
   .item-kpi.destaque{background:var(--amberbg);border:1px solid #fcd34d}
   .item-kpi.destaque .val{color:var(--amber)}
-  .cb-grupo{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer}
-  .cb-grupo .txt-cb-sim{color:var(--verde);font-weight:700}
-  .cb-grupo .txt-cb-nao{color:var(--cinza);font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:16px}
@@ -84,13 +81,6 @@
   .barras .pista{flex:1;background:var(--creme);border-radius:6px;height:18px;overflow:hidden}
   .barras .preench{height:100%;background:linear-gradient(90deg,var(--verde2),var(--verde));border-radius:6px;min-width:2px}
   .barras .val{width:13%;font-weight:700;color:var(--verde);font-size:12px;text-align:right}
-  .donut-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .donut{width:110px;height:110px;border-radius:50%;position:relative;flex-shrink:0}
-  .donut .centro{position:absolute;inset:22px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:var(--verde)}
-  .legenda{font-size:13px}
-  .legenda .item{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-  .legenda .item b{font-size:14px}
-  .legenda .cor{width:12px;height:12px;border-radius:3px}
   .tabela-box{background:#fff;border:1px solid var(--borda);border-radius:14px;overflow:hidden}
   .tabela-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--borda);flex-wrap:wrap}
   .tabela-top .contador{font-size:13px;color:var(--cinza);flex:1}
@@ -109,17 +99,6 @@
   .b-historico{background:var(--azulbg);color:var(--azul)}
   .b-fora{background:var(--redbg);color:var(--red)}
   .tabela-scroll thead th{position:sticky;top:0;z-index:5;background:var(--verde3);box-shadow:0 1px 0 rgba(0,0,0,.07)}
-  .cb{width:17px;height:17px;cursor:pointer;accent-color:var(--verde);vertical-align:middle}
-  .inp-data{border:1px solid var(--borda);border-radius:7px;padding:4px 6px;font-size:11.5px;background:#fff;color:#374151;max-width:130px}
-  .sel-atend{border:1px solid var(--borda);border-radius:7px;padding:4px 6px;font-size:11.5px;background:#fff;color:#374151;min-width:100px;max-width:140px;cursor:pointer}
-  #contatos table{min-width:0;width:100%;table-layout:fixed}
-  #contatos th,#contatos td{padding:7px 8px;overflow:hidden;text-overflow:ellipsis}
-  #contatos td.cel-wrap{white-space:normal;word-break:break-word}
-  #contatos td.cel-c{text-align:center;white-space:nowrap}
-  #contatos tbody tr.linha-contato td{background:#fff8cc}
-  #contatos tbody tr.linha-contato:hover td{background:#fff2a6}
-  #contatos tbody tr.linha-retorno td{background:#d9f5d9}
-  #contatos tbody tr.linha-retorno:hover td{background:#c3eec3}
   .paginacao{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--borda);font-size:12.5px;color:var(--cinza);flex-wrap:wrap}
   .paginacao .btn:disabled{opacity:.4;cursor:default}
   footer{max-width:1280px;margin:20px auto 0;padding:0 16px;font-size:12px;color:var(--cinza);text-align:center}
@@ -150,7 +129,7 @@
 <main>
   <div class="erro-global" id="erroGlobal"></div>
   <div class="avisos" id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Arquivos lidos do repositório</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês (confira agosto aqui)</h3><div id="diagLinhas"></div></div>
 
   <div id="conteudo">
     <div class="foco" id="foco" style="display:none">
@@ -160,7 +139,7 @@
     </div>
 
     <div class="filtros">
-      <div class="linha"><label>Histórico — mês a mês (detectado automaticamente)</label><div class="chips" id="chipsPeriodo"></div></div>
+      <div class="linha"><label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div></div>
       <div class="linha">
         <label>Filtros de navegação</label>
         <div class="chips" id="chipsSegmento"></div>
@@ -192,7 +171,7 @@
             </div>
           </div>
         </div>
-        <div class="card"><h3>🧭 Como atualizar</h3><div style="font-size:12.5px;color:#374151;line-height:1.7">Suba os CSVs de pedidos na raiz do repositório. O dashboard detecta o mês automaticamente. A aba Contatos é editada na planilha e o site lê como espelho.</div></div>
+        <div class="card"><h3>🧭 Como atualizar</h3><div style="font-size:12.5px;color:#374151;line-height:1.7">Suba 1 CSV por mês na raiz do repositório. O dashboard usa Coluna A (nº do pedido) e Coluna I (Subtotal) e mostra a auditoria no topo.</div></div>
       </div>
       <div class="grid2" style="margin-top:14px">
         <div class="card"><h3>💵 Vendas líquidas (Subtotal) mês a mês</h3><canvas id="graficoLiquido"></canvas></div>
@@ -240,7 +219,7 @@
         <div class="status-api" id="statusApi">—</div>
         <div class="tabela-scroll">
           <table>
-            <thead><tr><th data-ordc="nome">Cliente <span class="seta"></span></th><th data-ordc="email">E-mail <span class="seta"></span></th><th data-ordc="tel">Telefone <span class="seta"></span></th><th data-ordc="cidade">Cidade <span class="seta"></span></th><th data-ordc="contato">Cliente Contatado <span class="seta"></span></th><th data-ordc="retorno">Houve Retorno? <span class="seta"></span></th><th data-ordc="data">Data do contato <span class="seta"></span></th><th data-ordc="atendente">Atendente <span class="seta"></span></th></tr></thead>
+            <thead><tr><th data-ordc="nome">Cliente <span class="seta"></span></th><th data-ordc="email">E-mail <span class="seta"></span></th><th data-ordc="tel">Telefone <span class="seta"></span></th><th data-ordc="cidade">Cidade <span class="seta"></span></th><th data-ordc="contato">Contatado <span class="seta"></span></th><th data-ordc="retorno">Retorno <span class="seta"></span></th><th data-ordc="data">Data <span class="seta"></span></th><th data-ordc="atendente">Atendente <span class="seta"></span></th></tr></thead>
             <tbody id="tbodyContatos"></tbody>
           </table>
         </div>
@@ -256,7 +235,12 @@
 <script>
 var CONFIG = {
   repo: 'infinity-piercing/historicodecompras',
-  apiUrl: 'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
+  /* COLUNAS CONFIRMADAS PELO USUÁRIO (base 0: A=0, B=1, ..., I=8) */
+  pedidoCol: 0,    /* Coluna A = Número do pedido */
+  subtotalCol: 8,  /* Coluna I = Subtotal (valor do pedido sem frete) */
+  descontoCol: -1, /* -1 = detectar automaticamente */
+  dataCol: -1      /* -1 = detectar automaticamente */
 };
 var ATENDENTES = ['Andrei','Larissa','Vinicius','Alexandre','Tamires'];
 var NOMES_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -275,7 +259,7 @@ function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').rep
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function dinheiro(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0); }catch(e){ return 'R$ '+(v||0); } }
 function numero(v){ try{ return new Intl.NumberFormat('pt-BR').format(v||0); }catch(e){ return String(v||0); } }
-function avisar(tipo,titulo,texto){ var box=document.getElementById('avisos'); var d=document.createElement('div'); d.className='aviso show '+tipo; d.innerHTML='<b>'+titulo+'</b>'+texto; box.appendChild(d); }
+function avisar(tipo,titulo,texto){ var box=document.getElementById('avisos'); if(!box) return; var d=document.createElement('div'); d.className='aviso show '+tipo; d.innerHTML='<b>'+titulo+'</b>'+texto; box.appendChild(d); }
 function agora(){ try{ return new Date().toLocaleTimeString('pt-BR'); }catch(e){ return new Date().toTimeString().slice(0,8); } }
 function fmtCurto(v){ v=Math.round(v||0); if(v>=1000000){ return 'R$'+(v/1000000).toFixed(1).replace('.',',')+'M'; } if(v>=1000){ return 'R$'+(v/1000).toFixed(1).replace('.',',')+'k'; } return 'R$'+v; }
 function fmtCompleto(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(v||0); }catch(e){ return 'R$ '+Math.round(v||0); } }
@@ -357,7 +341,6 @@ function parseData(v){
   return isNaN(g.getTime())?null:g;
 }
 function fmtData(d){ if(!d) return '—'; try{ return d.toLocaleDateString('pt-BR'); }catch(e){ return String(d); } }
-function chaveData(v){ var d=parseData(v); if(!d) return ''; return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 function ehPago(st){ st=String(st||'').toLowerCase(); return st.indexOf('paid')>-1||st.indexOf('pago')>-1||st.indexOf('aprovado')>-1||st.indexOf('complete')>-1||st.indexOf('conclu')>-1||st.indexOf('entregue')>-1||st.indexOf('success')>-1; }
 function ehExpirado(st){ st=String(st||'').toLowerCase(); return st.indexOf('expired')>-1||st.indexOf('expirado')>-1||st.indexOf('cancelado')>-1||st.indexOf('canceled')>-1||st.indexOf('refunded')>-1||st.indexOf('chargeback')>-1||st.indexOf('voided')>-1||st.indexOf('falhou')>-1; }
 
@@ -373,8 +356,7 @@ var ALIASES={
   status:['status','statusdacompra','statusfinancial','statusdopagamento','situation','paymentstatus','financialstatus'],
   preco:['lineitemprice','lineiteimprice','precounitario','valorunitario','preco'],
   cidade:['cidade','city','defaultaddresscity','addresscity'],
-  telefone:['telefone','phone','fone','defaultaddressphone','celular'],
-  historico:['totalpedidos','totalorders','npedidos','numerodepedidos','pedidos','historicodecompras','historico']
+  telefone:['telefone','phone','fone','defaultaddressphone','celular']
 };
 function acharColuna(cab,chave){
   var alvos=ALIASES[chave]||[];
@@ -406,44 +388,6 @@ function acharColuna(cab,chave){
   }
   return -1;
 }
-/* ============================================================
-   DETECÇÃO DA COLUNA DO Nº DO PEDIDO (REFORÇADA)
-   - Ignora colunas de status/país/canal (poucos valores distintos)
-   - Ignora colunas quase 100% únicas (ID de item)
-   - Bônus para cabeçalho de pedido e valores tipo "#1234" (Shopify)
-   ============================================================ */
-function detectarColunaPedido(colunas, linhas){
-  var amostra = linhas.length>4000 ? linhas.slice(0,4000) : linhas;
-  var melhor=-1, melhorScore=999;
-  for(var c=0;c<colunas.length;c++){
-    var h = norm(colunas[c]||'');
-    if(!h) continue;
-    if(h.indexOf('lineitem')>-1 || h==='sku' || h.indexOf('sku')>-1 || h==='codigo' || h==='code') continue;
-    if(h==='email' || h==='e-mail' || h.indexOf('email')>-1) continue;
-    if(h.indexOf('telefone')>-1 || h.indexOf('phone')>-1) continue;
-    if(h.indexOf('status')>-1 || h.indexOf('fulfillment')>-1 || h.indexOf('metodo')>-1 || h.indexOf('method')>-1 || h.indexOf('pais')>-1 || h.indexOf('country')>-1 || h.indexOf('canal')>-1 || h.indexOf('channel')>-1) continue;
-    var set = {}, preenchidas = 0, comHash = 0;
-    for(var r=0;r<amostra.length;r++){
-      var v = String(amostra[r][c]||'').trim();
-      if(v==='') continue;
-      preenchidas++;
-      set[v]=true;
-      if(v.charAt(0)==='#') comHash++;
-    }
-    if(preenchidas < amostra.length*0.5) continue;
-    var unicos = Object.keys(set).length;
-    if(unicos < 50) continue; /* status/país/canal têm pouquíssimos valores — não são pedido */
-    var uni = unicos/preenchidas;
-    if(uni > 0.95) continue;  /* quase 100% únicos: ID de item */
-    var bonus = 0;
-    if(h==='name' || h==='ordername' || h==='pedido' || h==='npedido' || h==='numero do pedido' || h==='numerodopedido' || h.indexOf('pedido')>-1 || h.indexOf('order')>-1 || h.indexOf('numero')>-1) bonus = 0.3;
-    if(comHash/preenchidas > 0.5) bonus += 0.4; /* valores "#1234" = nº do pedido Shopify */
-    var score = uni - bonus;
-    if(score < melhorScore){ melhorScore = score; melhor = c; }
-  }
-  if(melhor===-1 && colunas.length>0) melhor = 0;
-  return melhor;
-}
 function acharColunaProduto(cab){
   for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemname'||h==='lineiteimname') return i; }
   for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')===-1) return j; }
@@ -453,6 +397,11 @@ function acharColunaSku(cab){
   for(var i=0;i<cab.length;i++){ var h=norm(cab[i]); if(h==='lineitemsku'||h==='lineiteimsku') return i; }
   for(var j=0;j<cab.length;j++){ var h2=norm(cab[j]); if(h2.indexOf('lineitem')>-1&&h2.indexOf('sku')>-1) return j; }
   return acharColuna(cab,'sku');
+}
+function overrideCol(idx, limite){
+  var v = parseInt(idx,10);
+  if(!isNaN(v) && v>=0 && v<limite) return v;
+  return -1;
 }
 
 function listarArquivosRepo(repo){
@@ -471,7 +420,7 @@ function faixa(prom,ms){
 }
 function baixarCSV(url){ return faixa(fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }),20000); }
 function parseCSV(texto){
-  var primeira=texto.split('\n')[0]||'';
+  var primeira=(texto.split('\n')[0]||'').trim();
   var v1=(primeira.match(/,/g)||[]).length, v2=(primeira.match(/;/g)||[]).length;
   var delim=v2>v1?';':',';
   var linhas=[],linha=[],campo='',aspas=false;
@@ -496,11 +445,11 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   if(iData>-1){
     var cont={},total=0;
     linhas.forEach(function(r){ var d=parseData(r[iData]); if(!d) return; var k=d.getFullYear()*100+(d.getMonth()+1); cont[k]=(cont[k]||0)+1; total++; });
-    if(total){ var mel=null,melN=0; for(var kk in cont){ if(cont[kk]>melN){ melN=cont[kk]; mel=parseInt(kk,10); } } return NOMES_MESES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2); }
+    if(total){ var mel=null,melN=0; for(var kk in cont){ if(cont[kk]>melN){ melN=cont[kk]; mel=parseInt(kk,10); } } return {rot:NOMES_MESES[(mel%100)-1]+'/'+String(Math.floor(mel/100)).slice(2), dominante:mel, totalDatas:total, noMes:melN}; }
   }
   var m=(nomeArquivo||'').match(/([a-z]{3,4})[.\-_]?(\d{2,4})/i);
-  if(m) return m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2);
-  return String(nomeArquivo||'Mês').replace(/\.csv$/i,'').replace(/[_-]+/g,' ') || 'Mês';
+  if(m) return {rot:m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2)};
+  return {rot:String(nomeArquivo||'Mês').replace(/\.csv$/i,'').replace(/[_-]+/g,' ') || 'Mês'};
 }
 function fmtMesChave(k){ return NOMES_MESES[(k%100)-1]+'/'+String(Math.floor(k/100)).slice(2); }
 
@@ -525,28 +474,30 @@ function processarBase(b){
   return {map:map};
 }
 /* ============================================================
-   PROCESSAMENTO DOS PEDIDOS
-   1) Coluna do pedido: DETECTADA automaticamente (reforçada).
-   2) MÊS ALVO: mês dominante do arquivo — se o arquivo tiver
-      vários meses, só os pedidos do mês dominante entram.
-   3) Valor do pedido: Subtotal (Coluna I / cabeçalho, sem frete).
+   PROCESSAMENTO — CORREÇÃO DEFINITIVA DA INFLAÇÃO DE AGOSTO
+   1) Coluna do pedido = CONFIG.pedidoCol (0 = Coluna A), SEM detecção.
+   2) Subtotal = CONFIG.subtotalCol (8 = Coluna I), SEM detecção.
+   3) Subtotal capturado UMA ÚNICA VEZ por pedido (primeiro valor).
+   4) Mês dominante: se o arquivo tiver vários meses, só o mês
+      dominante entra.
    ============================================================ */
 function processarMes(colunas, linhas){
-  var idxPedido = detectarColunaPedido(colunas, linhas);
-  var idxSubtotal = acharColuna(colunas,'subtotal');
-  if(idxSubtotal===-1 && colunas.length>8){
-    var v4=0;
-    for(var z=0;z<Math.min(linhas.length,200);z++){ if(parseMoney(linhas[z][8])>0) v4++; }
-    if(v4>=30) idxSubtotal=8;
-  }
+  var limite = colunas.length;
+  var idxPedido = overrideCol(CONFIG.pedidoCol, limite);
+  if(idxPedido===-1) idxPedido = 0;
+  var idxSubtotal = overrideCol(CONFIG.subtotalCol, limite);
+  var idxDesconto = overrideCol(CONFIG.descontoCol, limite);
+  if(idxDesconto===-1) idxDesconto = acharColuna(colunas,'desconto');
+  var iData = overrideCol(CONFIG.dataCol, limite);
+  if(iData===-1) iData = acharColuna(colunas,'data');
   var idx={
     email:acharColuna(colunas,'email'),
     pedido:idxPedido,
-    data:acharColuna(colunas,'data'),
+    data:iData,
     total:acharColuna(colunas,'total'),
     subtotal:idxSubtotal,
     frete:acharColuna(colunas,'frete'),
-    desconto:acharColuna(colunas,'desconto'),
+    desconto:idxDesconto,
     status:acharColuna(colunas,'status'),
     produto:acharColunaProduto(colunas),
     sku:acharColunaSku(colunas),
@@ -576,6 +527,7 @@ function processarMes(colunas, linhas){
     if(!o){ o={chave:chave,email:'',nome:'',data:null,total:0,subtotal:0,totalColuna:0,frete:0,desconto:0,status:'',items:[]}; ordens.set(chave,o); }
     if(idx.email>-1&&!o.email) o.email=String(r[idx.email]||'').trim();
     if(idx.nome>-1&&!o.nome) o.nome=String(r[idx.nome]||'').trim();
+    /* Subtotal capturado UMA única vez por pedido (primeiro valor > 0) */
     if(idx.subtotal>-1&&!o.subtotal){ var stV=parseMoney(r[idx.subtotal]); if(stV>0) o.subtotal=stV; }
     if(idx.total>-1&&!o.totalColuna) o.totalColuna=parseMoney(r[idx.total]);
     if(idx.frete>-1&&!o.frete) o.frete=parseMoney(r[idx.frete]);
@@ -606,7 +558,7 @@ function processarMes(colunas, linhas){
     }
     var st=String(o.status||'').toLowerCase();
     var pago=st===''?true:ehPago(st);
-    saida.push({email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
+    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',data:o.data,total:pago?venda:0,subtotal:pago?(o.subtotal||0):0,frete:pago?(o.frete||0):0,desconto:pago?(o.desconto||0):0,status:st,pago:pago,expirado:ehExpirado(st),items:o.items});
   });
   return {saida:saida, idx:idx, colunas:colunas, nLinhas:linhas.length, nPedidos:saida.length, removidos:removidos, mesclado:mesclado, mesAlvo:mesAlvo};
 }
@@ -630,7 +582,7 @@ function carregarDados(){
         var linhas=parseCSV(txtCsv);
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
         estado.base=processarBase(d);
-        estado.diag.push({nome:baseArq.name,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' cliente(s))':'sem coluna de e-mail'});
+        estado.diag.push({nome:baseArq.name,ok:!!estado.base,det:estado.base?'('+estado.base.map.size+' cliente(s) na base)':'sem coluna de e-mail'});
       }).catch(function(e){ estado.diag.push({nome:baseArq.name,ok:false,det:e.message}); }));
     } else {
       estado.diag.push({nome:'Base',ok:false,det:'nenhum arquivo com base/cliente/customer'});
@@ -639,47 +591,62 @@ function carregarDados(){
       prom.push(baixarCSV(f.download_url).then(function(txtCsv){
         var linhas=parseCSV(txtCsv);
         var d={colunas:linhas[0].map(function(h){return String(h).trim();}),linhas:linhas.slice(1)};
-        var rot=detectarRotulo(d.colunas,d.linhas,f.name) || 'Mês';
+        var info=detectarRotulo(d.colunas,d.linhas,f.name);
+        var rot=info.rot||'Mês';
         var proc=processarMes(d.colunas,d.linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas,mesclado:proc.mesclado,arquivo:f.name});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,idx:proc.idx,colunas:proc.colunas,mesclado:proc.mesclado,arquivo:f.name,mesAlvo:proc.mesAlvo,removidos:proc.removidos});
         var nomePed = proc.idx.pedido>-1 ? (d.colunas[proc.idx.pedido]||'Coluna '+(proc.idx.pedido+1)) : '—';
-        var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s)';
-        diagDet+=' · coluna do pedido: '+esc(nomePed);
+        var nomeSub = proc.idx.subtotal>-1 ? (d.colunas[proc.idx.subtotal]||'Coluna '+(proc.idx.subtotal+1)) : '—';
+        var diagDet=proc.nLinhas+' linha(s) → '+proc.nPedidos+' pedido(s) únicos';
+        diagDet+=' · pedido: '+esc(nomePed)+' · subtotal: '+esc(nomeSub);
         var razao = proc.nPedidos>0 ? (proc.nLinhas/proc.nPedidos) : 0;
-        diagDet+=' · médio '+razao.toFixed(1)+' item(s)/pedido';
+        diagDet+=' · '+razao.toFixed(1)+' linha(s)/pedido';
+        var sSub=0, sDesc=0, cli=new Set(), pagos=0;
+        proc.saida.forEach(function(o){ if(o.pago){ sSub+=o.subtotal||0; sDesc+=o.desconto||0; pagos++; if(o.email) cli.add(o.email); } });
         if(proc.mesclado){
           diagDet+=' ⚠ ARQUIVO COM VÁRIOS MESES → filtrado para '+fmtMesChave(proc.mesAlvo)+' · '+proc.removidos+' pedido(s) de outros meses removidos';
         }
-        var sSub=0;
-        proc.saida.forEach(function(o){ if(o.pago) sSub+=o.subtotal||0; });
-        diagDet+=' · Σ Subtotal: '+fmtCurto(sSub);
-        diagDet+=' · email: '+esc(proc.idx.email>-1?(d.colunas[proc.idx.email]||'?'):'—');
-        diagDet+=' · status: '+esc(proc.idx.status>-1?(d.colunas[proc.idx.status]||'?'):'—');
+        diagDet+=' · Σ Subtotal: '+fmtCurto(sSub)+' · Σ Descontos: '+fmtCurto(sDesc);
+        diagDet+=' · clientes: '+cli.size+' · pagos: '+pagos+' · ticket/cliente: '+fmtCurto(sSub/(cli.size||1));
         estado.diag.push({nome:f.name+' → '+rot,ok:true,det:diagDet});
       }).catch(function(e){ estado.diag.push({nome:f.name,ok:false,det:e.message}); }));
     });
     Promise.all(prom).then(function(){
       /* ============================================================
-         CORREÇÃO DA INFLAÇÃO DE AGOSTO — DEDUPE POR MÊS
-         Se dois arquivos caírem no MESMO mês (ex.: arquivo antigo
-         com 4 meses + arquivo novo de agosto), mantém APENAS o
-         melhor arquivo (o que é de 1 mês só, ou o menor) e ignora
-         o duplicado. Sem isso, os valores somam em dobro.
+         CORREÇÃO DA INFLAÇÃO — DEDUPE GLOBAL POR Nº DE PEDIDO
+         Se o mesmo pedido aparecer em outro arquivo (arquivo antigo
+         + novo, export sobreposto), entra UMA vez só.
          ============================================================ */
-      var porMes = {};
-      estado.meses.forEach(function(m){ (porMes[m.rotulo] = porMes[m.rotulo]||[]).push(m); });
-      var manter = new Set();
+      var vistosPedidos=new Set(), dupsTotal=0;
+      estado.meses.forEach(function(m){
+        var novos=[];
+        m.pedidos.forEach(function(o){
+          var k=String(o.chave||'');
+          if(k && vistosPedidos.has(k)){ dupsTotal++; return; }
+          if(k) vistosPedidos.add(k);
+          novos.push(o);
+        });
+        m.pedidos=novos;
+      });
+      if(dupsTotal>0){
+        estado.diag.push({nome:'⚠ Duplicados entre arquivos',ok:false,det:dupsTotal+' pedido(s) repetido(s) em mais de um arquivo contados UMA vez. Se o arquivo antigo de agosto ainda estiver no repositório, remova-o.'});
+      }
+
+      /* DEDUPE POR MÊS (dois arquivos com o mesmo rótulo) */
+      var porMes={};
+      estado.meses.forEach(function(m){ (porMes[m.rotulo]=porMes[m.rotulo]||[]).push(m); });
+      var manter=new Set();
       Object.keys(porMes).forEach(function(rot){
-        var lista = porMes[rot];
+        var lista=porMes[rot];
         if(lista.length<=1){ manter.add(lista[0]); return; }
         lista.sort(function(a,b){
-          var aLimpo = a.mesclado?0:1, bLimpo = b.mesclado?0:1;
-          if(aLimpo!==bLimpo) return bLimpo-aLimpo; /* arquivo de 1 mês vence */
-          return a.pedidos.length - b.pedidos.length; /* empate: menor vence */
+          var aL=a.mesclado?0:1, bL=b.mesclado?0:1;
+          if(aL!==bL) return bL-aL;
+          return a.pedidos.length-b.pedidos.length;
         });
         manter.add(lista[0]);
         for(var i=1;i<lista.length;i++){
-          estado.diag.push({nome:'⚠ MÊS DUPLICADO ('+rot+')',ok:false,det:'Há mais de um arquivo identificado como '+rot+'. Mantido: '+esc(lista[0].arquivo)+' · ignorado: '+esc(lista[i].arquivo)+' — remova o arquivo duplicado do repositório para evitar soma em dobro.'});
+          estado.diag.push({nome:'⚠ MÊS DUPLICADO ('+rot+')',ok:false,det:'Mantido: '+esc(lista[0].arquivo)+' · ignorado: '+esc(lista[i].arquivo)+' — remova o duplicado do repositório.'});
         }
       });
       estado.meses = estado.meses.filter(function(m){ return manter.has(m); });
@@ -731,7 +698,6 @@ function clientesDoPeriodo(){
 }
 function mesesComCompra(email){ var n=0; estado.meses.forEach(function(m){ if(m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;})) n++; }); return n; }
 function comprouNoMes(email,rotulo){ var m=estado.meses.filter(function(x){return x.rotulo===rotulo;})[0]; return !!(m&&m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;})); }
-function totalMesesCarregados(){ return estado.meses.filter(function(m){return m.ok;}).length; }
 function ultimoMesLabel(){ var arr=estado.meses.filter(function(m){return m.ok;}); return arr.length?arr[arr.length-1].rotulo:''; }
 function situacao(email,comprou){ var meses=mesesComCompra(email); if(comprou) return meses>=2?'recorrente':'comprou'; if(!estado.base) return 'fora'; if(estado.base.map.has(email)) return meses>0?'historico':'semcompra'; return 'fora'; }
 function dadoBase(email){ return estado.base?estado.base.map.get(email)||null:null; }
@@ -884,18 +850,12 @@ function desenharComparativo(id,rotulos,s1,s2,cor1,cor2,leg1,leg2,fmt){
     if(d.v1>0){
       ctx.fillStyle=cor1;
       ctx.fillRect(Math.round(x-bw-2),Math.round(yBas-h1),Math.max(2,Math.round(bw)),Math.round(h1)+1);
-      if(mostrarVals){
-        ctx.fillStyle=cor1; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(fmt(d.v1),Math.round(x-bw/2-1),Math.round(yBas-h1-4));
-      }
+      if(mostrarVals){ ctx.fillStyle=cor1; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.fillText(fmt(d.v1),Math.round(x-bw/2-1),Math.round(yBas-h1-4)); }
     }
     if(s2!==null&&s2!==undefined&&d.v2>0){
       ctx.fillStyle=cor2;
       ctx.fillRect(Math.round(x+2),Math.round(yBas-h2),Math.max(2,Math.round(bw)),Math.round(h2)+1);
-      if(mostrarVals){
-        ctx.fillStyle=cor2; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(fmt(d.v2),Math.round(x+bw/2+1),Math.round(yBas-h2-4));
-      }
+      if(mostrarVals){ ctx.fillStyle=cor2; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.fillText(fmt(d.v2),Math.round(x+bw/2+1),Math.round(yBas-h2-4)); }
     }
     ctx.fillStyle='#374151'; ctx.font='10px sans-serif'; ctx.textAlign='center';
     ctx.fillText(d.rot||'Mês',x,H-8);
@@ -908,9 +868,7 @@ function desenharComparativo(id,rotulos,s1,s2,cor1,cor2,leg1,leg2,fmt){
     var d=dados[di];
     var html='<div class="tt-titulo">'+esc(d.rot||'Mês')+'</div>';
     html+='<div class="tt-linha"><span class="tt-cor" style="background:'+cor1+'"></span> '+esc(leg1)+': <b>'+fmtCompleto(d.v1)+'</b></div>';
-    if(s2!==null&&s2!==undefined){
-      html+='<div class="tt-linha"><span class="tt-cor" style="background:'+cor2+'"></span> '+esc(leg2)+': <b>'+fmtCompleto(d.v2)+'</b></div>';
-    }
+    if(s2!==null&&s2!==undefined){ html+='<div class="tt-linha"><span class="tt-cor" style="background:'+cor2+'"></span> '+esc(leg2)+': <b>'+fmtCompleto(d.v2)+'</b></div>'; }
     ttMostrar(html,ev.clientX,ev.clientY);
   };
   cv.onmouseleave=function(){ ttOcultar(); };
@@ -926,13 +884,9 @@ function somarMes(chave,fn){
 function montarComparativos(){
   var meses=estado.meses.filter(function(m){return m.ok;}).map(function(m){return m.rotulo||'Mês';});
   var subt=somarMes('subtotal'), tot=somarMes('total'), fre=somarMes('frete'), desc=somarMes('desconto');
-  var comDesc=somarMes(null,function(o){return o.desconto>0?o.total:0;});
-  var semDesc=somarMes(null,function(o){return o.desconto<=0?o.total:0;});
-  var semFrete=tot.map(function(v,i){return v-fre[i];});
   desenharComparativo('graficoLiquido',meses,tot,null,'#1d4a2e',null,'Vendas líquidas (Subtotal)',null,fmtCurto);
-  desenharComparativo('graficoFrete',meses,tot,semFrete,'#1d4a2e','#3b82f6','Com frete (total)','Sem frete (subtotal)',fmtCurto);
+  desenharComparativo('graficoFrete',meses,tot,subt,'#1d4a2e','#3b82f6','Total c/ frete','Subtotal s/ frete',fmtCurto);
   desenharComparativo('graficoDescontos',meses,desc,null,'#b45309',null,'Descontos',null,fmtCurto);
-  desenharComparativo('graficoComSemDesconto',meses,comDesc,semDesc,'#7c3aed','#1d4a2e','Com desconto','Sem desconto',fmtCurto);
   desenharComparativo('graficoBruto',meses,subt,null,'#f59e0b',null,'Vendas brutas',null,fmtCurto);
 }
 
@@ -985,7 +939,10 @@ function verFoco(){ estado.segmento='SEMCOMPRA'; estado.pagina=1; mostrarTab('cl
 function atualizarChipsSegmento(){ document.getElementById('chipsSegmento').querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('ativo',c.dataset.seg===estado.segmento); }); }
 function montarChips(){
   var p=document.getElementById('chipsPeriodo'); p.innerHTML='';
-  var t2=document.createElement('button'); t2.className='chip'+(estado.periodo==='TODOS'?' ativo':''); t2.textContent='📅 Todos os meses';
+  var nomes=estado.meses.filter(function(m){return m.ok;}).map(function(m){return m.rotulo;});
+  var t2=document.createElement('button');
+  t2.className='chip'+(estado.periodo==='TODOS'?' ativo':'');
+  t2.textContent='📅 Todos ('+(nomes.length?nomes.join(' + '):'—')+')';
   t2.onclick=function(){ estado.periodo='TODOS'; estado.pagina=1; montarChips(); montarFoco(); renderSection(secaoAtiva()); }; p.appendChild(t2);
   estado.meses.forEach(function(m){
     if(!m.ok) return;
@@ -1006,18 +963,19 @@ function montarKpis(){
   var compradores=clientesDoPeriodo(), totalBase=estado.base?estado.base.map.size:0, sem=0, recorrentes=0;
   compradores.forEach(function(c,em){ if(mesesComCompra(em)>=2) recorrentes++; });
   if(estado.base) estado.base.map.forEach(function(v,em){ if(mesesComCompra(em)===0) sem++; });
-  var nClientes = compradores.size;
+  var nClientes=compradores.size;
   var ticketMedio = nClientes ? subtotalTotal/nClientes : 0;
   var nPagos = contarPagos(pedidos);
+  var rotPeriodo = estado.periodo==='TODOS' ? 'todos ('+(estado.meses.filter(function(m){return m.ok;}).map(function(m){return m.rotulo;}).join(' + '))+')' : estado.periodo;
   var cards=[
-    {rotulo:'Ticket médio (por cliente)',valor:dinheiro(ticketMedio),ico:'🎯',detalhe:'média do valor gasto por cliente (Subtotal, sem frete)',destaque:true},
-    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nClientes)+' clientes que compraram',destaque:false},
-    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:estado.periodo==='TODOS'?'em todos os meses':'no mês',destaque:false},
-    {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:'no período',destaque:false},
+    {rotulo:'Ticket médio (por cliente)',valor:dinheiro(ticketMedio),ico:'🎯',detalhe:'média do valor gasto por cliente (Subtotal, sem frete) · '+rotPeriodo,destaque:true},
+    {rotulo:'Vendas líquidas (Subtotal)',valor:dinheiro(subtotalTotal),ico:'💰',detalhe:'valor sem frete · '+numero(nClientes)+' clientes que compraram · '+rotPeriodo,destaque:false},
+    {rotulo:'Clientes que compraram',valor:numero(nClientes),ico:'🛍️',detalhe:rotPeriodo,destaque:false},
+    {rotulo:'Descontos aplicados',valor:dinheiro(desc),ico:'🏷️',detalhe:rotPeriodo,destaque:false},
     {rotulo:'Cadastrados sem compra',valor:numero(sem),ico:'🎯',detalhe:totalBase?'de '+numero(totalBase)+' na base':'-',destaque:false},
     {rotulo:'Recompra (2+ meses)',valor:numero(recorrentes),ico:'🔁',detalhe:'clientes em 2+ meses',destaque:false},
     {rotulo:'Pedidos expirados',valor:numero(nExp),ico:'🚫',detalhe:'não concluídos',destaque:false},
-    {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:'total de pedidos pagos no período',destaque:false}
+    {rotulo:'Pedidos pagos',valor:numero(nPagos),ico:'🧾',detalhe:'pedidos pagos únicos (deduplicados) · '+rotPeriodo,destaque:false}
   ];
   document.getElementById('kpis').innerHTML=cards.map(function(c){ return '<div class="kpi'+(c.destaque?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rotulo+'</div><div class="valor">'+c.valor+'</div><div class="detalhe">'+c.detalhe+'</div></div>'; }).join('');
 }
@@ -1051,10 +1009,9 @@ function montarEvolucao(){
     ctx.fillRect(Math.round(x+2),Math.round(H-padB-hC),Math.max(2,Math.round(bw)),Math.round(hC)+1);
     if(mostrarVals){
       var rx=d.receita>=1000?('R$'+Math.round(d.receita/1000)+'k'):('R$'+Math.round(d.receita));
-      var rotulo=rx+' · '+d.clientes+' cli';
       var ty=H-padB-Math.max(hR,hC)-10; if(ty<padT+2) ty=padT+2;
       ctx.fillStyle='#1d4a2e'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
-      ctx.fillText(rotulo,Math.round(x),Math.round(ty));
+      ctx.fillText(rx+' · '+d.clientes+' cli',Math.round(x),Math.round(ty));
     }
     ctx.fillStyle='#374151'; ctx.textAlign='center'; ctx.font='bold 11px sans-serif';
     ctx.fillText(d.rotulo,Math.round(x),H-12);
@@ -1180,7 +1137,7 @@ function exportarCsvProdutos(){
 function exportarCsvContatos(){
   if(!estado.linhasContatos.length){ alert('Nenhum cliente encontrado.'); return; }
   var linhas=estado.linhasContatos.map(function(r){ return ['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"','"'+r.telefone.replace(/"/g,'""')+'"','"'+r.cidade.replace(/"/g,'""')+'"',r.contato?'Sim':'Não',r.retorno?'Sim':'Não',r.data||'',r.atendente||''].join(';'); });
-  var csv='\uFEFF'+['Cliente','E-mail','Telefone','Cidade','Cliente Contatado','Houve Retorno?','Data do contato','Atendente'].join(';')+'\n'+linhas.join('\n');
+  var csv='\uFEFF'+['Cliente','E-mail','Telefone','Cidade','Contatado','Retorno','Data','Atendente'].join(';')+'\n'+linhas.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='contatos_infinity_piercing.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 
