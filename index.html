@@ -87,7 +87,7 @@
 </header>
 <main>
   <div id="avisos"></div>
-  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas exatas usadas + status + valores</h3><div id="diagLinhas"></div></div>
+  <div class="diag" id="diag" style="display:none"><h3>🔎 Auditoria por mês — colunas exatas + status + valores</h3><div id="diagLinhas"></div></div>
   <div id="conteudo">
     <div class="filtros">
       <label>Histórico — mês a mês</label><div class="chips" id="chipsPeriodo"></div>
@@ -130,14 +130,13 @@ window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.c
 
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
-  /* Sobrescrita opcional por LETRA (ex.: 'A','B'). Vazio = automático por NOME EXATO do cabeçalho. */
+  /* Sobrescrita opcional por LETRA (ex.: 'A'). Vazio = automático por NOME EXATO do cabeçalho. */
   colPedido:'',colEmail:'',colStatus:'',colPaidAt:'',colCreatedAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-var TETO=1000000000; /* acima de R$ 1 bi = célula corrompida -> 0 */
 var estado={meses:[],periodo:'TODOS',segmento:'TODOS',pagina:1,porPagina:50,linhasTabela:[],linhasProdutos:[]};
 
-function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function norm(s){return String(s==null?'':s).replace(/^\uFEFF/,'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function dinheiro(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);}catch(e){return 'R$ '+(v||0);}}
 function numero(v){try{return new Intl.NumberFormat('pt-BR').format(v||0);}catch(e){return String(v||0);}}
@@ -145,16 +144,15 @@ function fmtCurto(v){v=Math.round(v||0);if(v>=1000000)return 'R$'+(v/1000000).to
 function fmtData(d){if(!d)return '—';try{return d.toLocaleDateString('pt-BR');}catch(e){return String(d);}}
 function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');if(!el)return;var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
 
-/* Dinheiro: aceita 326.83 | 830917.22 | 1.234,56 | 5.048.208,96. Acima do TETO = 0. */
+/* Parse de dinheiro: aceita 899975.08, 899.975,08, 1.234,56, 326.83, 300,20 */
 function parseMoney(v){
   if(v==null)return 0;
-  if(typeof v==='number')return isFinite(v)?(Math.abs(v)<=TETO?v:0):0;
+  if(typeof v==='number')return isFinite(v)?v:0;
   var s=String(v).trim();if(!s)return 0;
+  s=s.replace(/R\$/gi,'').replace(/\s/g,'').replace(/%/g,'');
+  if(!/^[0-9.,()-]+$/.test(s))return 0;
   var neg=false;
   if(s.charAt(0)==='('&&s.charAt(s.length-1)===')'){neg=true;s=s.slice(1,-1);}
-  s=s.replace(/R\$/gi,'').replace(/\s/g,'').replace(/%/g,'');
-  if(!/^[0-9.,-]+$/.test(s))return 0;
-  if(s.charAt(0)==='-'){neg=true;s=s.slice(1);}
   var virg=s.indexOf(',')>-1,ponto=s.indexOf('.')>-1,out;
   if(virg&&ponto){
     if(s.lastIndexOf(',')>s.lastIndexOf('.')){out=s.split('.').join('').replace(',','.');}
@@ -166,21 +164,20 @@ function parseMoney(v){
   }else if(ponto){
     var ps=s.split('.');
     if(ps.length===2&&ps[1].length>0&&ps[1].length<=2){out=s;}
-    else if(ps.length>2&&ps[ps.length-1].length===3){out=s.split('.').join('');}
-    else if(ps.length===2&&ps[0].length>3&&ps[1].length===3){out=s.split('.').join('');}
+    else if(ps.length===2&&ps[1].length===3&&ps[0].length>3){out=s.split('.').join('');}
     else{out=s;}
   }else{out=s;}
   var n=parseFloat(out);
-  if(isNaN(n)||!isFinite(n))return 0;
-  if(Math.abs(n)>TETO)return 0;
-  return neg?-n:n;
+  return isNaN(n)?0:(neg?-n:n);
 }
-function rawNum(v){if(v==null)return 0;var d=String(v).replace(/[^0-9]/g,'');if(!d)return 0;var n=parseFloat(d);return isNaN(n)?0:n;}
 function parseData(v){
   if(v==null||v==='')return null;
   if(v instanceof Date)return isNaN(v.getTime())?null:v;
   if(typeof v==='number'){if(v>100000000000){var a=new Date(v);return isNaN(a.getTime())?null:a;}if(v>20000){var b=new Date(Math.round((v-25569)*86400000));return isNaN(b.getTime())?null:b;}return null;}
-  var s=String(v).trim(),esp=s.indexOf(' '),dp=esp>-1?s.substring(0,esp):s;
+  var s=String(v).trim();
+  var t=s.indexOf('T');
+  if(t>-1)s=s.substring(0,t)+' '+s.substring(t+1);
+  var esp=s.indexOf(' '),dp=esp>-1?s.substring(0,esp):s;
   var tr=dp.split('-');
   if(tr.length===3&&tr[0].length===4){var d1=new Date(+tr[0],+tr[1]-1,+tr[2]);if(!isNaN(d1.getTime()))return d1;}
   var sep=-1;if(dp.indexOf('/')>-1)sep='/';else if(dp.indexOf('.')>-1)sep='.';
@@ -189,10 +186,7 @@ function parseData(v){
 }
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
 
-/* ============ COLUNAS — SOMENTE NOME EXATO DO CABEÇALHO (sem suposições) ============
-   Dicionário do usuário:
-   Name | Email | Financial Status | Paid at | Created at | Subtotal | Total
-   Shipping | Taxes | Discount Amount | Lineitem quantity/name/price/sku */
+/* ===== RESOLUÇÃO DE COLUNAS — SOMENTE PELO NOME EXATO DO CABEÇALHO ===== */
 function resolverColunas(colunas){
   var m={pedido:-1,email:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1},uso={};
   function acharExata(nomes){
@@ -202,9 +196,8 @@ function resolverColunas(colunas){
     }
     return -1;
   }
-  function cfgLetra(chave){return letraIdx(CONFIG[chave],colunas.length);}
   function set(tipo,nomesPadrao,chaveCfg){
-    var i=cfgLetra(chaveCfg);
+    var i=letraIdx(CONFIG[chaveCfg],colunas.length);
     if(i<0)i=acharExata(nomesPadrao);
     if(tipo==='pedido'&&i<0&&colunas.length>0){i=0;uso.pedidoAuto=true;}
     m[tipo]=i;uso[tipo]=i>-1?(colunas[i]||''):'';
@@ -229,64 +222,47 @@ function resolverColunas(colunas){
   return {m:m,uso:uso};
 }
 
-/* ============ REGRA DE PEDIDO PAGO — IGUALDADE EXATA ============
-   Premissa do usuário: Financial Status conta se o pedido FINALIZOU (meta)
-   ou EXPIROU (carrinho abandonado).
-   Só 'paid' (exato) conta como pago. 'partially_paid', 'refunded',
-   'expired', '_scaladiscount' NÃO contam. */
-function ehPago(status){
-  var st=String(status||'').trim().toLowerCase();
-  return st==='paid';
-}
-function ehExpirado(status){
-  var st=String(status||'').trim().toLowerCase();
-  return st==='expired'||st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('abandoned')>-1||st.indexOf('void')>-1||st.indexOf('falhou')>-1;
-}
+/* ===== REGRAS (diretrizes do usuário) =====
+   Financial Status: paid = finalizado/conta p/ meta; expired = carrinho abandonado. */
+function ehPago(status){return String(status||'').trim().toLowerCase()==='paid';}
+function ehExpirado(status){var st=String(status||'').trim().toLowerCase();return st==='expired'||st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('abandon')>-1||st.indexOf('void')>-1;}
 
-/* ============ PROCESSAMENTO ============ */
+/* ===== PROCESSAMENTO — 1× POR PEDIDO (Name) ===== */
 function processarMes(colunas,linhas){
   var r=resolverColunas(colunas),m=r.m;
-  var ordens=new Map(),suspeitos=0,ausentes=[];
-  if(m.subtotal<0)ausentes.push('Subtotal');
-  if(m.total<0)ausentes.push('Total');
-  if(m.desconto<0)ausentes.push('Discount Amount');
-  if(m.frete<0)ausentes.push('Shipping');
-  if(m.taxas<0)ausentes.push('Taxes');
-  if(m.status<0)ausentes.push('Financial Status');
-  if(m.paidAt<0)ausentes.push('Paid at');
-
+  var ordens=new Map(),ausentes=[];
+  ['Subtotal','Total','Discount Amount','Shipping','Taxes','Financial Status','Paid at'].forEach(function(n){
+    var key={Subtotal:'subtotal',Total:'total','Discount Amount':'desconto',Shipping:'frete',Taxes:'taxas','Financial Status':'status','Paid at':'paidAt'}[n];
+    if(m[key]<0)ausentes.push(n);
+  });
   linhas.forEach(function(ln){
     var chave=m.pedido>-1?String(ln[m.pedido]||'').trim():'';
     if(!chave)chave='L:'+ordens.size;
     var o=ordens.get(chave);
-    if(!o){o={chave:chave,email:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,hs:0,ht:0,hd:0,hf:0,hx:0,items:[]};ordens.set(chave,o);}
+    if(!o){o={chave:chave,email:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,items:[]};ordens.set(chave,o);}
     var email=m.email>-1?String(ln[m.email]||'').trim():'';
     var status=m.status>-1?String(ln[m.status]||'').trim():'';
     var paidAt=m.paidAt>-1?parseData(ln[m.paidAt]):null;
     var createdAt=m.createdAt>-1?parseData(ln[m.createdAt]):null;
     var subtotal=m.subtotal>-1?parseMoney(ln[m.subtotal]):0;
     var total=m.total>-1?parseMoney(ln[m.total]):0;
-    var desconto=m.desconto>-1?parseMoney(ln[m.desconto]):0;
+    var desconto=m.desconto>-1?Math.abs(parseMoney(ln[m.desconto])):0;
     var frete=m.frete>-1?parseMoney(ln[m.frete]):0;
     var taxas=m.taxas>-1?parseMoney(ln[m.taxas]):0;
-    if(m.total>-1&&rawNum(ln[m.total])>TETO)suspeitos++;
-    if(m.subtotal>-1&&rawNum(ln[m.subtotal])>TETO)suspeitos++;
     if(email&&!o.email)o.email=email;
     if(status&&!o.status)o.status=status;
     if(paidAt&&!o.paidAt)o.paidAt=paidAt;
     if(createdAt&&!o.createdAt)o.createdAt=createdAt;
-    if(!o.hs){o.subtotal=subtotal;o.hs=1;}
-    if(!o.ht){o.total=total;o.ht=1;}
-    if(!o.hd){o.desconto=Math.abs(desconto);o.hd=1;}
-    if(!o.hf){o.frete=frete;o.hf=1;}
-    if(!o.hx){o.taxas=taxas;o.hx=1;}
+    if(subtotal>o.subtotal)o.subtotal=subtotal;
+    if(total>o.total)o.total=total;
+    if(desconto>o.desconto)o.desconto=desconto;
+    if(frete>o.frete)o.frete=frete;
+    if(taxas>o.taxas)o.taxas=taxas;
     var produto=m.produto>-1?String(ln[m.produto]||'').trim():(m.sku>-1?String(ln[m.sku]||'').trim():'');
     var qtd=m.qtd>-1?(parseInt(ln[m.qtd],10)||0):0;
     var preco=m.preco>-1?parseMoney(ln[m.preco]):0;
     if(produto||qtd)o.items.push({produto:produto||'(sem produto)',qtd:qtd||1,preco:preco});
   });
-
-  /* Data do pedido = Paid at (premissa); mês dominante do arquivo. */
   var cont={};
   ordens.forEach(function(o){var d=o.paidAt||o.createdAt;if(!d)return;var k=d.getFullYear()*100+(d.getMonth()+1);cont[k]=(cont[k]||0)+1;});
   var mesAlvo=null,noMes=0;
@@ -299,13 +275,12 @@ function processarMes(colunas,linhas){
     var expirado=!pago&&ehExpirado(o.status);
     var liquido=o.subtotal;
     if(liquido<=0){var si=0;o.items.forEach(function(it){si+=(it.preco||0)*(it.qtd||1);});liquido=si>0?si:o.total;}
-    /* Bruto = coluna Total; se ausente, usa a fórmula da premissa: Subtotal + frete + taxas */
     var bruto=o.total>0?o.total:(liquido+o.frete+o.taxas);
     saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',data:d,status:o.status,
       liquido:pago?liquido:0,bruto:pago?bruto:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,
       pago:pago,expirado:expirado,items:o.items});
   });
-  return {saida:saida,uso:r.uso,ausentes:ausentes,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,suspeitos:suspeitos,razao:saida.length?linhas.length/saida.length:1};
+  return {saida:saida,uso:r.uso,ausentes:ausentes,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,razao:saida.length?linhas.length/saida.length:1};
 }
 
 function detectarRotulo(colunas,linhas,nomeArquivo){
@@ -321,7 +296,6 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   if(m)return m[1].charAt(0).toUpperCase()+m[1].slice(1)+'/'+String(m[2]).slice(-2);
   return String(nomeArquivo||'Mês').replace(/\.csv$/i,'')||'Mês';
 }
-function fmtMesChave(k){return NOMES[(k%100)-1]+'/'+String(Math.floor(k/100)).slice(2);}
 function chaveMes(rot){var m=String(rot||'').match(/^([A-Za-z]{3})\/(\d{2})$/);if(m){var idx=NOMES.indexOf(m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase());if(idx>-1)return parseInt(m[2],10)*100+(idx+1);}return 0;}
 function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;}
 
@@ -366,7 +340,7 @@ function carregarDados(){
         if(!colunas.filter(function(x){return x;}).length)throw new Error('CSV vazio');
         var rot=detectarRotulo(colunas,linhas,f.name)||'Mês';
         var proc=processarMes(colunas,linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,uso:proc.uso,ausentes:proc.ausentes,arquivo:f.name,nLinhas:proc.nLinhas,nPedidos:proc.nPedidos,removidos:proc.removidos,suspeitos:proc.suspeitos,razao:proc.razao});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,uso:proc.uso,ausentes:proc.ausentes,arquivo:f.name,nLinhas:proc.nLinhas,nPedidos:proc.nPedidos,removidos:proc.removidos,razao:proc.razao});
       }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:(e&&e.message)||e});}));
     });
     Promise.all(prom).then(function(){
@@ -389,9 +363,7 @@ function carregarDados(){
           var lin='<div class="linha"><span class="'+(uso.status?'ok':'bad')+'">'+(uso.status?'✅':'❌')+' '+esc(mes.arquivo)+' → '+esc(mes.rotulo)+'</span><span>';
           lin+=String(mes.nLinhas)+' linhas → '+String(mes.nPedidos)+' pedidos · '+(mes.razao?mes.razao.toFixed(1):'1')+' linhas/pedido';
           lin+=' · colunas: pedido['+esc(uso.pedido||'—')+(uso.pedidoAuto?'*':'')+'] status['+esc(uso.status||'—')+'] paidAt['+esc(uso.paidAt||'—')+'] subtotal['+esc(uso.subtotal||'—')+'] total['+esc(uso.total||'—')+'] desconto['+esc(uso.desconto||'—')+'] frete['+esc(uso.frete||'—')+'] taxas['+esc(uso.taxas||'—')+']';
-          if(uso.pedidoAuto)lin+=' ⚠ pedido: coluna A usada como fallback';
           if(mes.ausentes.length)lin+=' ⚠ NÃO ENCONTRADAS: '+mes.ausentes.join(', ')+' → se Total faltar, bruto=Subtotal+frete+taxas';
-          if(mes.suspeitos>0)lin+=' ⚠ '+mes.suspeitos+' célula(s) > R$ 1 bi ignorada(s) (corrompida)';
           if(mes.removidos>0)lin+=' ⚠ '+mes.removidos+' pedido(s) de outro mês removidos';
           var contS={};
           mes.pedidos.forEach(function(o){var k=(o.status||'(vazio)').toLowerCase()||'(vazio)';contS[k]=(contS[k]||0)+1;});
