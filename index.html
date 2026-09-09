@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.1</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -40,18 +40,6 @@
   .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:14px}
   .card h3{font-size:13px;margin:0 0 8px}
   canvas{width:100%;height:150px;display:block}
-  .donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:6px 0}
-  .donut{width:110px;height:110px;border-radius:50%;background:#e5e7eb;position:relative;flex:0 0 auto}
-  .donut .centro{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--v)}
-  .legenda{font-size:13px;color:#374151;line-height:2}
-  .legenda .item{display:flex;align-items:center;gap:6px}
-  .legenda .cor{width:12px;height:12px;border-radius:3px;display:inline-block}
-  .barras{font-size:12px}
-  .barras .barra{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .barras .nome{width:45%;color:#374151;line-height:1.3;word-break:break-word}
-  .barras .pista{flex:1;background:var(--creme);border-radius:6px;height:15px;overflow:hidden}
-  .barras .preench{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--v2),var(--v))}
-  .barras .qtd{width:52px;text-align:right;font-weight:700;color:var(--v)}
   .tabs{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
   .tab{border:1px solid var(--b);background:#fff;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
   .tab.ativo{background:var(--v);border-color:var(--v);color:#fff}
@@ -76,7 +64,7 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.1</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
   <div class="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
@@ -122,7 +110,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12 · Visão geral com dados consolidados + tabelas lidas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.1 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -132,7 +120,6 @@ var CONFIG={
   colPedido:'',colEmail:'',colStatus:'',colPaidAt:'',colCreatedAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-/* ===== FONTE DA VERDADE — Visão geral (consolidado, 1× por pedido, paid) ===== */
 var DADOS=[
   {rot:'Jun/26',liq:1248033.91,bru:1274287.57,desc:644337.69,fre:26234.88,cli:1405,pag:1682},
   {rot:'Jul/26',liq:843215.32,bru:866470.35,desc:301048.88,fre:23255.03,cli:1197,pag:1398},
@@ -198,7 +185,6 @@ function parseData(v){
 }
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
 
-/* ===== COLUNAS — SOMENTE NOME EXATO DO CABEÇALHO ===== */
 function resolverColunas(colunas){
   var m={pedido:-1,email:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1};
   function acharExata(nomes){
@@ -236,7 +222,6 @@ function resolverColunas(colunas){
 function ehPago(status){return String(status||'').trim().toLowerCase()==='paid';}
 function ehExpirado(status){var st=String(status||'').trim().toLowerCase();return st==='expired'||st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('abandon')>-1||st.indexOf('void')>-1;}
 
-/* ===== PROCESSAMENTO — 1× POR PEDIDO (Name) ===== */
 function processarMes(colunas,linhas){
   var m=resolverColunas(colunas);
   var ordens=new Map();
@@ -328,14 +313,13 @@ function parseCSV(texto){
   return linhas.filter(function(l){return l.some(function(c2){return String(c2).trim()!=='';});});
 }
 
-/* ===== CARGA ===== */
 function carregarDados(){
   var txt=document.getElementById('pillTexto');
-  txt.textContent='Carregando…';
-  document.getElementById('avisos').innerHTML='';
+  if(txt)txt.textContent='Carregando…';
+  var av=document.getElementById('avisos');if(av)av.innerHTML='';
   estado.meses=[];
   listarArquivosRepo().then(function(arquivos){
-    if(!arquivos.length){txt.textContent='Sem CSVs';return;}
+    if(!arquivos.length){if(txt)txt.textContent='Sem CSVs';return;}
     var mesArqs=arquivos.filter(function(f){return !ehArquivoBase(f.name);});
     var prom=[];
     mesArqs.forEach(function(f){
@@ -355,44 +339,46 @@ function carregarDados(){
       Object.keys(porMes).forEach(function(rot){var l=porMes[rot];if(l.length<=1){manter.add(l[0]);return;}l.sort(function(a,b){return a.nPedidos-b.nPedidos;});manter.add(l[0]);});
       estado.meses=estado.meses.filter(function(mes){return manter.has(mes);});
       estado.meses.sort(function(a,b){return chaveMes(a.rotulo)-chaveMes(b.rotulo);});
-      montarChips();montarKpis();montarGraficos();montarDonut();montarTopProdutos();
+      montarChips();montarKpis();montarGraficos();
       carregarContatos();
-      txt.textContent='Pronto ✓';
+      if(txt)txt.textContent='Pronto ✓';
     });
-  }).catch(function(e){txt.textContent='Erro';avisar('erro','GitHub',esc(e&&e.message?e.message:e));});
+  }).catch(function(e){if(txt)txt.textContent='Erro';avisar('erro','GitHub',esc(e&&e.message?e.message:e));});
 }
 
-/* ===== VISÃO GERAL (dados fixos) ===== */
 function mesesDoPeriodo(){
   if(estado.periodo==='TODOS')return DADOS;
   var m=DADOS.filter(function(x){return x.rot===estado.periodo;});
   return m.length?m:[];
 }
 function montarChips(){
-  var p=document.getElementById('chipsPeriodo');p.innerHTML='';
+  var p=document.getElementById('chipsPeriodo');if(!p)return;p.innerHTML='';
   var b=document.createElement('button');b.className='chip'+(estado.periodo==='TODOS'?' ativo':'');b.textContent='📅 Todos ('+DADOS.map(function(m){return m.rot;}).join(' + ')+')';
-  b.onclick=function(){estado.periodo='TODOS';estado.pagina=1;montarChips();montarKpis();montarGraficos();montarDonut();montarTopProdutos();};p.appendChild(b);
+  b.onclick=function(){estado.periodo='TODOS';estado.pagina=1;montarChips();montarKpis();montarGraficos();};p.appendChild(b);
   DADOS.forEach(function(m){
     var c=document.createElement('button');c.className='chip'+(estado.periodo===m.rot?' ativo':'');c.textContent='✅ '+m.rot;
-    c.onclick=function(){estado.periodo=m.rot;estado.pagina=1;montarChips();montarKpis();montarGraficos();montarDonut();montarTopProdutos();};p.appendChild(c);
+    c.onclick=function(){estado.periodo=m.rot;estado.pagina=1;montarChips();montarKpis();montarGraficos();};p.appendChild(c);
   });
-  var s=document.getElementById('chipsSegmento');s.innerHTML='';
+  var s=document.getElementById('chipsSegmento');if(s)s.innerHTML='';
   [['TODOS','Todos'],['COMPROU','Comprou no período'],['EXPIROU','Expirados']].forEach(function(it){
     var c=document.createElement('button');c.className='chip'+(estado.segmento===it[0]?' ativo':'');c.textContent=it[1];
-    c.onclick=function(){estado.segmento=it[0];estado.pagina=1;montarChips();montarTabela();};s.appendChild(c);
+    c.onclick=function(){estado.segmento=it[0];estado.pagina=1;montarChips();montarTabela();};
+    if(s)s.appendChild(c);
   });
 }
 function montarKpis(){
+  var el=document.getElementById('kpis');if(!el)return;
   var ms=mesesDoPeriodo(),rot=estado.periodo==='TODOS'?'todos os meses':estado.periodo;
   var html=CARDS.map(function(c){
     var v=0;ms.forEach(function(m){v+=c.fn(m);});
-    var vv=c.fmt(v)&&c.fmt(v).indexOf('R$')>-1?dinheiro(v):numero(v);
+    var vv=dinheiro(v);
+    if(c.fmt(1).indexOf('R$')===-1)vv=numero(v);
     return '<div class="kpi'+(c.dest?' destaque':'')+'"><div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rot+'</div><div class="valor">'+vv+'</div><div class="detalhe">'+rot+'</div></div>';
   }).join('');
-  document.getElementById('kpis').innerHTML=html;
+  el.innerHTML=html;
 }
 function montarGraficos(){
-  var g=document.getElementById('graficos');g.innerHTML='';
+  var g=document.getElementById('graficos');if(!g)return;g.innerHTML='';
   CARDS.forEach(function(c){
     var card=document.createElement('div');card.className='card';
     card.innerHTML='<h3>'+c.ico+' '+esc(c.rot)+'</h3><canvas id="cv-'+c.id+'" height="150"></canvas>';
@@ -420,39 +406,7 @@ function desenharGrafico(c){
   });
   ctx.strokeStyle='#e5e0d4';ctx.beginPath();ctx.moveTo(padL,cv.height-padB);ctx.lineTo(cv.width-padR,cv.height-padB);ctx.stroke();
 }
-function montarDonut(){
-  var pagos=0,exp=0;
-  pedidosDoPeriodo().forEach(function(o){if(o.pago)pagos++;else if(o.expirado)exp++;});
-  var total=pagos+exp,pct=total?(pagos/total*100):0;
-  var d=document.getElementById('donut');
-  if(d)d.style.background=total?'conic-gradient(var(--v2) 0 '+pct+'%, #f87171 '+pct+'% 100%)':'#e5e7eb';
-  var c=document.getElementById('donutCentro');if(c)c.textContent=Math.round(pct)+'%';
-  var l1=document.getElementById('legPagos');if(l1)l1.textContent=numero(pagos);
-  var l2=document.getElementById('legExpirados');if(l2)l2.textContent=numero(exp);
-}
-function montarTopProdutos(){
-  var map=new Map();
-  pedidosDoPeriodo().forEach(function(o){
-    if(!o.pago)return;
-    (o.items||[]).forEach(function(it){
-      if(!it||!it.produto)return;
-      var p=map.get(it.produto)||{nome:it.produto,qtd:0};
-      p.qtd+=it.qtd||1;map.set(it.produto,p);
-    });
-  });
-  var arr=Array.from(map.values()).sort(function(a,b){return b.qtd-a.qtd;}).slice(0,8);
-  var el=document.getElementById('topProdutos');el.innerHTML='';
-  if(!arr.length){el.innerHTML='<div class="vazio">Sem itens neste período.</div>';return;}
-  var max=arr[0].qtd||1;
-  arr.forEach(function(p){
-    var larg=Math.max(4,Math.round(p.qtd/max*100));
-    var d=document.createElement('div');d.className='barra';
-    d.innerHTML='<span class="nome">'+esc(p.nome)+'</span><span class="pista"><span class="preench" style="width:'+larg+'%"></span></span><span class="qtd">'+numero(p.qtd)+'</span>';
-    el.appendChild(d);
-  });
-}
 
-/* ===== CONSULTAS (tabelas dinâmicas) ===== */
 function pedidosDoPeriodo(){
   if(estado.periodo==='TODOS'){var t=[];estado.meses.forEach(function(m){if(m.ok)t=t.concat(m.pedidos);});return t;}
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
@@ -471,9 +425,8 @@ function clientesDoPeriodo(){
   return map;
 }
 function mesesComCompra(email){var n=0;estado.meses.forEach(function(m){if(m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;}))n++;});return n;}
-
-/* ===== TABELAS ===== */
 function montarTabela(){
+  var tb=document.getElementById('tbodyClientes');if(!tb)return;
   var comp=clientesDoPeriodo(),linhas=[];
   comp.forEach(function(c,em){linhas.push({email:em,nome:c.nome,sit:c.pedidos>0?'comprou':'—',pedidos:c.pedidos,total:c.total,ultima:c.ultima,meses:mesesComCompra(em)});});
   if(estado.segmento==='COMPROU')linhas=linhas.filter(function(r){return r.pedidos>0;});
@@ -487,11 +440,11 @@ function montarTabela(){
   if(estado.busca){var b=norm(estado.busca);linhas=linhas.filter(function(r){return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1;});}
   linhas.sort(function(a,b){return b.total-a.total;});
   estado.linhasTabela=linhas;
-  document.getElementById('contadorTabela').textContent=numero(linhas.length)+' cliente(s)';
+  var ct=document.getElementById('contadorTabela');if(ct)ct.textContent=numero(linhas.length)+' cliente(s)';
   var totalPag=Math.max(1,Math.ceil(linhas.length/estado.porPagina));
   if(estado.pagina>totalPag)estado.pagina=totalPag;
   var ini=(estado.pagina-1)*estado.porPagina,fatia=linhas.slice(ini,ini+estado.porPagina);
-  var tb=document.getElementById('tbodyClientes');tb.innerHTML='';
+  tb.innerHTML='';
   if(!fatia.length){tb.innerHTML='<tr><td colspan="7" class="vazio">Nenhum cliente.</td></tr>';}
   fatia.forEach(function(r){
     var badge=r.sit==='comprou'?'<span class="badge b-comprou">Comprou</span>':(r.sit==='expirado'?'<span class="badge b-expirado">Expirado</span>':'<span class="badge b-semcompra">Sem pedido pago</span>');
@@ -499,11 +452,12 @@ function montarTabela(){
     tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+badge+'</td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?r.meses+' meses':r.meses+' mês')+'</td>';
     tb.appendChild(tr);
   });
-  document.getElementById('infoPag').textContent='Página '+estado.pagina+' de '+totalPag;
-  document.getElementById('prevPag').disabled=estado.pagina<=1;
-  document.getElementById('nextPag').disabled=estado.pagina>=totalPag;
+  var info=document.getElementById('infoPag');if(info)info.textContent='Página '+estado.pagina+' de '+totalPag;
+  var pp=document.getElementById('prevPag');if(pp)pp.disabled=estado.pagina<=1;
+  var np=document.getElementById('nextPag');if(np)np.disabled=estado.pagina>=totalPag;
 }
 function montarTabelaProdutos(){
+  var tb=document.getElementById('tbodyProdutos');if(!tb)return;
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
     if(!o.pago)return;
@@ -515,13 +469,11 @@ function montarTabelaProdutos(){
   });
   var arr=Array.from(map.values()).sort(function(a,b){return b.qtd-a.qtd;});
   estado.linhasProdutos=arr;
-  document.getElementById('contadorProdutos').textContent=numero(arr.length)+' produto(s)';
-  var tb=document.getElementById('tbodyProdutos');tb.innerHTML='';
+  var ct=document.getElementById('contadorProdutos');if(ct)ct.textContent=numero(arr.length)+' produto(s)';
+  tb.innerHTML='';
   if(!arr.length){tb.innerHTML='<tr><td colspan="3" class="vazio">Sem produtos no período.</td></tr>';return;}
   arr.forEach(function(p){var tr=document.createElement('tr');tr.innerHTML='<td>'+esc(p.nome)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tb.appendChild(tr);});
 }
-
-/* ===== CONTATOS (planilha via Apps Script) ===== */
 function jsonp(url,cb){return new Promise(function(res,rej){var sep=url.indexOf('?')>-1?'&':'?';var s=document.createElement('script'),done=false;var t=setTimeout(function(){cleanup();rej(new Error('timeout'));},20000);function cleanup(){if(done)return;done=true;clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(d){cleanup();res(d);};s.src=url+sep+'callback='+cb+'&_='+Date.now();s.onerror=function(){cleanup();rej(new Error('falha de rede'));};document.head.appendChild(s);});}
 function carregarContatos(){
   if(!CONFIG.apiUrl){estado.apiOk=false;return;}
@@ -535,14 +487,13 @@ function carregarContatos(){
   }).catch(function(){estado.apiOk=false;});
 }
 function montarTabelaContatos(){
+  var tb=document.getElementById('tbodyContatos');if(!tb)return;
   var arr=Object.keys(estado.contatos).map(function(em){var v=estado.contatos[em];return{email:v.email||em,nome:v.nome||em,telefone:v.telefone||'',cidade:v.cidade||'',contato:!!v.contato,retorno:!!v.retorno,data:v.data||'',atendente:v.atendente||''};});
-  document.getElementById('contadorContatos').textContent=numero(arr.length)+' cliente(s) na planilha'+(estado.apiOk?'':' · ⚠ sem conexão');
-  var tb=document.getElementById('tbodyContatos');tb.innerHTML='';
+  var ct=document.getElementById('contadorContatos');if(ct)ct.textContent=numero(arr.length)+' cliente(s) na planilha'+(estado.apiOk?'':' · ⚠ sem conexão');
+  tb.innerHTML='';
   if(!arr.length){tb.innerHTML='<tr><td colspan="8" class="vazio">Nenhum cliente.</td></tr>';return;}
   arr.forEach(function(r){var tr=document.createElement('tr');tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.telefone||'—')+'</td><td>'+esc(r.cidade||'—')+'</td><td>'+(r.contato?'✅':'—')+'</td><td>'+(r.retorno?'✅':'—')+'</td><td>'+esc(r.data||'—')+'</td><td>'+esc(r.atendente||'—')+'</td>';tb.appendChild(tr);});
 }
-
-/* ===== EXPORT ===== */
 function baixar(nome,csv){var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;a.click();URL.revokeObjectURL(a.href);}
 function exportarCsv(){
   if(!estado.linhasTabela.length){alert('Nenhum cliente encontrado.');return;}
@@ -560,26 +511,26 @@ function exportarCsvContatos(){
   var linhas=arr.map(function(r){return['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"','"'+r.telefone.replace(/"/g,'""')+'"','"'+r.cidade.replace(/"/g,'""')+'"',r.contato?'Sim':'Não',r.retorno?'Sim':'Não',r.data||'',r.atendente||''].join(';');});
   baixar('contatos_infinity_piercing.csv','\uFEFF'+['Cliente','E-mail','Telefone','Cidade','Contatado','Retorno','Data','Atendente'].join(';')+'\n'+linhas.join('\n'));
 }
-
-/* ===== EVENTOS ===== */
 function mostrarTab(nome){
   document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('ativo',x.dataset.tab===nome);});
-  document.getElementById('overview').style.display=nome==='overview'?'':'none';
-  document.getElementById('clientes').style.display=nome==='clientes'?'':'none';
-  document.getElementById('produtos').style.display=nome==='produtos'?'':'none';
-  document.getElementById('contatos').style.display=nome==='contatos'?'':'none';
+  var ov=document.getElementById('overview'),cl=document.getElementById('clientes'),pr=document.getElementById('produtos'),co=document.getElementById('contatos');
+  if(ov)ov.style.display=nome==='overview'?'':'none';
+  if(cl)cl.style.display=nome==='clientes'?'':'none';
+  if(pr)pr.style.display=nome==='produtos'?'':'none';
+  if(co)co.style.display=nome==='contatos'?'':'none';
   if(nome==='clientes')montarTabela();
   if(nome==='produtos')montarTabelaProdutos();
   if(nome==='contatos')montarTabelaContatos();
 }
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){mostrarTab(t.dataset.tab);};});
-document.getElementById('busca').addEventListener('input',function(e){clearTimeout(estado._db);estado._db=setTimeout(function(){estado.busca=e.target.value;estado.pagina=1;montarTabela();},250);});
-document.getElementById('prevPag').onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
-document.getElementById('nextPag').onclick=function(){estado.pagina++;montarTabela();};
-document.getElementById('btnCsv').onclick=exportarCsv;
-document.getElementById('btnCsvProdutos').onclick=exportarCsvProdutos;
-document.getElementById('btnCsvContatos').onclick=exportarCsvContatos;
-document.getElementById('btnTestarConexao').onclick=function(){carregarContatos();setTimeout(montarTabelaContatos,400);};
+var buscaEl=document.getElementById('busca');
+if(buscaEl)buscaEl.addEventListener('input',function(e){clearTimeout(estado._db);estado._db=setTimeout(function(){estado.busca=e.target.value;estado.pagina=1;montarTabela();},250);});
+var pp=document.getElementById('prevPag');if(pp)pp.onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
+var np=document.getElementById('nextPag');if(np)np.onclick=function(){estado.pagina++;montarTabela();};
+var bc=document.getElementById('btnCsv');if(bc)bc.onclick=exportarCsv;
+var bp=document.getElementById('btnCsvProdutos');if(bp)bp.onclick=exportarCsvProdutos;
+var bco=document.getElementById('btnCsvContatos');if(bco)bco.onclick=exportarCsvContatos;
+var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){carregarContatos();setTimeout(montarTabelaContatos,400);};
 carregarDados();
 </script>
 </body>
