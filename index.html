@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.7</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.8</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -14,6 +14,7 @@
   header .spacer{flex:1}
   .pill{font-size:12.5px;background:rgba(255,255,255,.16);padding:6px 13px;border-radius:999px;display:flex;align-items:center;gap:6px}
   .pill .dot{width:9px;height:9px;border-radius:50%;background:#4ade80}
+  .pill.err .dot{background:#f87171}
   .btn{border:1px solid var(--b);background:#fff;border-radius:9px;padding:8px 15px;font-size:13.5px;cursor:pointer;color:#374151;font-weight:600}
   .btn:hover{border-color:var(--v2);color:var(--v)}
   .btn:disabled{opacity:.5;cursor:default}
@@ -77,14 +78,15 @@
   .aviso{border-radius:14px;padding:13px 16px;margin-bottom:10px;font-size:13.5px;line-height:1.6;display:none}
   .aviso.show{display:block}
   .aviso.erro{background:var(--rdb);border:1px solid #fca5a5;color:var(--rd)}
+  .aviso.info{background:var(--amb);border:1px solid #fcd34d;color:var(--am)}
   footer{max-width:1440px;margin:20px auto 0;padding:0 28px;font-size:12.5px;color:var(--cin);text-align:center}
 </style>
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.7</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.8</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
-  <div class="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
+  <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
 <main>
   <div id="avisos"></div>
@@ -192,7 +194,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.7 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.8 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -216,7 +218,7 @@ var CARDS=[
   {id:'cli',rot:'Clientes que compraram',ico:'🛍️',dest:false,fn:function(m){return m.cli;},fmt:function(v){return numero(v);}},
   {id:'pag',rot:'Pedidos pagos',ico:'✅',dest:false,fn:function(m){return m.pag;},fmt:function(v){return numero(v);}}
 ];
-var estado={periodo:'TODOS',segmento:'TODOS',busca:'',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},ordemCont:{chave:'nome',dir:1},meses:[],linhasTabela:[],linhasProdutos:[],contatos:{},apiOk:false};
+var estado={periodo:'TODOS',segmento:'TODOS',busca:'',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},ordemCont:{chave:'nome',dir:1},meses:[],linhasTabela:[],linhasProdutos:[],contatos:{},apiOk:false,apiMsg:''};
 
 function norm(s){return String(s==null?'':s).replace(/^\uFEFF/,'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -245,6 +247,7 @@ function fechaOrd(v){
   return d&&!isNaN(d.getTime())?String(d.getFullYear())+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2):t;
 }
 function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');if(!el)return;var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
+function limparAvisos(){var el=document.getElementById('avisos');if(el)el.innerHTML='';}
 
 function parseMoney(v){
   if(v==null)return 0;
@@ -326,7 +329,6 @@ function resolverColunas(colunas,linhas){
   set('desconto',['discountamount','totaldiscounts'],'colDesconto');
   set('frete',['shipping'],'colFrete');
   set('taxas',['taxes'],'colTaxas');
-  /* E-mail: nome exato + validação por conteúdo + fallbacks */
   var iEmail=letraIdx(CONFIG.colEmail,colunas.length);
   if(iEmail<0)iEmail=acharExata(['email','e-mail','buyeremail','emailcomprador']);
   if(iEmail<0||!colunaPareceEmail(iEmail,colunas,linhas)){
@@ -366,7 +368,7 @@ function processarMes(colunas,linhas){
     var chave=m.pedido>-1?String(ln[m.pedido]||'').trim():'';
     if(!chave)chave='L:'+ordens.size;
     var o=ordens.get(chave);
-    if(!o){o={chave:chave,email:'',nome:'',telefone:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,items:[]};ordens.set(chave,o);}
+    if(!o){o={chave:chave,email:'',emailRaw:'',nome:'',telefone:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,items:[]};ordens.set(chave,o);}
     var email=m.email>-1?String(ln[m.email]||'').trim():'';
     var nome=m.nome>-1?String(ln[m.nome]||'').trim():'';
     var telefone=m.telefone>-1?String(ln[m.telefone]||'').trim():'';
@@ -378,7 +380,8 @@ function processarMes(colunas,linhas){
     var desconto=m.desconto>-1?Math.abs(parseMoney(ln[m.desconto])):0;
     var frete=m.frete>-1?parseMoney(ln[m.frete]):0;
     var taxas=m.taxas>-1?parseMoney(ln[m.taxas]):0;
-    if(email&&!o.email)o.email=email;
+    if(email&&!o.emailRaw)o.emailRaw=email;
+    if(email&&!o.email)o.email=norm(email);
     if(nome&&!o.nome)o.nome=nome;
     if(telefone&&!o.telefone)o.telefone=telefone;
     if(status&&!o.status)o.status=status;
@@ -408,7 +411,7 @@ function processarMes(colunas,linhas){
     var liquido=o.subtotal;
     if(liquido<=0){var si=0;o.items.forEach(function(it){si+=(it.preco||0)*(it.qtd||1);});liquido=si>0?si:o.total;}
     var bruto=o.total>0?o.total:(liquido+o.frete+o.taxas);
-    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',telefone:o.telefone||'',data:d,status:o.status,
+    saida.push({chave:o.chave,email:o.email,emailRaw:o.emailRaw||'',nome:o.nome||'',telefone:o.telefone||'',data:d,status:o.status,
       liquido:pago?liquido:0,bruto:pago?bruto:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,
       pago:pago,expirado:expirado,items:o.items});
   });
@@ -431,7 +434,7 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
 function chaveMes(rot){var m=String(rot||'').match(/^([A-Za-z]{3})\/(\d{2})$/);if(m){var idx=NOMES.indexOf(m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase());if(idx>-1)return parseInt(m[2],10)*100+(idx+1);}return 0;}
 function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;}
 
-function fetchT(url,ms){return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error('timeout ao acessar '+url.split('/').pop()));},ms);fetch(url,{cache:'no-store'}).then(function(r){clearTimeout(t);res(r);},function(e){clearTimeout(t);rej(e);});});}
+function fetchT(url,ms){return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error('timeout'));},ms);fetch(url,{cache:'no-store'}).then(function(r){clearTimeout(t);res(r);},function(e){clearTimeout(t);rej(e);});});}
 function listarArquivosRepo(){
   return fetchT('https://api.github.com/repos/'+CONFIG.repo+'/contents/',25000).then(function(r){
     if(r.status===403)throw new Error('GitHub API 403 (limite de requisições do IP). Espere ~1h ou clique em Atualizar depois.');
@@ -458,10 +461,10 @@ function parseCSV(texto){
 function carregarDados(){
   var txt=document.getElementById('pillTexto');
   if(txt)txt.textContent='Carregando…';
-  var av=document.getElementById('avisos');if(av)av.innerHTML='';
+  limparAvisos();
   estado.meses=[];
   listarArquivosRepo().then(function(arquivos){
-    if(!arquivos.length){if(txt)txt.textContent='Sem CSVs';return;}
+    if(!arquivos.length){if(txt)txt.textContent='Sem CSVs';avisar('erro','GitHub','Nenhum arquivo .csv na raiz do repositório.');return;}
     var mesArqs=arquivos.filter(function(f){return !ehArquivoBase(f.name);});
     var prom=[];
     mesArqs.forEach(function(f){
@@ -562,15 +565,15 @@ function pedidosDoPeriodo(){
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
   return m&&m.ok?m.pedidos:[];
 }
-/* Clientes: chave por e-mail OU telefone; nome real da coluna de nome */
+/* Clientes: chave por e-mail OU telefone; SEMPRE exibe o e-mail original com @ */
 function clientesDoPeriodo(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
-    if(!o.email&&!o.telefone)return;
-    var chave=o.email||('tel:'+o.telefone);
+    if(!o.emailRaw&&!o.telefone)return;
+    var chave=o.email||('tel:'+norm(o.telefone));
     var c=map.get(chave);
     if(!c){
-      var nome=o.nome||(o.email?String(o.email).split('@')[0]:'')||'Cliente';
+      var nome=o.nome||(o.emailRaw?String(o.emailRaw).split('@')[0]:'')||'Cliente';
       c={chave:chave,email:o.emailRaw||'',nome:nome,telefone:o.telefone||'',pedidos:0,total:0,ultima:null};
       map.set(chave,c);
     }
@@ -580,23 +583,25 @@ function clientesDoPeriodo(){
   });
   return map;
 }
-function mesesComCompra(email){var n=0;estado.meses.forEach(function(m){if(m.ok&&m.pedidos.some(function(o){return o.email===email&&o.pago;}))n++;});return n;}
+function mesesComCompra(chaveNorm){var n=0;estado.meses.forEach(function(m){if(m.ok&&m.pedidos.some(function(o){return o.email===chaveNorm&&o.pago;}))n++;});return n;}
 function montarTabela(){
   var tb=document.getElementById('tbodyClientes');if(!tb)return;
   var comp=clientesDoPeriodo(),linhas=[];
-  comp.forEach(function(c,em){linhas.push({email:em,nome:c.nome,telefone:c.telefone,sit:c.pedidos>0?'comprou':'—',pedidos:c.pedidos,total:c.total,ultima:c.ultima,meses:mesesComCompra(em)});});
+  comp.forEach(function(c,chave){
+    linhas.push({chave:chave,email:c.email,nome:c.nome,telefone:c.telefone,sit:c.pedidos>0?'comprou':'—',pedidos:c.pedidos,total:c.total,ultima:c.ultima,meses:mesesComCompra(c.email?chave:'')});
+  });
   if(estado.segmento==='COMPROU')linhas=linhas.filter(function(r){return r.pedidos>0;});
   if(estado.segmento==='EXPIROU'){
     linhas=[];
     var exp=pedidosDoPeriodo().filter(function(o){return o.expirado;});
     var mm=new Map();
     exp.forEach(function(o){
-      if(!o.email&&!o.telefone)return;
-      var ch=o.email||('tel:'+o.telefone);
-      var c=mm.get(ch)||{email:o.emailRaw||'',nome:o.nome||'Cliente',telefone:o.telefone||'',pedidos:0};
+      if(!o.emailRaw&&!o.telefone)return;
+      var ch=o.email||('tel:'+norm(o.telefone));
+      var c=mm.get(ch)||{chave:ch,email:o.emailRaw||'',nome:o.nome||'Cliente',telefone:o.telefone||'',pedidos:0};
       c.pedidos++;mm.set(ch,c);
     });
-    mm.forEach(function(c){linhas.push({email:c.email,nome:c.nome,telefone:c.telefone,sit:'expirado',pedidos:c.pedidos,total:0,ultima:null,meses:0});});
+    mm.forEach(function(c){linhas.push({chave:c.chave,email:c.email,nome:c.nome,telefone:c.telefone,sit:'expirado',pedidos:c.pedidos,total:0,ultima:null,meses:0});});
   }
   if(estado.busca){var b=norm(estado.busca);linhas=linhas.filter(function(r){return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1||norm(r.telefone).indexOf(b)>-1;});}
   linhas.sort(function(a,z){
@@ -686,19 +691,94 @@ function atualizarSetas(atributo,ord){
     }
   });
 }
-function jsonp(url,cb){return new Promise(function(res,rej){var sep=url.indexOf('?')>-1?'&':'?';var s=document.createElement('script'),done=false;var t=setTimeout(function(){cleanup();rej(new Error('timeout'));},20000);function cleanup(){if(done)return;done=true;clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(d){cleanup();res(d);};s.src=url+sep+'callback='+cb+'&_='+Date.now();s.onerror=function(){cleanup();rej(new Error('falha de rede'));};document.head.appendChild(s);});}
+
+/* ===== CONTATOS — carregamento robusto =====
+   1º tenta fetch direto (Apps Script público responde com CORS);
+   2º se falhar, tenta JSONP (callback);
+   3º aceita array puro, {data:[...]} ou {contatos:[...]} */
+function extrairLista(d){
+  if(Array.isArray(d))return d;
+  if(d&&typeof d==='object'){
+    if(Array.isArray(d.data))return d.data;
+    if(Array.isArray(d.contatos))return d.contatos;
+    if(Array.isArray(d.rows))return d.rows;
+    if(Array.isArray(d.records))return d.records;
+    var vals=Object.keys(d).map(function(k){return d[k];}).filter(Array.isArray);
+    if(vals.length===1)return vals[0];
+  }
+  return [];
+}
+function jsonp(url,cb,timeoutMs){
+  return new Promise(function(res,rej){
+    var sep=url.indexOf('?')>-1?'&':'?';
+    var s=document.createElement('script'),done=false;
+    var t=setTimeout(function(){cleanup();rej(new Error('timeout jsonp'));},timeoutMs||15000);
+    function cleanup(){if(done)return;done=true;clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=function(d){cleanup();res(d);};
+    s.src=url+sep+'callback='+cb+'&_='+Date.now();
+    s.onerror=function(){cleanup();rej(new Error('falha jsonp'));};
+    document.head.appendChild(s);
+  });
+}
 function carregarContatos(){
-  if(!CONFIG.apiUrl){estado.apiOk=false;return;}
-  jsonp(CONFIG.apiUrl,'cb'+Date.now()).then(function(lista){
-    if(!Array.isArray(lista)){estado.apiOk=false;return;}
-    var map={};
-    lista.forEach(function(l){var em=norm(l.email);if(!em)return;map[em]={email:l.email||'',nome:l.nome||'',telefone:l.telefone||'',cidade:l.cidade||'',contato:String(l.contato||'').toLowerCase()==='sim'||l.contato===true,retorno:String(l.retorno||'').toLowerCase()==='sim'||l.retorno===true,data:l.data||'',atendente:l.atendente||''};});
-    estado.contatos=map;estado.apiOk=true;
-    montarPlacarContatos();
-    montarPlacarAtendentes();
-    var sec=document.getElementById('contatos');
-    if(sec&&sec.style.display!=='none')montarTabelaContatos();
-  }).catch(function(){estado.apiOk=false;});
+  estado.contatos={};estado.apiOk=false;estado.apiMsg='';
+  montarPlacarContatos();
+  if(!CONFIG.apiUrl){
+    estado.apiMsg='Nenhuma URL de planilha configurada (CONFIG.apiUrl vazio).';
+    avisar('info','Contatos','A aba Contatos depende da URL do Apps Script. Configure CONFIG.apiUrl no topo do código.');
+    montarTabelaContatos();
+    return;
+  }
+  var url=CONFIG.apiUrl;
+  /* 1º tentativa: fetch (CORS) */
+  fetch(url,{method:'GET',cache:'no-store'})
+    .then(function(r){return r.text();})
+    .then(function(texto){
+      var d;
+      try{d=JSON.parse(texto);}catch(e){throw new Error('resposta não-JSON via fetch');}
+      var lista=extrairLista(d);
+      if(!lista.length)throw new Error('lista vazia via fetch');
+      aplicarContatos(lista,'fetch');
+    })
+    .catch(function(e1){
+      /* 2º tentativa: JSONP */
+      jsonp(url,'cb'+Date.now(),15000)
+        .then(function(d){
+          var lista=extrairLista(d);
+          if(!lista.length)throw new Error('lista vazia via jsonp');
+          aplicarContatos(lista,'jsonp');
+        })
+        .catch(function(e2){
+          estado.apiOk=false;
+          estado.apiMsg='Não foi possível ler a planilha (tentado fetch e JSONP). Verifique se o Web App do Apps Script está publicado como "Qualquer pessoa" e responde com os dados dos contatos.';
+          montarPlacarContatos();
+          montarTabelaContatos();
+        });
+    });
+}
+function aplicarContatos(lista,via){
+  var map={};
+  lista.forEach(function(l){
+    if(!l)return;
+    var emRaw=String(l.email||l.Email||l['E-mail']||'').trim();
+    if(!emRaw)return;
+    var em=norm(emRaw);
+    if(!em)return;
+    map[em]={email:emRaw,nome:String(l.nome||l.Nome||l.name||l.Name||'').trim()||emRaw.split('@')[0],
+      telefone:String(l.telefone||l.Telefone||l.phone||l.celular||'').trim(),
+      cidade:String(l.cidade||l.Cidade||l.city||'').trim(),
+      contato:(String(l.contato||l.Contatado||l['Já contatado']||'').toLowerCase()==='sim'||l.contato===true||l.Contatado===true),
+      retorno:(String(l.retorno||l.Retorno||'').toLowerCase()==='sim'||l.retorno===true),
+      data:String(l.data||l.Data||l.date||l['Data contato']||l['Data do contato']||'').trim(),
+      atendente:String(l.atendente||l.Atendente||l.responsavel||l['Responsável']||'').trim()};
+  });
+  estado.contatos=map;
+  estado.apiOk=Object.keys(map).length>0;
+  estado.apiMsg=via==='fetch'?'conectado (fetch)':'conectado (jsonp)';
+  montarPlacarContatos();
+  montarPlacarAtendentes();
+  var sec=document.getElementById('contatos');
+  if(sec&&sec.style.display!=='none')montarTabelaContatos();
 }
 function montarPlacarContatos(){
   var el=document.getElementById('placarContatos');if(!el)return;
@@ -748,7 +828,9 @@ function montarTabelaContatos(){
     if(typeof va==='number'&&typeof vz==='number')return(va-vz)*estado.ordemCont.dir;
     return String(va).localeCompare(String(vz),'pt-BR')*estado.ordemCont.dir;
   });
-  var ct=document.getElementById('contadorContatos');if(ct)ct.textContent=numero(arr.length)+' cliente(s) na planilha'+(estado.apiOk?'':' · ⚠ sem conexão');
+  var ct=document.getElementById('contadorContatos');
+  if(ct)ct.textContent=numero(arr.length)+' cliente(s) na planilha'+(estado.apiOk?'':' · ⚠ sem conexão');
+  if(!estado.apiOk&&estado.apiMsg)avisar('info','Contatos',esc(estado.apiMsg));
   tb.innerHTML='';
   if(!arr.length){tb.innerHTML='<tr><td colspan="8" class="vazio">Nenhum cliente.</td></tr>';return;}
   arr.forEach(function(r){
@@ -836,7 +918,7 @@ var bpt=document.getElementById('btnCsvTop');if(bpt)bpt.onclick=exportarCsvTop;
 var bpb=document.getElementById('btnCsvBottom');if(bpb)bpb.onclick=exportarCsvBottom;
 var bptt=document.getElementById('btnCsvProdutos');if(bptt)bptt.onclick=exportarCsvProdutos;
 var bco=document.getElementById('btnCsvContatos');if(bco)bco.onclick=exportarCsvContatos;
-var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){carregarContatos();setTimeout(function(){montarPlacarContatos();montarPlacarAtendentes();montarTabelaContatos();},400);};
+var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){limparAvisos();carregarContatos();};
 carregarDados();
 </script>
 </body>
