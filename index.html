@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.3</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.4</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -58,7 +58,7 @@
   .tabela-box{background:#fff;border:1px solid var(--b);border-radius:14px;overflow:hidden}
   .tabela-top{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--b);flex-wrap:wrap}
   .tabela-top .contador{font-size:13px;color:var(--cin);flex:1}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
   th{background:var(--v3);color:var(--v);text-align:left;padding:9px 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;white-space:nowrap}
   th .seta{font-size:10px;margin-left:3px;color:var(--v2)}
   td{padding:8px 11px;border-top:1px solid var(--b);white-space:nowrap}
@@ -82,7 +82,7 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.3</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.4</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
   <div class="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
@@ -124,13 +124,31 @@
     </div>
   </section>
   <section id="produtos" style="display:none">
-    <div class="tabela-box">
-      <div class="tabela-top"><div class="contador" id="contadorProdutos">—</div><button class="btn" id="btnCsvProdutos">⬇ Exportar CSV</button></div>
-      <div style="overflow:auto;max-height:calc(100vh - 260px)"><table><thead><tr>
-        <th data-ordp="produto">Produto <span class="seta"></span></th>
-        <th data-ordp="qtd">Qtd <span class="seta"></span></th>
-        <th data-ordp="receita">Receita <span class="seta"></span></th>
-      </tr></thead><tbody id="tbodyProdutos"></tbody></table></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>🏆 20 mais vendidos</h3>
+        <div class="tabela-box">
+          <div class="tabela-top"><div class="contador" id="contadorTop">—</div><button class="btn" id="btnCsvTop">⬇ Exportar CSV</button></div>
+          <div style="overflow:auto;max-height:calc(100vh - 320px)"><table><thead><tr>
+            <th>#</th>
+            <th data-ordp="produto">Produto <span class="seta"></span></th>
+            <th data-ordp="qtd">Qtd <span class="seta"></span></th>
+            <th data-ordp="receita">Receita <span class="seta"></span></th>
+          </tr></thead><tbody id="tbodyTop"></tbody></table></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📉 20 menos vendidos</h3>
+        <div class="tabela-box">
+          <div class="tabela-top"><div class="contador" id="contadorBottom">—</div><button class="btn" id="btnCsvBottom">⬇ Exportar CSV</button></div>
+          <div style="overflow:auto;max-height:calc(100vh - 320px)"><table><thead><tr>
+            <th>#</th>
+            <th data-ordp="produto">Produto <span class="seta"></span></th>
+            <th data-ordp="qtd">Qtd <span class="seta"></span></th>
+            <th data-ordp="receita">Receita <span class="seta"></span></th>
+          </tr></thead><tbody id="tbodyBottom"></tbody></table></div>
+        </div>
+      </div>
     </div>
   </section>
   <section id="contatos" style="display:none">
@@ -150,7 +168,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.3 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.4 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -536,7 +554,6 @@ function montarTabela(){
   atualizarSetas('data-ord',estado.ordem);
 }
 function montarTabelaProdutos(){
-  var tb=document.getElementById('tbodyProdutos');if(!tb)return;
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
     if(!o.pago)return;
@@ -554,10 +571,24 @@ function montarTabelaProdutos(){
     return String(va).localeCompare(String(vz),'pt-BR')*estado.ordemProd.dir;
   });
   estado.linhasProdutos=arr;
-  var ct=document.getElementById('contadorProdutos');if(ct)ct.textContent=numero(arr.length)+' produto(s)';
-  tb.innerHTML='';
-  if(!arr.length){tb.innerHTML='<tr><td colspan="3" class="vazio">Sem produtos no período.</td></tr>';return;}
-  arr.forEach(function(p){var tr=document.createElement('tr');tr.innerHTML='<td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tb.appendChild(tr);});
+  var top=arr.slice(0,20);
+  var bottom=arr.slice(-20).reverse();
+  var ctTop=document.getElementById('contadorTop');
+  var ctBottom=document.getElementById('contadorBottom');
+  if(ctTop)ctTop.textContent=numero(top.length)+' produto(s)';
+  if(ctBottom)ctBottom.textContent=numero(bottom.length)+' produto(s)';
+  var tbTop=document.getElementById('tbodyTop');
+  if(tbTop){
+    tbTop.innerHTML='';
+    if(!top.length){tbTop.innerHTML='<tr><td colspan="4" class="vazio">Sem produtos no período.</td></tr>';}
+    top.forEach(function(p,i){var tr=document.createElement('tr');tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tbTop.appendChild(tr);});
+  }
+  var tbBottom=document.getElementById('tbodyBottom');
+  if(tbBottom){
+    tbBottom.innerHTML='';
+    if(!bottom.length){tbBottom.innerHTML='<tr><td colspan="4" class="vazio">Sem produtos no período.</td></tr>';}
+    bottom.forEach(function(p,i){var tr=document.createElement('tr');tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tbBottom.appendChild(tr);});
+  }
   atualizarSetas('data-ordp',estado.ordemProd);
 }
 function atualizarSetas(atributo,ord){
@@ -630,10 +661,17 @@ function exportarCsv(){
   var linhas=estado.linhasTabela.map(function(r){return['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"',r.sit,r.pedidos,String(r.total).replace('.',','),r.ultima?fmtData(r.ultima):'',r.meses].join(';');});
   baixar('clientes_infinity_piercing.csv','\uFEFF'+['Cliente','E-mail','Situação','Pedidos','Total','Última compra','Meses'].join(';')+'\n'+linhas.join('\n'));
 }
-function exportarCsvProdutos(){
+function exportarCsvTop(){
   if(!estado.linhasProdutos.length){alert('Sem produtos no período.');return;}
-  var linhas=estado.linhasProdutos.map(function(p){return['"'+p.produto.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',',')].join(';');});
-  baixar('produtos_infinity_piercing.csv','\uFEFF'+['Produto','Qtd','Receita'].join(';')+'\n'+linhas.join('\n'));
+  var top=estado.linhasProdutos.slice(0,20);
+  var linhas=top.map(function(p,i){return[i+1,'"'+p.produto.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',',')].join(';');});
+  baixar('produtos_20_mais_vendidos.csv','\uFEFF'+['#','Produto','Qtd','Receita'].join(';')+'\n'+linhas.join('\n'));
+}
+function exportarCsvBottom(){
+  if(!estado.linhasProdutos.length){alert('Sem produtos no período.');return;}
+  var bottom=estado.linhasProdutos.slice(-20).reverse();
+  var linhas=bottom.map(function(p,i){return[i+1,'"'+p.produto.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',',')].join(';');});
+  baixar('produtos_20_menos_vendidos.csv','\uFEFF'+['#','Produto','Qtd','Receita'].join(';')+'\n'+linhas.join('\n'));
 }
 function exportarCsvContatos(){
   var arr=Object.keys(estado.contatos).map(function(em){return estado.contatos[em];});
@@ -682,7 +720,8 @@ if(buscaEl)buscaEl.addEventListener('input',function(e){clearTimeout(estado._db)
 var pp=document.getElementById('prevPag');if(pp)pp.onclick=function(){if(estado.pagina>1){estado.pagina--;montarTabela();}};
 var np=document.getElementById('nextPag');if(np)np.onclick=function(){estado.pagina++;montarTabela();};
 var bc=document.getElementById('btnCsv');if(bc)bc.onclick=exportarCsv;
-var bp=document.getElementById('btnCsvProdutos');if(bp)bp.onclick=exportarCsvProdutos;
+var bpt=document.getElementById('btnCsvTop');if(bpt)bpt.onclick=exportarCsvTop;
+var bpb=document.getElementById('btnCsvBottom');if(bpb)bpb.onclick=exportarCsvBottom;
 var bco=document.getElementById('btnCsvContatos');if(bco)bco.onclick=exportarCsvContatos;
 var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){carregarContatos();setTimeout(function(){montarPlacarContatos();montarTabelaContatos();},400);};
 carregarDados();
