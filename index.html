@@ -131,11 +131,12 @@ window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.c
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  /* Letras opcionais (A,B,C...). Vazio = detectar pelo nome exato do cabeçalho. */
-  colPedido:'',colEmail:'',colStatus:'',colPaidAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
+  /* Letras opcionais (A,B,C...). Vazio = detectar pelo NOME EXATO do cabeçalho. Nunca por conteúdo. */
+  colPedido:'',colEmail:'',colStatus:'',colPaidAt:'',colCreatedAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},linhasTabela:[],linhasProdutos:[],produtosSel:{},contatos:{},apiOk:false};
+var TETO=1000000000; /* R$ 1 bilhão: acima disso a célula está corrompida → vira 0 */
+var estado={base:null,meses:[],periodo:'TODOS',segmento:'TODOS',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},linhasTabela:[],linhasProdutos:[],contatos:{},apiOk:false};
 
 function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -145,18 +146,44 @@ function fmtCurto(v){v=Math.round(v||0);if(v>=1000000)return 'R$'+(v/1000000).to
 function fmtData(d){if(!d)return '—';try{return d.toLocaleDateString('pt-BR');}catch(e){return String(d);}}
 function avisar(tipo,titulo,texto){var el=document.getElementById('avisos');if(!el)return;var d=document.createElement('div');d.className='aviso show '+tipo;d.innerHTML='<b>'+titulo+'</b>'+texto;el.appendChild(d);}
 
-/* Suporta "300.20", "300,20", "5.048.208,96", "R$ 1.234,56" */
+/* ============ PARSE DE DINHEIRO (seguro, sem suposições) ============
+   Aceita: 326.83 | 300.20 | 5.048.208,96 | 1.234,56 | 1234.56 | 1234
+   Acima de R$ 1 bi (TETO) = célula corrompida → 0. */
 function parseMoney(v){
-  if(v==null)return 0;if(typeof v==='number')return isFinite(v)?v:0;
-  var s=String(v).trim();if(!s)return 0;s=s.split('R$').join('').split(' ').join('');
-  var neg=false;if(s.charAt(0)==='('&&s.charAt(s.length-1)===')'){neg=true;s=s.slice(1,-1);}
-  var out='';for(var i=0;i<s.length;i++){var c=s.charAt(i);if((c>='0'&&c<='9')||c===','||c==='.')out+=c;}
-  if(!out)return 0;
-  var virg=out.indexOf(',')>-1,ponto=out.indexOf('.')>-1;
-  if(virg&&ponto){if(out.lastIndexOf(',')>out.lastIndexOf('.')){out=out.split('.').join('').replace(',','.');}else{out=out.split(',').join('');}}
-  else if(virg){out=out.replace(',','.');}
-  else if(ponto){var pd=out.split('.');if(pd.length>1&&pd[pd.length-1].length===3&&pd[0].length>3){out=pd.join('');}}
-  var n=parseFloat(out);return isNaN(n)?0:(neg?-n:n);
+  if(v==null)return 0;
+  if(typeof v==='number')return isFinite(v)?(Math.abs(v)<=TETO?v:0):0;
+  var s=String(v).trim();if(!s)return 0;
+  var neg=false;
+  if(s.charAt(0)==='('&&s.charAt(s.length-1)===')'){neg=true;s=s.slice(1,-1);}
+  if(/^-\s?/.test(s)){neg=true;}
+  s=s.replace(/R\$/gi,'').replace(/\s/g,'').replace(/%/g,'').replace(/-/g,'');
+  if(!/^[0-9.,]+$/.test(s))return 0; /* não é número (ex.: "free", "vazio") */
+  var virg=s.indexOf(',')>-1,ponto=s.indexOf('.')>-1,out;
+  if(virg&&ponto){
+    if(s.lastIndexOf(',')>s.lastIndexOf('.')){out=s.split('.').join('').replace(',','.');}
+    else{out=s.split(',').join('');}
+  }else if(virg){
+    var p=s.split(',');
+    if(p.length===2&&p[1].length>0&&p[1].length<=2){out=s.replace(',','.');}
+    else{out=s.split(',').join('');}
+  }else if(ponto){
+    var ps=s.split('.');
+    if(ps.length===2&&ps[1].length>0&&ps[1].length<=2){out=s;}
+    else if(ps.length>=2&&ps[ps.length-1].length===3&&ps[0].length>1){out=s.split('.').join('');}
+    else{out=s;}
+  }else{out=s;}
+  var n=parseFloat(out);
+  if(isNaN(n)||!isFinite(n))return 0;
+  if(Math.abs(n)>TETO)return 0;
+  return neg?-n:n;
+}
+/* Só dígitos — para detectar célula corrompida na auditoria */
+function rawNum(v){
+  if(v==null)return 0;
+  var d=String(v).replace(/[^0-9]/g,'');
+  if(!d)return 0;
+  var n=parseFloat(d);
+  return isNaN(n)?0:n;
 }
 function parseData(v){
   if(v==null||v==='')return null;
@@ -170,59 +197,37 @@ function parseData(v){
   var g=new Date(s);return isNaN(g.getTime())?null:g;
 }
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
-function mediaDinheiro(idx,linhas){var soma=0,n=0;for(var r=0;r<Math.min(linhas.length,500);r++){var v=parseMoney(linhas[r][idx]);if(v>0){soma+=v;n++;}}return n?soma/n:0;}
-function temDinheiro(idx,linhas){var n=0;for(var r=0;r<Math.min(linhas.length,300);r++){if(parseMoney(linhas[r][idx])>0)n++;}return n>20;}
 
-/* ============ RESOLUÇÃO DE COLUNAS ============ */
-function resolverColunas(colunas,linhas){
+/* ============ RESOLUÇÃO DE COLUNAS — SOMENTE PELO NOME EXATO ============
+   Cada papel só é preenchido se o cabeçalho da planilha bater com o nome
+   exato do dicionário. NUNCA por posição nem por conteúdo (sem suposições). */
+function resolverColunas(colunas){
   var m={pedido:-1,email:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1},uso={};
-  function porLetra(cfg){return letraIdx(CONFIG[cfg],colunas.length);}
-  function achExata(nomes,precisaNumero){
-    for(var c=0;c<colunas.length;c++){
-      var hn=norm(colunas[c]||'');if(!hn)continue;
-      for(var i=0;i<nomes.length;i++){
-        if(hn===norm(nomes[i])){if(precisaNumero&&!temDinheiro(c,linhas))continue;return c;}
+  function setExata(tipo,nomes,cfgKey,padraoCol0){
+    var idx=letraIdx(CONFIG[cfgKey],colunas.length);
+    if(idx<0){
+      for(var c=0;c<colunas.length;c++){
+        var hn=norm(colunas[c]||'');if(!hn)continue;
+        for(var j=0;j<nomes.length;j++){
+          if(hn===norm(nomes[j])){idx=c;break;}
+        }
+        if(idx>=0)break;
       }
     }
-    return -1;
+    if(idx>=0){m[tipo]=idx;uso[tipo]=colunas[idx]||'';}
+    else if(padraoCol0&&tipo==='pedido'&&colunas.length>0){m[tipo]=0;uso[tipo]=colunas[0]||'';}
+    else{m[tipo]=-1;uso[tipo]='';}
   }
-  function achContem(keys,precisaNumero,excluir){
-    for(var c=0;c<colunas.length;c++){
-      var hn=norm(colunas[c]||'');if(!hn)continue;
-      if(excluir&&excluir.some(function(x){return hn.indexOf(x)>-1;}))continue;
-      for(var i=0;i<keys.length;i++){
-        if(hn.indexOf(norm(keys[i]))>-1){if(precisaNumero&&!temDinheiro(c,linhas))continue;return c;}
-      }
-    }
-    return -1;
-  }
-  function set(tipo,idx){m[tipo]=idx;uso[tipo]=idx>-1?(colunas[idx]||''):'';}
-
-  var i=porLetra('colPedido');if(i<0)i=achExata(['name','#','ordername','orderid','numpedido','pedido','order'],false);if(i<0&&colunas.length>0)i=0;set('pedido',i);
-  i=porLetra('colEmail');if(i<0)i=achExata(['email','e-mail','buyeremail','emailcomprador'],false);set('email',i);
-  i=porLetra('colStatus');if(i<0)i=achExata(['financialstatus','statusdacompra','statusdopagamento','paymentstatus','situation','status'],false);set('status',i);
-  i=porLetra('colPaidAt');if(i<0)i=achExata(['paidat','datadopedido','datadopagamento','datapagamento'],false);set('paidAt',i);
-  i=achExata(['createdat','datacompra','datainicio'],false);set('createdAt',i);
-  i=porLetra('colSubtotal');if(i<0)i=achExata(['subtotal'],true);if(i<0)i=achContem(['subtotal'],true,['lineitem']);set('subtotal',i);
-  i=porLetra('colDesconto');if(i<0)i=achExata(['discountamount','totaldiscounts'],true);if(i<0)i=achContem(['discount','desconto'],true,['lineitem','code']);set('desconto',i);
-  i=porLetra('colFrete');if(i<0)i=achExata(['shipping','shippingamount','shippingrate'],true);if(i<0)i=achContem(['shipping','frete'],true,['lineitem','method','title']);set('frete',i);
-  i=porLetra('colTaxas');if(i<0)i=achExata(['taxes','tax','impostos'],true);if(i<0)i=achContem(['tax','impostos'],true,['lineitem']);set('taxas',i);
-  /* TOTAL: nome exato → contém "total" → coluna monetária de maior média */
-  i=porLetra('colTotal');
-  if(i<0)i=achExata(['total'],true);
-  if(i<0)i=achContem(['total'],true,['lineitem','subtotal','discount','shipping','frete','tax']);
-  if(i<0){
-    var melhor=-1,melhorV=0;
-    for(var c=0;c<colunas.length;c++){
-      var hn=norm(colunas[c]||'');if(!hn||hn.indexOf('lineitem')>-1)continue;
-      if(hn==='subtotal'||hn.indexOf('shipping')>-1||hn.indexOf('discount')>-1||hn.indexOf('tax')>-1||hn.indexOf('frete')>-1)continue;
-      if(!temDinheiro(c,linhas))continue;
-      var med=mediaDinheiro(c,linhas);
-      if(med>melhorV){melhorV=med;melhor=c;}
-    }
-    i=melhor;
-  }
-  set('total',i);
+  setExata('pedido',['name','name#','ordername','orderid','numpedido','pedido','order'],'colPedido',true);
+  setExata('email',['email','e-mail','buyeremail','emailcomprador'],'colEmail',false);
+  setExata('status',['financialstatus','statusdacompra','statusdopagamento','paymentstatus','situation','status'],'colStatus',false);
+  setExata('paidAt',['paidat','datadopedido','datadopagamento','datapagamento'],'colPaidAt',false);
+  setExata('createdAt',['createdat','datacompra','datainicio'],'colCreatedAt',false);
+  setExata('subtotal',['subtotal'],'colSubtotal',false);
+  setExata('total',['total'],'colTotal',false);
+  setExata('desconto',['discountamount','totaldiscounts'],'colDesconto',false);
+  setExata('frete',['shipping','shippingamount','shippingrate','shipping amount'],'colFrete',false);
+  setExata('taxas',['taxes','tax','impostos','taxas'],'colTaxas',false);
   for(var cc=0;cc<colunas.length;cc++){
     var h=norm(colunas[cc]||'');
     if(h==='lineitemquantity')m.qtd=cc;
@@ -233,7 +238,7 @@ function resolverColunas(colunas,linhas){
   return {m:m,uso:uso};
 }
 
-/* ============ REGRA DE PAGO (premissas: Financial Status + Paid at) ============ */
+/* ============ REGRA DE PEDIDO PAGO (suas premissas) ============ */
 function ehPago(status,paidAt){
   if(paidAt)return true;
   var st=String(status||'').toLowerCase();
@@ -249,8 +254,8 @@ function ehExpirado(status){
 
 /* ============ PROCESSAMENTO ============ */
 function processarMes(colunas,linhas){
-  var r=resolverColunas(colunas,linhas),m=r.m;
-  var ordens=new Map();
+  var r=resolverColunas(colunas),m=r.m;
+  var ordens=new Map(),suspeitos=0;
   linhas.forEach(function(ln){
     var chave=m.pedido>-1?String(ln[m.pedido]||'').trim():'';
     if(!chave)chave='L:'+ordens.size;
@@ -265,6 +270,11 @@ function processarMes(colunas,linhas){
     var desconto=m.desconto>-1?parseMoney(ln[m.desconto]):0;
     var frete=m.frete>-1?parseMoney(ln[m.frete]):0;
     var taxas=m.taxas>-1?parseMoney(ln[m.taxas]):0;
+    /* detecta célula corrompida (número > R$ 1 bi na fonte) */
+    if(m.total>-1&&rawNum(ln[m.total])>TETO)suspeitos++;
+    if(m.subtotal>-1&&rawNum(ln[m.subtotal])>TETO)suspeitos++;
+    if(m.frete>-1&&rawNum(ln[m.frete])>TETO)suspeitos++;
+    if(m.taxas>-1&&rawNum(ln[m.taxas])>TETO)suspeitos++;
     if(email&&!o.email)o.email=email;
     if(status&&!o.status)o.status=status;
     if(paidAt&&!o.paidAt)o.paidAt=paidAt;
@@ -292,13 +302,13 @@ function processarMes(colunas,linhas){
     var expirado=!pago&&ehExpirado(o.status);
     var liquido=o.subtotal;
     if(liquido<=0){var si=0;o.items.forEach(function(it){si+=(it.preco||0)*(it.qtd||1);});liquido=si>0?si:o.total;}
-    /* Brutas = coluna Total; se faltar, Subtotal + frete + taxas */
+    /* Bruto = coluna Total (se existir e for válida) senão Subtotal+frete+taxas */
     var bruto=o.total>0?o.total:(liquido+o.frete+o.taxas);
     saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',data:d,status:o.status,
       liquido:pago?liquido:0,bruto:pago?bruto:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,
       pago:pago,expirado:expirado,items:o.items});
   });
-  return {saida:saida,uso:r.uso,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,razao:saida.length?linhas.length/saida.length:1};
+  return {saida:saida,uso:r.uso,nLinhas:linhas.length,nPedidos:saida.length,removidos:removidos,suspeitos:suspeitos,razao:saida.length?linhas.length/saida.length:1};
 }
 
 function detectarRotulo(colunas,linhas,nomeArquivo){
@@ -359,7 +369,7 @@ function carregarDados(){
         if(!colunas.filter(function(x){return x;}).length)throw new Error('CSV vazio');
         var rot=detectarRotulo(colunas,linhas,f.name)||'Mês';
         var proc=processarMes(colunas,linhas);
-        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,uso:proc.uso,arquivo:f.name,nLinhas:proc.nLinhas,nPedidos:proc.nPedidos,removidos:proc.removidos,razao:proc.razao});
+        estado.meses.push({rotulo:rot,ok:true,pedidos:proc.saida,uso:proc.uso,arquivo:f.name,nLinhas:proc.nLinhas,nPedidos:proc.nPedidos,removidos:proc.removidos,suspeitos:proc.suspeitos,razao:proc.razao});
       }).catch(function(e){estado.meses.push({rotulo:f.name,ok:false,erro:(e&&e.message)||e});}));
     });
     Promise.all(prom).then(function(){
@@ -379,6 +389,8 @@ function carregarDados(){
           var lin='<div class="linha"><span class="ok">✅ '+esc(mes.arquivo)+' → '+esc(mes.rotulo)+'</span><span>';
           lin+=String(mes.nLinhas)+' linhas → '+String(mes.nPedidos)+' pedidos · '+(mes.razao?mes.razao.toFixed(1):'1')+' linhas/pedido';
           lin+=' · colunas: pedido['+esc(uso.pedido||'—')+'] status['+esc(uso.status||'—')+'] paidAt['+esc(uso.paidAt||'—')+'] subtotal['+esc(uso.subtotal||'—')+'] total['+esc(uso.total||'—')+'] desconto['+esc(uso.desconto||'—')+'] frete['+esc(uso.frete||'—')+'] taxas['+esc(uso.taxas||'—')+']';
+          if(!uso.total)lin+=' ⚠ sem coluna Total → bruto = Subtotal+frete+taxas';
+          if(mes.suspeitos>0)lin+=' ⚠ '+mes.suspeitos+' célula(s) com valor > R$ 1 bi ignorada(s) (corrompida)';
           if(mes.removidos>0)lin+=' ⚠ '+mes.removidos+' pedido(s) de outro mês removidos';
           var contS={};
           mes.pedidos.forEach(function(o){var k=(o.status||'(vazio)').toLowerCase()||'(vazio)';contS[k]=(contS[k]||0)+1;});
