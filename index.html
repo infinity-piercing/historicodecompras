@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.6</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.7</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -58,7 +58,7 @@
   .tabela-box{background:#fff;border:1px solid var(--b);border-radius:16px;overflow:hidden}
   .tabela-top{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--b);flex-wrap:wrap}
   .tabela-top .contador{font-size:13.5px;color:var(--cin);flex:1}
-  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
   th{background:var(--v3);color:var(--v);text-align:left;padding:11px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;white-space:nowrap}
   th .seta{font-size:10px;margin-left:4px;color:var(--v2)}
   td{padding:10px 14px;border-top:1px solid var(--b);white-space:nowrap}
@@ -82,7 +82,7 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.6</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.7</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
   <div class="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
@@ -107,13 +107,14 @@
   </section>
   <section id="clientes" style="display:none">
     <div class="filtros">
-      <div class="busca"><input id="busca" type="text" placeholder="🔍 Buscar cliente ou e-mail…"></div>
+      <div class="busca"><input id="busca" type="text" placeholder="🔍 Buscar cliente, e-mail ou telefone…"></div>
     </div>
     <div class="tabela-box">
       <div class="tabela-top"><div class="contador" id="contadorTabela">—</div><button class="btn" id="btnCsv">⬇ Exportar CSV</button></div>
       <div style="overflow:auto;max-height:calc(100vh - 260px)"><table><thead><tr>
         <th data-ord="nome">Cliente <span class="seta"></span></th>
         <th data-ord="email">E-mail <span class="seta"></span></th>
+        <th data-ord="telefone">Telefone <span class="seta"></span></th>
         <th data-ord="sit">Situação <span class="seta"></span></th>
         <th data-ord="pedidos">Pedidos <span class="seta"></span></th>
         <th data-ord="total">Total (líquido) <span class="seta"></span></th>
@@ -191,14 +192,14 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.6 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.7 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
 var CONFIG={
   repo:'infinity-piercing/historicodecompras',
   apiUrl:'https://script.google.com/macros/s/AKfycbzUXRkb5_PEc3sPdkWo8nKrYVwieqauXQcy5U9wpgxpaWjWXkCUt92C4x_Z1r80oB9TAQ/exec',
-  colPedido:'',colEmail:'',colStatus:'',colPaidAt:'',colCreatedAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
+  colPedido:'',colEmail:'',colNome:'',colTelefone:'',colStatus:'',colPaidAt:'',colCreatedAt:'',colSubtotal:'',colTotal:'',colDesconto:'',colFrete:'',colTaxas:''
 };
 var NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var DADOS=[
@@ -286,8 +287,21 @@ function parseData(v){
 }
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
 
-function resolverColunas(colunas){
-  var m={pedido:-1,email:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1};
+/* Coluna parece e-mail? (validação por conteúdo: maioria dos valores tem @) */
+function colunaPareceEmail(idx,colunas,linhas){
+  if(idx<0||!linhas||!linhas.length)return false;
+  var com=0,sem=0;
+  for(var r=0;r<Math.min(linhas.length,300);r++){
+    var v=String(linhas[r][idx]||'').trim();
+    if(!v)continue;
+    if(v.indexOf('@')>-1)com++;else sem++;
+  }
+  return com>0&&com>=sem;
+}
+
+/* ===== COLUNAS — NOME EXATO + VALIDAÇÃO DE E-MAIL POR CONTEÚDO ===== */
+function resolverColunas(colunas,linhas){
+  var m={pedido:-1,email:-1,nome:-1,telefone:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1};
   function acharExata(nomes){
     for(var c=0;c<colunas.length;c++){
       var hn=norm(colunas[c]||'');if(!hn)continue;
@@ -302,7 +316,8 @@ function resolverColunas(colunas){
     m[tipo]=i;
   }
   set('pedido',['name','ordername','pedido','numpedido'],'colPedido');
-  set('email',['email','e-mail','buyeremail','emailcomprador'],'colEmail');
+  set('nome',['billingname','shippingname','customername','nome','nomecompleto','nomecliente','nome do cliente','cliente','customer','buyername'],'colNome');
+  set('telefone',['billingphone','shippingphone','phone','telefone','celular','contactphone','buyerphone','fone'],'colTelefone');
   set('status',['financialstatus','statusdacompra','statusdopagamento','paymentstatus'],'colStatus');
   set('paidAt',['paidat'],'colPaidAt');
   set('createdAt',['createdat'],'colCreatedAt');
@@ -311,6 +326,27 @@ function resolverColunas(colunas){
   set('desconto',['discountamount','totaldiscounts'],'colDesconto');
   set('frete',['shipping'],'colFrete');
   set('taxas',['taxes'],'colTaxas');
+  /* E-mail: nome exato + validação por conteúdo + fallbacks */
+  var iEmail=letraIdx(CONFIG.colEmail,colunas.length);
+  if(iEmail<0)iEmail=acharExata(['email','e-mail','buyeremail','emailcomprador']);
+  if(iEmail<0||!colunaPareceEmail(iEmail,colunas,linhas)){
+    var ach=-1;
+    var alt=['billingemail','shippingemail','contactemail','emailcomprador','emailcliente','email do cliente','emaildopedido'];
+    for(var c=0;c<colunas.length;c++){
+      var hn=norm(colunas[c]||'');
+      for(var a=0;a<alt.length;a++){
+        if(hn===norm(alt[a])&&colunaPareceEmail(c,colunas,linhas)){ach=c;break;}
+      }
+      if(ach>=0)break;
+    }
+    if(ach<0){
+      for(var c2=0;c2<colunas.length;c2++){
+        if(colunaPareceEmail(c2,colunas,linhas)){ach=c2;break;}
+      }
+    }
+    iEmail=ach;
+  }
+  m.email=iEmail;
   for(var cc=0;cc<colunas.length;cc++){
     var h=norm(colunas[cc]||'');
     if(h==='lineitemquantity')m.qtd=cc;
@@ -324,14 +360,16 @@ function ehPago(status){return String(status||'').trim().toLowerCase()==='paid';
 function ehExpirado(status){var st=String(status||'').trim().toLowerCase();return st==='expired'||st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('abandon')>-1||st.indexOf('void')>-1;}
 
 function processarMes(colunas,linhas){
-  var m=resolverColunas(colunas);
+  var m=resolverColunas(colunas,linhas);
   var ordens=new Map();
   linhas.forEach(function(ln){
     var chave=m.pedido>-1?String(ln[m.pedido]||'').trim():'';
     if(!chave)chave='L:'+ordens.size;
     var o=ordens.get(chave);
-    if(!o){o={chave:chave,email:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,items:[]};ordens.set(chave,o);}
+    if(!o){o={chave:chave,email:'',nome:'',telefone:'',status:'',paidAt:null,createdAt:null,subtotal:0,total:0,desconto:0,frete:0,taxas:0,items:[]};ordens.set(chave,o);}
     var email=m.email>-1?String(ln[m.email]||'').trim():'';
+    var nome=m.nome>-1?String(ln[m.nome]||'').trim():'';
+    var telefone=m.telefone>-1?String(ln[m.telefone]||'').trim():'';
     var status=m.status>-1?String(ln[m.status]||'').trim():'';
     var paidAt=m.paidAt>-1?parseData(ln[m.paidAt]):null;
     var createdAt=m.createdAt>-1?parseData(ln[m.createdAt]):null;
@@ -341,6 +379,8 @@ function processarMes(colunas,linhas){
     var frete=m.frete>-1?parseMoney(ln[m.frete]):0;
     var taxas=m.taxas>-1?parseMoney(ln[m.taxas]):0;
     if(email&&!o.email)o.email=email;
+    if(nome&&!o.nome)o.nome=nome;
+    if(telefone&&!o.telefone)o.telefone=telefone;
     if(status&&!o.status)o.status=status;
     if(paidAt&&!o.paidAt)o.paidAt=paidAt;
     if(createdAt&&!o.createdAt)o.createdAt=createdAt;
@@ -368,7 +408,7 @@ function processarMes(colunas,linhas){
     var liquido=o.subtotal;
     if(liquido<=0){var si=0;o.items.forEach(function(it){si+=(it.preco||0)*(it.qtd||1);});liquido=si>0?si:o.total;}
     var bruto=o.total>0?o.total:(liquido+o.frete+o.taxas);
-    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',data:d,status:o.status,
+    saida.push({chave:o.chave,email:norm(o.email),emailRaw:o.email||'',nome:o.nome||'',telefone:o.telefone||'',data:d,status:o.status,
       liquido:pago?liquido:0,bruto:pago?bruto:0,desconto:pago?o.desconto:0,frete:pago?o.frete:0,
       pago:pago,expirado:expirado,items:o.items});
   });
@@ -522,12 +562,18 @@ function pedidosDoPeriodo(){
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
   return m&&m.ok?m.pedidos:[];
 }
+/* Clientes: chave por e-mail OU telefone; nome real da coluna de nome */
 function clientesDoPeriodo(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
-    if(!o.email)return;
-    var c=map.get(o.email);
-    if(!c){c={email:o.emailRaw,nome:o.emailRaw,pedidos:0,total:0,ultima:null};map.set(o.email,c);}
+    if(!o.email&&!o.telefone)return;
+    var chave=o.email||('tel:'+o.telefone);
+    var c=map.get(chave);
+    if(!c){
+      var nome=o.nome||(o.email?String(o.email).split('@')[0]:'')||'Cliente';
+      c={chave:chave,email:o.emailRaw||'',nome:nome,telefone:o.telefone||'',pedidos:0,total:0,ultima:null};
+      map.set(chave,c);
+    }
     if(!o.pago)return;
     c.pedidos++;c.total+=o.liquido;
     if(o.data&&(!c.ultima||o.data>c.ultima))c.ultima=o.data;
@@ -538,16 +584,21 @@ function mesesComCompra(email){var n=0;estado.meses.forEach(function(m){if(m.ok&
 function montarTabela(){
   var tb=document.getElementById('tbodyClientes');if(!tb)return;
   var comp=clientesDoPeriodo(),linhas=[];
-  comp.forEach(function(c,em){linhas.push({email:em,nome:c.nome,sit:c.pedidos>0?'comprou':'—',pedidos:c.pedidos,total:c.total,ultima:c.ultima,meses:mesesComCompra(em)});});
+  comp.forEach(function(c,em){linhas.push({email:em,nome:c.nome,telefone:c.telefone,sit:c.pedidos>0?'comprou':'—',pedidos:c.pedidos,total:c.total,ultima:c.ultima,meses:mesesComCompra(em)});});
   if(estado.segmento==='COMPROU')linhas=linhas.filter(function(r){return r.pedidos>0;});
   if(estado.segmento==='EXPIROU'){
     linhas=[];
     var exp=pedidosDoPeriodo().filter(function(o){return o.expirado;});
     var mm=new Map();
-    exp.forEach(function(o){if(!o.email)return;var c=mm.get(o.email)||{email:o.email,nome:o.email,pedidos:0};c.pedidos++;mm.set(o.email,c);});
-    mm.forEach(function(c){linhas.push({email:c.email,nome:c.nome,sit:'expirado',pedidos:c.pedidos,total:0,ultima:null,meses:0});});
+    exp.forEach(function(o){
+      if(!o.email&&!o.telefone)return;
+      var ch=o.email||('tel:'+o.telefone);
+      var c=mm.get(ch)||{email:o.emailRaw||'',nome:o.nome||'Cliente',telefone:o.telefone||'',pedidos:0};
+      c.pedidos++;mm.set(ch,c);
+    });
+    mm.forEach(function(c){linhas.push({email:c.email,nome:c.nome,telefone:c.telefone,sit:'expirado',pedidos:c.pedidos,total:0,ultima:null,meses:0});});
   }
-  if(estado.busca){var b=norm(estado.busca);linhas=linhas.filter(function(r){return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1;});}
+  if(estado.busca){var b=norm(estado.busca);linhas=linhas.filter(function(r){return norm(r.nome).indexOf(b)>-1||norm(r.email).indexOf(b)>-1||norm(r.telefone).indexOf(b)>-1;});}
   linhas.sort(function(a,z){
     var va=a[estado.ordem.chave],vz=z[estado.ordem.chave];
     if(va==null)va='';if(vz==null)vz='';
@@ -560,7 +611,7 @@ function montarTabela(){
   if(estado.pagina>totalPag)estado.pagina=totalPag;
   var ini=(estado.pagina-1)*estado.porPagina,fatia=linhas.slice(ini,ini+estado.porPagina);
   tb.innerHTML='';
-  if(!fatia.length){tb.innerHTML='<tr><td colspan="7" class="vazio">Nenhum cliente.</td></tr>';}
+  if(!fatia.length){tb.innerHTML='<tr><td colspan="8" class="vazio">Nenhum cliente.</td></tr>';}
   fatia.forEach(function(r){
     var badge='',cls='';
     if(r.sit==='comprou'){badge='<span class="badge b-comprou">Comprou</span>';cls='linha-comprou';}
@@ -569,7 +620,7 @@ function montarTabela(){
     if(r.meses>=2){badge='<span class="badge b-recorrente">Recompra</span>';cls='linha-recorrente';}
     var tr=document.createElement('tr');
     if(cls)tr.className=cls;
-    tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+badge+'</td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?r.meses+' meses':r.meses+' mês')+'</td>';
+    tr.innerHTML='<td>'+esc(r.nome)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.telefone||'—')+'</td><td>'+badge+'</td><td>'+numero(r.pedidos)+'</td><td>'+dinheiro(r.total)+'</td><td>'+fmtData(r.ultima)+'</td><td>'+(r.meses>=2?r.meses+' meses':r.meses+' mês')+'</td>';
     tb.appendChild(tr);
   });
   var info=document.getElementById('infoPag');if(info)info.textContent='Página '+estado.pagina+' de '+totalPag;
@@ -714,8 +765,8 @@ function montarTabelaContatos(){
 function baixar(nome,csv){var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;a.click();URL.revokeObjectURL(a.href);}
 function exportarCsv(){
   if(!estado.linhasTabela.length){alert('Nenhum cliente encontrado.');return;}
-  var linhas=estado.linhasTabela.map(function(r){return['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"',r.sit,r.pedidos,String(r.total).replace('.',','),r.ultima?fmtData(r.ultima):'',r.meses].join(';');});
-  baixar('clientes_infinity_piercing.csv','\uFEFF'+['Cliente','E-mail','Situação','Pedidos','Total','Última compra','Meses'].join(';')+'\n'+linhas.join('\n'));
+  var linhas=estado.linhasTabela.map(function(r){return['"'+r.nome.replace(/"/g,'""')+'"','"'+r.email.replace(/"/g,'""')+'"','"'+String(r.telefone||'').replace(/"/g,'""')+'"',r.sit,r.pedidos,String(r.total).replace('.',','),r.ultima?fmtData(r.ultima):'',r.meses].join(';');});
+  baixar('clientes_infinity_piercing.csv','\uFEFF'+['Cliente','E-mail','Telefone','Situação','Pedidos','Total','Última compra','Meses'].join(';')+'\n'+linhas.join('\n'));
 }
 function exportarCsvTop(){
   if(!estado.linhasProdutos.length){alert('Sem produtos no período.');return;}
