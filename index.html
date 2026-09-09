@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.9</title>
+<title>Infinity Piercing · Dashboard de Compras · v13</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -87,13 +87,13 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.9</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v13</b> · base = clientes cadastrados</div></div>
   <div class="spacer"></div>
   <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
 <main>
   <div id="avisos"></div>
-  <div class="fonte">📌 <b>Fonte:</b> valores consolidados da leitura dos CSVs do repositório (Financial Status = <b>paid</b>, cada campo 1× por pedido, mês pela coluna Paid at). Frete e descontos de agosto: <b>R$ 17.752,11</b> e <b>R$ 262.401,54</b>.</div>
+  <div class="fonte">📌 <b>Fonte:</b> base de clientes do arquivo <b>clientes cadastrados</b> do repositório cruzada com os pedidos pagos (<b>Financial Status = paid</b>, 1× por pedido, mês pela coluna Paid at). Frete e descontos de agosto: <b>R$ 17.752,11</b> e <b>R$ 262.401,54</b>.</div>
   <div class="filtros">
     <label>Histórico — mês a mês</label>
     <div class="chips" id="chipsPeriodo"></div>
@@ -110,8 +110,8 @@
     <div class="kpis" id="kpis"></div>
     <div class="grid2" id="graficos"></div>
     <div class="card" style="margin-top:18px">
-      <h3>🍕 Clientes na Base × Clientes que compraram no período</h3>
-      <canvas id="gPizzaBase" height="190"></canvas>
+      <h3>🍕 Clientes cadastrados — frequência de compra</h3>
+      <canvas id="gPizzaBase" height="210"></canvas>
       <div class="legenda" id="legPizzaBase"></div>
     </div>
   </section>
@@ -202,7 +202,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.9 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v13 · Base de clientes cadastrados + pedidos dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -226,7 +226,7 @@ var CARDS=[
   {id:'cli',rot:'Clientes que compraram',ico:'🛍️',dest:false,fn:function(m){return m.cli;},fmt:function(v){return numero(v);}},
   {id:'pag',rot:'Pedidos pagos',ico:'✅',dest:false,fn:function(m){return m.pag;},fmt:function(v){return numero(v);}}
 ];
-var estado={periodo:'TODOS',segmento:'TODOS',busca:'',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},ordemCont:{chave:'nome',dir:1},meses:[],linhasTabela:[],linhasProdutos:[],contatos:{},apiOk:false,apiMsg:''};
+var estado={periodo:'TODOS',segmento:'TODOS',busca:'',pagina:1,porPagina:50,ordem:{chave:'total',dir:-1},ordemProd:{chave:'qtd',dir:-1},ordemCont:{chave:'nome',dir:1},meses:[],linhasTabela:[],linhasProdutos:[],contatos:{},apiOk:false,apiMsg:'',baseOk:false,baseMsg:'',base:new Map()};
 
 function norm(s){return String(s==null?'':s).replace(/^\uFEFF/,'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -364,6 +364,32 @@ function resolverColunas(colunas,linhas){
   }
   return m;
 }
+
+/* ===== Resolver colunas do arquivo de clientes cadastrados (export Shopify) ===== */
+function resolverColunasBase(colunas,linhas){
+  var m={email:-1,nome:-1,telefone:-1,cidade:-1};
+  function acharExata(nomes){
+    for(var c=0;c<colunas.length;c++){
+      var hn=norm(colunas[c]||'');if(!hn)continue;
+      for(var i=0;i<nomes.length;i++){if(hn===norm(nomes[i]))return c;}
+    }
+    return -1;
+  }
+  var iEmail=acharExata(['email','e-mail','emailcliente','email do cliente']);
+  if(iEmail<0||!colunaPareceEmail(iEmail,colunas,linhas)){
+    var ach=-1;
+    for(var c=0;c<colunas.length;c++){if(colunaPareceEmail(c,colunas,linhas)){ach=c;break;}}
+    iEmail=ach;
+  }
+  m.email=iEmail;
+  m.nome=acharExata(['name','fullname','nom','nome','nomecompleto','customer','cliente','firstname','first name']);
+  var lname=acharExata(['lastname','last name','sobrenome']);
+  m.telefone=acharExata(['phone','telefone','celular','fone']);
+  m.cidade=acharExata(['city','cidade','defaultaddresscity']);
+  return {m:m,primeiro:m.nome,ultimo:lname};
+}
+function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('cadastro')>-1||n.indexOf('registrad')>-1||n.indexOf('customers')>-1||n.indexOf('customer')>-1||n.indexOf('cliente')>-1||n.indexOf('base')>-1;}
+
 function ehPago(status){return String(status||'').trim().toLowerCase()==='paid';}
 function ehExpirado(status){var st=String(status||'').trim().toLowerCase();return st==='expired'||st.indexOf('expired')>-1||st.indexOf('cancel')>-1||st.indexOf('abandon')>-1||st.indexOf('void')>-1;}
 
@@ -438,7 +464,6 @@ function detectarRotulo(colunas,linhas,nomeArquivo){
   return String(nomeArquivo||'Mês').replace(/\.csv$/i,'')||'Mês';
 }
 function chaveMes(rot){var m=String(rot||'').match(/^([A-Za-z]{3})\/(\d{2})$/);if(m){var idx=NOMES.indexOf(m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase());if(idx>-1)return parseInt(m[2],10)*100+(idx+1);}return 0;}
-function ehArquivoBase(nome){var n=norm(nome);return n.indexOf('base')>-1||n.indexOf('cliente')>-1||n.indexOf('customer')>-1||n.indexOf('cadastro')>-1;}
 
 function fetchT(url,ms){return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error('timeout'));},ms);fetch(url,{cache:'no-store'}).then(function(r){clearTimeout(t);res(r);},function(e){clearTimeout(t);rej(e);});});}
 function listarArquivosRepo(){
@@ -462,6 +487,47 @@ function parseCSV(texto){
   }
   if(campo!==''||linha.length){linha.push(campo);linhas.push(linha);}
   return linhas.filter(function(l){return l.some(function(c2){return String(c2).trim()!=='';});});
+}
+
+/* ===== Carrega o arquivo de CLIENTES CADASTRADOS (base) ===== */
+function carregarBase(){
+  estado.base=new Map();estado.baseOk=false;estado.baseMsg='';
+  return listarArquivosRepo().then(function(arquivos){
+    var baseArqs=arquivos.filter(function(f){return ehArquivoBase(f.name);});
+    if(!baseArqs.length){
+      estado.baseMsg='Nenhum arquivo de clientes cadastrados encontrado. O gráfico usará a base derivada dos pedidos.';
+      return;
+    }
+    baseArqs.sort(function(a,b){var x=norm(a.name).indexOf('cadastro')>-1?0:1,y=norm(b.name).indexOf('cadastro')>-1?0:1;return x-y;});
+    var f=baseArqs[0];
+    if(!/\.csv$/i.test(f.name)){
+      estado.baseMsg='Arquivo base "'+f.name+'" não é CSV (xlsx não suportado nesta versão). Converta para CSV.';
+      return;
+    }
+    return baixarCSV(f.download_url).then(function(t){
+      var L=parseCSV(t);
+      var colunas=L[0].map(function(h){return String(h).trim();});
+      var linhas=L.slice(1);
+      if(!colunas.filter(function(x){return x;}).length)throw new Error('CSV base vazio');
+      var r=resolverColunasBase(colunas,linhas),m=r.m;
+      var map=new Map(),semEmail=0;
+      linhas.forEach(function(ln){
+        var em=m.email>-1?String(ln[m.email]||'').trim():'';
+        if(!em||em.indexOf('@')<0){semEmail++;return;}
+        var key=norm(em);
+        if(!key||map.has(key))return;
+        var nome='';
+        if(m.nome>-1)nome=String(ln[m.nome]||'').trim();
+        if(r.ultimo>-1){var ul=String(ln[r.ultimo]||'').trim();if(ul)nome=(nome?nome+' ':'')+ul;}
+        if(!nome)nome=em.split('@')[0];
+        map.set(key,{email:em,nome:nome,telefone:(m.telefone>-1?String(ln[m.telefone]||'').trim():''),cidade:(m.cidade>-1?String(ln[m.cidade]||'').trim():'')});
+      });
+      estado.base=map;
+      estado.baseOk=map.size>0;
+      estado.baseMsg=map.size+' clientes cadastrados carregados do arquivo '+f.name+(semEmail?' · '+semEmail+' linhas sem e-mail válido':'');
+      if(!estado.baseOk)estado.baseMsg='Nenhum e-mail válido encontrado no arquivo '+f.name;
+    },function(){estado.baseMsg='Não consegui baixar o arquivo base '+f.name+'. Usando base dos pedidos.';});
+  },function(){estado.baseMsg='Erro ao listar repositório para a base. Usando base dos pedidos.';});
 }
 
 function carregarDados(){
@@ -490,9 +556,11 @@ function carregarDados(){
       Object.keys(porMes).forEach(function(rot){var l=porMes[rot];if(l.length<=1){manter.add(l[0]);return;}l.sort(function(a,b){return a.nPedidos-b.nPedidos;});manter.add(l[0]);});
       estado.meses=estado.meses.filter(function(mes){return manter.has(mes);});
       estado.meses.sort(function(a,b){return chaveMes(a.rotulo)-chaveMes(b.rotulo);});
-      montarChips();montarKpis();montarGraficos();montarPizzaBase();
-      carregarContatos();
-      if(txt)txt.textContent='Pronto ✓';
+      carregarBase().then(function(){
+        montarChips();montarKpis();montarGraficos();montarPizzaBase();
+        carregarContatos();
+        if(txt)txt.textContent='Pronto ✓';
+      });
     });
   }).catch(function(e){if(txt)txt.textContent='Erro';avisar('erro','GitHub',esc(e&&e.message?e.message:e));});
 }
@@ -566,41 +634,96 @@ function desenharGrafico(c){
   ctx.strokeStyle='#e5e0d4';ctx.beginPath();ctx.moveTo(padL,cv.height-padB);ctx.lineTo(cv.width-padR,cv.height-padB);ctx.stroke();
 }
 
-/* ===== PIZZA: Clientes na Base × Clientes que compraram no período ===== */
-function clientesBase(){
-  var set=new Set();
-  estado.meses.forEach(function(m){if(!m.ok)return;m.pedidos.forEach(function(o){if(o.pago&&o.email)set.add(o.email);});});
-  return set;
+/* ===== PIZZA: base de clientes cadastrados × frequência de compra ===== */
+function baseEfetiva(){
+  if(estado.baseOk&&estado.base.size)return estado.base;
+  /* fallback: base derivada dos pedidos pagos */
+  var map=new Map();
+  estado.meses.forEach(function(m){if(!m.ok)return;m.pedidos.forEach(function(o){if(o.pago&&o.email&&!map.has(o.email)){map.set(o.email,{email:o.emailRaw||o.email,nome:o.nome||'',telefone:o.telefone||'',cidade:''});}});});
+  if(!estado.baseOk&&estado.baseMsg)avisar('info','Aviso base',esc(estado.baseMsg)+' Usando base derivada dos pedidos.');
+  return map;
 }
-function clientesCompraramPeriodo(){
-  var set=new Set();
-  pedidosDoPeriodo().forEach(function(o){if(o.pago&&o.email)set.add(o.email);});
-  return set;
+function comprasPorMesBase(){
+  var res=new Map();
+  var base=baseEfetiva();
+  estado.meses.forEach(function(mes){
+    if(!mes.ok)return;
+    mes.pedidos.forEach(function(o){
+      if(!o.pago||!o.email)return;
+      if(!base.has(o.email))return;
+      var s=res.get(o.email);
+      if(!s){s=new Set();res.set(o.email,s);}
+      s.add(mes.rotulo);
+    });
+  });
+  return res;
 }
 function montarPizzaBase(){
   var cv=document.getElementById('gPizzaBase');if(!cv)return;
-  cv.width=cv.parentNode.clientWidth||700;cv.height=190;
+  cv.width=cv.parentNode.clientWidth||700;cv.height=210;
   var ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
-  var base=clientesBase(),comp=clientesCompraramPeriodo();
-  var totalBase=base.size,comprados=comp.size;
-  var nao=Math.max(0,totalBase-comprados);
-  var pct=totalBase?(comprados/totalBase*100):0;
+  var base=baseEfetiva();
+  var chaves=Array.from(base.keys());
+  var total=chaves.length;
+  var mesesOk=estado.meses.filter(function(m){return m.ok;});
+  var compras=comprasPorMesBase();
   var cx=cv.width/2,cy=cv.height/2,raio=Math.min(cv.width,cv.height)/2-16;
-  if(!totalBase){ctx.fillStyle='#9ca3af';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('Sem dados de base',cx,cy);return;}
-  var a0=-Math.PI/2;
-  var a1=a0+(comprados/totalBase)*Math.PI*2;
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,raio,a0,a1);ctx.closePath();ctx.fillStyle='#2e7d4f';ctx.fill();
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,raio,a1,a0);ctx.closePath();ctx.fillStyle='#d1d5db';ctx.fill();
-  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,raio,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#1f2937';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(Math.round(pct)+'%',cx,cy-2);
-  ctx.font='10px sans-serif';ctx.fillStyle='#6b7280';ctx.fillText('compraram no período',cx,cy+13);
-  var leg=document.getElementById('legPizzaBase');
-  if(leg){
-    var rot=estado.periodo==='TODOS'?'todos os períodos':estado.periodo;
-    leg.innerHTML='<div class="item"><span class="cor" style="background:#2e7d4f"></span> Compraram ('+rot+'): <b>'+numero(comprados)+' ('+Math.round(pct)+'%)</b></div>'+
-      '<div class="item"><span class="cor" style="background:#d1d5db"></span> Não compraram no período: <b>'+numero(nao)+' ('+Math.round(100-pct)+'%)</b></div>'+
-      '<div class="item"><span class="cor" style="background:#b45309"></span> Clientes na base (todos os períodos): <b>'+numero(totalBase)+'</b></div>';
+  if(!total){ctx.fillStyle='#9ca3af';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('Sem clientes na base',cx,cy);return;}
+  var slices=[],leg=[];
+  if(estado.periodo==='TODOS'){
+    var todosN=mesesOk.length;
+    var n1=0,n2=0,nTodos=0,nNao=0;
+    chaves.forEach(function(k){
+      var q=compras.get(k)?compras.get(k).size:0;
+      if(q===0)nNao++;
+      else if(todosN>1&&q===todosN)nTodos++;
+      else if(q===2)n2++;
+      else n1++;
+    });
+    if(todosN>1){
+      slices=[{v:nTodos,cor:'#1d4a2e',lab:'Compraram todos os meses ('+todosN+'/'+todosN+')'},{v:n2,cor:'#0e7490',lab:'Compraram em 2 meses'},{v:n1,cor:'#b45309',lab:'Compraram em 1 mês'},{v:nNao,cor:'#d1d5db',lab:'Não compraram'}];
+    }else{
+      var comprou=nTodos+n2+n1;
+      slices=[{v:comprou,cor:'#2e7d4f',lab:'Compraram no período'},{v:nNao,cor:'#d1d5db',lab:'Não compraram'}];
+    }
+    var comprouSoma=slices.reduce(function(a,s){return a+(s.lab.indexOf('Não')>-1?0:s.v);},0);
+    var pctCentral=total?Math.round(comprouSoma/total*100):0;
+    leg.push('<div class="item"><span class="cor" style="background:#b45309"></span> Clientes na Base: <b>'+numero(total)+'</b></div>');
+    if(estado.baseMsg)leg.push('<div class="item" style="color:var(--cin);font-size:11.5px">'+esc(estado.baseMsg)+'</div>');
+    desenharDonut(ctx,cx,cy,raio,slices,Math.round(pctCentral)+'%','da base comprou');
+    slices.forEach(function(s){leg.push('<div class="item"><span class="cor" style="background:'+s.cor+'"></span> '+s.lab+': <b>'+numero(s.v)+' ('+(total?Math.round(s.v/total*100):0)+'%)</b></div>');});
+  }else{
+    var setMes=new Set();
+    var mesSel=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
+    if(mesSel&&mesSel.ok)mesSel.pedidos.forEach(function(o){if(o.pago&&o.email&&base.has(o.email))setMes.add(o.email);});
+    var comprou=0;
+    chaves.forEach(function(k){if(setMes.has(k))comprou++;});
+    var nao=total-comprou;
+    var pct=total?Math.round(comprou/total*100):0;
+    slices=[{v:comprou,cor:'#2e7d4f',lab:'Compraram em '+estado.periodo},{v:nao,cor:'#d1d5db',lab:'Não compraram em '+estado.periodo}];
+    leg.push('<div class="item"><span class="cor" style="background:#b45309"></span> Clientes na Base: <b>'+numero(total)+'</b></div>');
+    if(estado.baseMsg)leg.push('<div class="item" style="color:var(--cin);font-size:11.5px">'+esc(estado.baseMsg)+'</div>');
+    desenharDonut(ctx,cx,cy,raio,slices,Math.round(pct)+'%','comprou em '+estado.periodo);
+    slices.forEach(function(s){leg.push('<div class="item"><span class="cor" style="background:'+s.cor+'"></span> '+s.lab+': <b>'+numero(s.v)+' ('+(total?Math.round(s.v/total*100):0)+'%)</b></div>');});
   }
+  var el=document.getElementById('legPizzaBase');
+  if(el)el.innerHTML=leg.join('');
+  var ocr=document.getElementById('legendaPizzaExtra');
+}
+function desenharDonut(ctx,cx,cy,raio,slices,centro,sub){
+  var total=0;slices.forEach(function(s){total+=s.v;});
+  if(!total){ctx.fillStyle='#9ca3af';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('Sem dados',cx,cy);return;}
+  var ang=-Math.PI/2;
+  slices.forEach(function(s){
+    if(!s.v)return;
+    var a=ang+(s.v/total)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,raio,ang,a);ctx.closePath();
+    ctx.fillStyle=s.cor;ctx.fill();
+    ang=a;
+  });
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,raio,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#1f2937';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(centro,cx,cy-3);
+  ctx.font='10px sans-serif';ctx.fillStyle='#6b7280';ctx.fillText(sub,cx,cy+13);
 }
 
 function pedidosDoPeriodo(){
