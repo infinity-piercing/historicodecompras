@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.4</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.5</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -82,7 +82,7 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.4</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.5</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
   <div class="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
@@ -129,7 +129,7 @@
         <h3>🏆 20 mais vendidos</h3>
         <div class="tabela-box">
           <div class="tabela-top"><div class="contador" id="contadorTop">—</div><button class="btn" id="btnCsvTop">⬇ Exportar CSV</button></div>
-          <div style="overflow:auto;max-height:calc(100vh - 320px)"><table><thead><tr>
+          <div style="overflow:auto;max-height:calc(100vh - 340px)"><table><thead><tr>
             <th>#</th>
             <th data-ordp="produto">Produto <span class="seta"></span></th>
             <th data-ordp="qtd">Qtd <span class="seta"></span></th>
@@ -141,7 +141,7 @@
         <h3>📉 20 menos vendidos</h3>
         <div class="tabela-box">
           <div class="tabela-top"><div class="contador" id="contadorBottom">—</div><button class="btn" id="btnCsvBottom">⬇ Exportar CSV</button></div>
-          <div style="overflow:auto;max-height:calc(100vh - 320px)"><table><thead><tr>
+          <div style="overflow:auto;max-height:calc(100vh - 340px)"><table><thead><tr>
             <th>#</th>
             <th data-ordp="produto">Produto <span class="seta"></span></th>
             <th data-ordp="qtd">Qtd <span class="seta"></span></th>
@@ -150,9 +150,29 @@
         </div>
       </div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h3>📋 Lista total de produtos</h3>
+      <div class="tabela-box">
+        <div class="tabela-top"><div class="contador" id="contadorProdutos">—</div><button class="btn" id="btnCsvProdutos">⬇ Exportar CSV</button></div>
+        <div style="overflow:auto;max-height:calc(100vh - 340px)"><table><thead><tr>
+          <th data-ordp="produto">Produto <span class="seta"></span></th>
+          <th data-ordp="qtd">Qtd <span class="seta"></span></th>
+          <th data-ordp="receita">Receita <span class="seta"></span></th>
+        </tr></thead><tbody id="tbodyProdutos"></tbody></table></div>
+      </div>
+    </div>
   </section>
   <section id="contatos" style="display:none">
     <div class="mini-kpis" id="placarContatos"></div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>🏅 Placar por atendente</h3>
+      <div class="tabela-box">
+        <div class="tabela-top"><div class="contador" id="contadorAtendentes">—</div></div>
+        <div style="overflow:auto;max-height:300px"><table><thead><tr>
+          <th>Atendente</th><th>Contatados</th><th>Retorno</th><th>Sem retorno</th><th>Sem contato</th>
+        </tr></thead><tbody id="tbodyAtendentes"></tbody></table></div>
+      </div>
+    </div>
     <div class="tabela-box">
       <div class="tabela-top"><div class="contador" id="contadorContatos">—</div><button class="btn" id="btnTestarConexao">🔌 Testar conexão</button><button class="btn" id="btnCsvContatos">⬇ Exportar CSV</button></div>
       <div style="overflow:auto;max-height:calc(100vh - 260px)"><table><thead><tr>
@@ -168,7 +188,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.4 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.5 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -435,7 +455,7 @@ function aoMudarPeriodo(){
   var nome=at?at.dataset.tab:'overview';
   if(nome==='clientes')montarTabela();
   if(nome==='produtos')montarTabelaProdutos();
-  if(nome==='contatos'){montarPlacarContatos();montarTabelaContatos();}
+  if(nome==='contatos'){montarPlacarContatos();montarPlacarAtendentes();montarTabelaContatos();}
 }
 function montarChips(){
   var p=document.getElementById('chipsPeriodo');if(!p)return;p.innerHTML='';
@@ -575,8 +595,10 @@ function montarTabelaProdutos(){
   var bottom=arr.slice(-20).reverse();
   var ctTop=document.getElementById('contadorTop');
   var ctBottom=document.getElementById('contadorBottom');
+  var ctTotal=document.getElementById('contadorProdutos');
   if(ctTop)ctTop.textContent=numero(top.length)+' produto(s)';
   if(ctBottom)ctBottom.textContent=numero(bottom.length)+' produto(s)';
+  if(ctTotal)ctTotal.textContent=numero(arr.length)+' produto(s) no total';
   var tbTop=document.getElementById('tbodyTop');
   if(tbTop){
     tbTop.innerHTML='';
@@ -588,6 +610,12 @@ function montarTabelaProdutos(){
     tbBottom.innerHTML='';
     if(!bottom.length){tbBottom.innerHTML='<tr><td colspan="4" class="vazio">Sem produtos no período.</td></tr>';}
     bottom.forEach(function(p,i){var tr=document.createElement('tr');tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tbBottom.appendChild(tr);});
+  }
+  var tbTotal=document.getElementById('tbodyProdutos');
+  if(tbTotal){
+    tbTotal.innerHTML='';
+    if(!arr.length){tbTotal.innerHTML='<tr><td colspan="3" class="vazio">Sem produtos no período.</td></tr>';}
+    arr.forEach(function(p){var tr=document.createElement('tr');tr.innerHTML='<td>'+esc(p.produto)+'</td><td>'+numero(p.qtd)+'</td><td>'+dinheiro(p.receita)+'</td>';tbTotal.appendChild(tr);});
   }
   atualizarSetas('data-ordp',estado.ordemProd);
 }
@@ -610,6 +638,7 @@ function carregarContatos(){
     lista.forEach(function(l){var em=norm(l.email);if(!em)return;map[em]={email:l.email||'',nome:l.nome||'',telefone:l.telefone||'',cidade:l.cidade||'',contato:String(l.contato||'').toLowerCase()==='sim'||l.contato===true,retorno:String(l.retorno||'').toLowerCase()==='sim'||l.retorno===true,data:l.data||'',atendente:l.atendente||''};});
     estado.contatos=map;estado.apiOk=true;
     montarPlacarContatos();
+    montarPlacarAtendentes();
     var sec=document.getElementById('contatos');
     if(sec&&sec.style.display!=='none')montarTabelaContatos();
   }).catch(function(){estado.apiOk=false;});
@@ -626,6 +655,27 @@ function montarPlacarContatos(){
     {r:'Retorno',v:numero(ret),cls:'k-rt',ico:'🟣'}
   ];
   el.innerHTML=cards.map(function(c){return '<div class="kpi-mini '+c.cls+'"><div class="rotulo">'+c.ico+' '+c.r+'</div><div class="valor">'+c.v+'</div></div>';}).join('');
+}
+function montarPlacarAtendentes(){
+  var tb=document.getElementById('tbodyAtendentes');if(!tb)return;
+  var map=new Map();
+  Object.keys(estado.contatos).forEach(function(em){
+    var v=estado.contatos[em];
+    var nome=(v.atendente||'').trim()||'(não informado)';
+    var a=map.get(nome);
+    if(!a){a={nome:nome,cont:0,ret:0,semRet:0,semCont:0};map.set(nome,a);}
+    if(v.contato){a.cont++;if(v.retorno)a.ret++;else a.semRet++;}
+    else a.semCont++;
+  });
+  var arr=Array.from(map.values()).sort(function(x,y){return y.cont-x.cont;});
+  var ct=document.getElementById('contadorAtendentes');if(ct)ct.textContent=numero(arr.length)+' atendente(s)';
+  tb.innerHTML='';
+  if(!arr.length){tb.innerHTML='<tr><td colspan="5" class="vazio">Sem dados de atendente.</td></tr>';return;}
+  arr.forEach(function(a){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(a.nome)+'</td><td>'+numero(a.cont)+'</td><td>'+numero(a.ret)+'</td><td>'+numero(a.semRet)+'</td><td>'+numero(a.semCont)+'</td>';
+    tb.appendChild(tr);
+  });
 }
 function montarTabelaContatos(){
   var tb=document.getElementById('tbodyContatos');if(!tb)return;
@@ -673,6 +723,11 @@ function exportarCsvBottom(){
   var linhas=bottom.map(function(p,i){return[i+1,'"'+p.produto.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',',')].join(';');});
   baixar('produtos_20_menos_vendidos.csv','\uFEFF'+['#','Produto','Qtd','Receita'].join(';')+'\n'+linhas.join('\n'));
 }
+function exportarCsvProdutos(){
+  if(!estado.linhasProdutos.length){alert('Sem produtos no período.');return;}
+  var linhas=estado.linhasProdutos.map(function(p){return['"'+p.produto.replace(/"/g,'""')+'"',p.qtd,String(p.receita).replace('.',',')].join(';');});
+  baixar('produtos_lista_total.csv','\uFEFF'+['Produto','Qtd','Receita'].join(';')+'\n'+linhas.join('\n'));
+}
 function exportarCsvContatos(){
   var arr=Object.keys(estado.contatos).map(function(em){return estado.contatos[em];});
   if(!arr.length){alert('Nenhum cliente na planilha.');return;}
@@ -688,7 +743,7 @@ function mostrarTab(nome){
   if(co)co.style.display=nome==='contatos'?'':'none';
   if(nome==='clientes')montarTabela();
   if(nome==='produtos')montarTabelaProdutos();
-  if(nome==='contatos'){montarPlacarContatos();montarTabelaContatos();}
+  if(nome==='contatos'){montarPlacarContatos();montarPlacarAtendentes();montarTabelaContatos();}
 }
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){mostrarTab(t.dataset.tab);};});
 document.querySelectorAll('#clientes th[data-ord]').forEach(function(th){
@@ -722,8 +777,9 @@ var np=document.getElementById('nextPag');if(np)np.onclick=function(){estado.pag
 var bc=document.getElementById('btnCsv');if(bc)bc.onclick=exportarCsv;
 var bpt=document.getElementById('btnCsvTop');if(bpt)bpt.onclick=exportarCsvTop;
 var bpb=document.getElementById('btnCsvBottom');if(bpb)bpb.onclick=exportarCsvBottom;
+var bptt=document.getElementById('btnCsvProdutos');if(bptt)bptt.onclick=exportarCsvProdutos;
 var bco=document.getElementById('btnCsvContatos');if(bco)bco.onclick=exportarCsvContatos;
-var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){carregarContatos();setTimeout(function(){montarPlacarContatos();montarTabelaContatos();},400);};
+var bt=document.getElementById('btnTestarConexao');if(bt)bt.onclick=function(){carregarContatos();setTimeout(function(){montarPlacarContatos();montarPlacarAtendentes();montarTabelaContatos();},400);};
 carregarDados();
 </script>
 </body>
