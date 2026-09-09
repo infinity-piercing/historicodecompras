@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinity Piercing · Dashboard de Compras · v12.8</title>
+<title>Infinity Piercing · Dashboard de Compras · v12.9</title>
 <style>
   :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -53,6 +53,9 @@
   .card{background:#fff;border:1px solid var(--b);border-radius:16px;padding:18px}
   .card h3{font-size:14px;margin:0 0 10px}
   canvas{width:100%;height:190px;display:block}
+  .legenda{font-size:12.5px;color:#374151;line-height:1.9;margin-top:8px}
+  .legenda .item{display:flex;align-items:center;gap:7px}
+  .legenda .cor{width:12px;height:12px;border-radius:3px;display:inline-block;flex:0 0 auto}
   .tabs{display:flex;gap:10px;margin:0 0 18px;flex-wrap:wrap}
   .tab{border:1px solid var(--b);background:#fff;border-radius:10px;padding:9px 18px;font-size:14px;cursor:pointer;color:#374151;font-weight:600}
   .tab.ativo{background:var(--v);border-color:var(--v);color:#fff}
@@ -84,7 +87,7 @@
 </head>
 <body>
 <header>
-  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.8</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v12.9</b> · dados consolidados (paid · 1× por pedido)</div></div>
   <div class="spacer"></div>
   <div class="pill" id="pill"><span class="dot"></span><span id="pillTexto">Carregando…</span></div>
 </header>
@@ -106,6 +109,11 @@
   <section id="overview">
     <div class="kpis" id="kpis"></div>
     <div class="grid2" id="graficos"></div>
+    <div class="card" style="margin-top:18px">
+      <h3>🍕 Clientes na Base × Clientes que compraram no período</h3>
+      <canvas id="gPizzaBase" height="190"></canvas>
+      <div class="legenda" id="legPizzaBase"></div>
+    </div>
   </section>
   <section id="clientes" style="display:none">
     <div class="filtros">
@@ -194,7 +202,7 @@
     </div>
   </section>
 </main>
-<footer>Infinity Piercing · Dashboard v12.8 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
+<footer>Infinity Piercing · Dashboard v12.9 · Visão geral consolidada + tabelas dos arquivos do repositório</footer>
 <script>
 window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
 
@@ -290,7 +298,6 @@ function parseData(v){
 }
 function letraIdx(letra,lim){if(!letra)return -1;var L=String(letra).toUpperCase().charCodeAt(0)-65;return(L>=0&&L<lim)?L:-1;}
 
-/* Coluna parece e-mail? (validação por conteúdo: maioria dos valores tem @) */
 function colunaPareceEmail(idx,colunas,linhas){
   if(idx<0||!linhas||!linhas.length)return false;
   var com=0,sem=0;
@@ -302,7 +309,6 @@ function colunaPareceEmail(idx,colunas,linhas){
   return com>0&&com>=sem;
 }
 
-/* ===== COLUNAS — NOME EXATO + VALIDAÇÃO DE E-MAIL POR CONTEÚDO ===== */
 function resolverColunas(colunas,linhas){
   var m={pedido:-1,email:-1,nome:-1,telefone:-1,status:-1,paidAt:-1,createdAt:-1,subtotal:-1,total:-1,desconto:-1,frete:-1,taxas:-1,qtd:-1,produto:-1,sku:-1,preco:-1};
   function acharExata(nomes){
@@ -484,7 +490,7 @@ function carregarDados(){
       Object.keys(porMes).forEach(function(rot){var l=porMes[rot];if(l.length<=1){manter.add(l[0]);return;}l.sort(function(a,b){return a.nPedidos-b.nPedidos;});manter.add(l[0]);});
       estado.meses=estado.meses.filter(function(mes){return manter.has(mes);});
       estado.meses.sort(function(a,b){return chaveMes(a.rotulo)-chaveMes(b.rotulo);});
-      montarChips();montarKpis();montarGraficos();
+      montarChips();montarKpis();montarGraficos();montarPizzaBase();
       carregarContatos();
       if(txt)txt.textContent='Pronto ✓';
     });
@@ -497,7 +503,7 @@ function mesesDoPeriodo(){
   return m.length?m:[];
 }
 function aoMudarPeriodo(){
-  montarChips();montarKpis();montarGraficos();
+  montarChips();montarKpis();montarGraficos();montarPizzaBase();
   var at=document.querySelector('.tab.ativo');
   var nome=at?at.dataset.tab:'overview';
   if(nome==='clientes')montarTabela();
@@ -560,12 +566,48 @@ function desenharGrafico(c){
   ctx.strokeStyle='#e5e0d4';ctx.beginPath();ctx.moveTo(padL,cv.height-padB);ctx.lineTo(cv.width-padR,cv.height-padB);ctx.stroke();
 }
 
+/* ===== PIZZA: Clientes na Base × Clientes que compraram no período ===== */
+function clientesBase(){
+  var set=new Set();
+  estado.meses.forEach(function(m){if(!m.ok)return;m.pedidos.forEach(function(o){if(o.pago&&o.email)set.add(o.email);});});
+  return set;
+}
+function clientesCompraramPeriodo(){
+  var set=new Set();
+  pedidosDoPeriodo().forEach(function(o){if(o.pago&&o.email)set.add(o.email);});
+  return set;
+}
+function montarPizzaBase(){
+  var cv=document.getElementById('gPizzaBase');if(!cv)return;
+  cv.width=cv.parentNode.clientWidth||700;cv.height=190;
+  var ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
+  var base=clientesBase(),comp=clientesCompraramPeriodo();
+  var totalBase=base.size,comprados=comp.size;
+  var nao=Math.max(0,totalBase-comprados);
+  var pct=totalBase?(comprados/totalBase*100):0;
+  var cx=cv.width/2,cy=cv.height/2,raio=Math.min(cv.width,cv.height)/2-16;
+  if(!totalBase){ctx.fillStyle='#9ca3af';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('Sem dados de base',cx,cy);return;}
+  var a0=-Math.PI/2;
+  var a1=a0+(comprados/totalBase)*Math.PI*2;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,raio,a0,a1);ctx.closePath();ctx.fillStyle='#2e7d4f';ctx.fill();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,raio,a1,a0);ctx.closePath();ctx.fillStyle='#d1d5db';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,raio,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#1f2937';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(Math.round(pct)+'%',cx,cy-2);
+  ctx.font='10px sans-serif';ctx.fillStyle='#6b7280';ctx.fillText('compraram no período',cx,cy+13);
+  var leg=document.getElementById('legPizzaBase');
+  if(leg){
+    var rot=estado.periodo==='TODOS'?'todos os períodos':estado.periodo;
+    leg.innerHTML='<div class="item"><span class="cor" style="background:#2e7d4f"></span> Compraram ('+rot+'): <b>'+numero(comprados)+' ('+Math.round(pct)+'%)</b></div>'+
+      '<div class="item"><span class="cor" style="background:#d1d5db"></span> Não compraram no período: <b>'+numero(nao)+' ('+Math.round(100-pct)+'%)</b></div>'+
+      '<div class="item"><span class="cor" style="background:#b45309"></span> Clientes na base (todos os períodos): <b>'+numero(totalBase)+'</b></div>';
+  }
+}
+
 function pedidosDoPeriodo(){
   if(estado.periodo==='TODOS'){var t=[];estado.meses.forEach(function(m){if(m.ok)t=t.concat(m.pedidos);});return t;}
   var m=estado.meses.filter(function(x){return x.rotulo===estado.periodo;})[0];
   return m&&m.ok?m.pedidos:[];
 }
-/* Clientes: chave por e-mail OU telefone; SEMPRE exibe o e-mail original com @ */
 function clientesDoPeriodo(){
   var map=new Map();
   pedidosDoPeriodo().forEach(function(o){
@@ -692,10 +734,6 @@ function atualizarSetas(atributo,ord){
   });
 }
 
-/* ===== CONTATOS — carregamento robusto =====
-   1º tenta fetch direto (Apps Script público responde com CORS);
-   2º se falhar, tenta JSONP (callback);
-   3º aceita array puro, {data:[...]} ou {contatos:[...]} */
 function extrairLista(d){
   if(Array.isArray(d))return d;
   if(d&&typeof d==='object'){
@@ -730,7 +768,6 @@ function carregarContatos(){
     return;
   }
   var url=CONFIG.apiUrl;
-  /* 1º tentativa: fetch (CORS) */
   fetch(url,{method:'GET',cache:'no-store'})
     .then(function(r){return r.text();})
     .then(function(texto){
@@ -741,7 +778,6 @@ function carregarContatos(){
       aplicarContatos(lista,'fetch');
     })
     .catch(function(e1){
-      /* 2º tentativa: JSONP */
       jsonp(url,'cb'+Date.now(),15000)
         .then(function(d){
           var lista=extrairLista(d);
@@ -767,10 +803,10 @@ function aplicarContatos(lista,via){
     map[em]={email:emRaw,nome:String(l.nome||l.Nome||l.name||l.Name||'').trim()||emRaw.split('@')[0],
       telefone:String(l.telefone||l.Telefone||l.phone||l.celular||'').trim(),
       cidade:String(l.cidade||l.Cidade||l.city||'').trim(),
-      contato:(String(l.contato||l.Contatado||l['Já contatado']||'').toLowerCase()==='sim'||l.contato===true||l.Contatado===true),
-      retorno:(String(l.retorno||l.Retorno||'').toLowerCase()==='sim'||l.retorno===true),
-      data:String(l.data||l.Data||l.date||l['Data contato']||l['Data do contato']||'').trim(),
-      atendente:String(l.atendente||l.Atendente||l.responsavel||l['Responsável']||'').trim()};
+      contato:(String(l.contato||l.Contatado||l['Já contatado']||l['Contatado?']||'').toLowerCase()==='sim'||l.contato===true||l.Contatado===true),
+      retorno:(String(l.retorno||l.Retorno||l['Retorno?']||'').toLowerCase()==='sim'||l.retorno===true),
+      data:String(l.data||l.Data||l.date||l['Data contato']||l['Data do contato']||l['Data contato?']||'').trim(),
+      atendente:String(l.atendente||l.Atendente||l.responsavel||l['Responsável']||l['Quem contatou']||'').trim()};
   });
   estado.contatos=map;
   estado.apiOk=Object.keys(map).length>0;
