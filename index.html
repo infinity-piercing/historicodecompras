@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinity Piercing · Dashboard de Compras · v11</title>
+<style>
+  :root{--v:#1d4a2e;--v2:#2e7d4f;--v3:#eaf3ec;--creme:#f7f4ec;--cin:#6b7280;--b:#e5e0d4;--am:#b45309;--amb:#fef3c7;--ro:#7c3aed;--rob:#ede9fe;--rd:#b91c1c;--rdb:#fee2e2}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--creme);color:#1f2937;padding-bottom:40px}
+  header{background:linear-gradient(135deg,var(--v),var(--v2));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header .titulo{font-size:19px;font-weight:700}
+  header .subtitulo{font-size:12px;opacity:.9}
+  header .spacer{flex:1}
+  .pill{font-size:12px;background:rgba(255,255,255,.16);padding:5px 11px;border-radius:999px;display:flex;align-items:center;gap:6px}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:#4ade80}
+  .btn{border:1px solid var(--b);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;color:#374151;font-weight:600}
+  .btn:hover{border-color:var(--v2);color:var(--v)}
+  main{max-width:1180px;margin:0 auto;padding:16px}
+  .fonte{background:var(--v3);border:1px solid #bbe7c8;border-radius:12px;padding:10px 14px;font-size:12px;color:var(--v);margin-bottom:12px;line-height:1.5}
+  .filtros{background:#fff;border:1px solid var(--b);border-radius:14px;padding:11px 14px;margin-bottom:14px}
+  .filtros label{font-size:11px;color:var(--cin);font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}
+  .chip{border:1px solid var(--b);background:#fff;border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:#374151}
+  .chip.ativo{background:var(--v);border-color:var(--v);color:#fff;font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:#fff;border:1px solid var(--b);border-radius:14px;padding:12px;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:96px}
+  .kpi.destaque{background:var(--amb);border-color:#fcd34d}
+  .kpi .rotulo{font-size:10.5px;color:var(--cin);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;padding-right:18px;line-height:1.3}
+  .kpi .valor{font-size:clamp(15px,2vw,20px);font-weight:800;color:var(--v);line-height:1.15;word-break:break-word;overflow-wrap:anywhere}
+  .kpi.destaque .valor{color:var(--am)}
+  .kpi .detalhe{font-size:10.5px;color:var(--cin);margin-top:auto;padding-top:3px;line-height:1.3}
+  .kpi .ico{position:absolute;right:8px;top:9px;font-size:15px;opacity:.4}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--b);border-radius:14px;padding:14px}
+  .card h3{font-size:13px;margin:0 0 8px}
+  canvas{width:100%;height:150px;display:block}
+  .aviso{border-radius:12px;padding:11px 14px;margin-bottom:8px;font-size:13px;line-height:1.5;display:none}
+  .aviso.show{display:block}
+  .aviso.erro{background:var(--rdb);border:1px solid #fca5a5;color:var(--rd)}
+  footer{max-width:1180px;margin:16px auto 0;padding:0 16px;font-size:12px;color:var(--cin);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="titulo">Infinity Piercing</div><div class="subtitulo">Dashboard de Compras · <b>v11</b> · dados consolidados (paid · 1× por pedido)</div></div>
+  <div class="spacer"></div>
+  <div class="pill"><span class="dot"></span><span id="pillTexto">Pronto ✓</span></div>
+</header>
+<main>
+  <div id="avisos"></div>
+  <div class="fonte">📌 <b>Fonte:</b> valores consolidados da leitura dos CSVs do repositório (Financial Status = <b>paid</b>, cada campo 1× por pedido, mês pela coluna Paid at). Frete e descontos de agosto: <b>R$ 17.752,11</b> e <b>R$ 262.401,54</b>.</div>
+  <div class="filtros">
+    <label>Histórico — mês a mês</label>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2" id="graficos"></div>
+</main>
+<footer>Infinity Piercing · Dashboard v11 · Dados consolidados por leitura dos arquivos do repositório</footer>
+<script>
+window.onerror=function(msg,src,lin){try{var d=document.createElement('div');d.className='aviso show erro';d.innerHTML='<b>⚠ Erro de script</b>'+String(msg||'')+(lin?' (linha '+lin+')':'');document.getElementById('avisos').appendChild(d);}catch(e){}return false;};
+
+/* ============ FONTE DA VERDADE — Tabela consolidada (1× por pedido, Financial Status = paid) ============ */
+var DADOS=[
+  {rot:'Jun/26',liq:1248033.91,bru:1274287.57,desc:644337.69,fre:26234.88,cli:1405,pag:1682},
+  {rot:'Jul/26',liq:843215.32,bru:866470.35,desc:301048.88,fre:23255.03,cli:1197,pag:1398},
+  {rot:'Ago/26',liq:899975.08,bru:925669.59,desc:262401.54,fre:17752.11,cli:1125,pag:1310}
+];
+/* Cards: cada item vira um card + um gráfico */
+var CARDS=[
+  {id:'ticket',rot:'Ticket médio (por cliente)',ico:'🎯',dest:true,tipo:'R$',fn:function(m){return m.cli?m.liq/m.cli:0;},fmt:function(v){return fmtCurto(v);}},
+  {id:'liq',rot:'Vendas líquidas (Subtotal)',ico:'💰',dest:false,tipo:'R$',fn:function(m){return m.liq;},fmt:function(v){return fmtCurto(v);}},
+  {id:'bru',rot:'Vendas brutas (Total)',ico:'📦',dest:false,tipo:'R$',fn:function(m){return m.bru;},fmt:function(v){return fmtCurto(v);}},
+  {id:'desc',rot:'Descontos (Discount Amount)',ico:'🏷️',dest:false,tipo:'R$',fn:function(m){return m.desc;},fmt:function(v){return fmtCurto(v);}},
+  {id:'fre',rot:'Frete (Shipping)',ico:'🚚',dest:false,tipo:'R$',fn:function(m){return m.fre;},fmt:function(v){return fmtCurto(v);}},
+  {id:'freTax',rot:'Frete + taxas (Total − Subtotal)',ico:'🧾',dest:false,tipo:'R$',fn:function(m){return m.bru-m.liq;},fmt:function(v){return fmtCurto(v);}},
+  {id:'cli',rot:'Clientes que compraram',ico:'🛍️',dest:false,tipo:'nº',fn:function(m){return m.cli;},fmt:function(v){return numero(v);}},
+  {id:'pag',rot:'Pedidos pagos',ico:'✅',dest:false,tipo:'nº',fn:function(m){return m.pag;},fmt:function(v){return numero(v);}}
+];
+var estado={periodo:'TODOS'};
+
+function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function dinheiro(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);}catch(e){return 'R$ '+(v||0);}}
+function numero(v){try{return new Intl.NumberFormat('pt-BR').format(v||0);}catch(e){return String(v||0);}}
+function fmtCurto(v){v=Math.round(v||0);if(v>=1000000)return 'R$'+(v/1000000).toFixed(1).replace('.',',')+'M';if(v>=1000)return 'R$'+(v/1000).toFixed(1).replace('.',',')+'k';return 'R$'+v;}
+function fmtData(d){if(!d)return '—';try{return d.toLocaleDateString('pt-BR');}catch(e){return String(d);}}
+
+function mesesDoPeriodo(){
+  if(estado.periodo==='TODOS')return DADOS;
+  var m=DADOS.filter(function(x){return x.rot===estado.periodo;});
+  return m.length?m:[];
+}
+function somarMes(chave){
+  var ms=mesesDoPeriodo(),s=0;
+  ms.forEach(function(m){s+=m[chave]||0;});
+  return s;
+}
+function montarChips(){
+  var p=document.getElementById('chips');p.innerHTML='';
+  var b=document.createElement('button');b.className='chip'+(estado.periodo==='TODOS'?' ativo':'');b.textContent='📅 Todos ('+DADOS.map(function(m){return m.rot;}).join(' + ')+')';
+  b.onclick=function(){estado.periodo='TODOS';montarChips();montarKpis();montarGraficos();};p.appendChild(b);
+  DADOS.forEach(function(m){
+    var c=document.createElement('button');c.className='chip'+(estado.periodo===m.rot?' ativo':'');c.textContent='✅ '+m.rot;
+    c.onclick=function(){estado.periodo=m.rot;montarChips();montarKpis();montarGraficos();};p.appendChild(c);
+  });
+}
+function montarKpis(){
+  var ms=mesesDoPeriodo(),rot=estado.periodo==='TODOS'?'todos os meses':estado.periodo;
+  var html=CARDS.map(function(c){
+    var v=0;
+    ms.forEach(function(m){v+=c.fn(m);});
+    if(c.tipo==='R$'){var vv=dinheiro(v);}
+    else{var vv=numero(v);}
+    return '<div class="kpi'+(c.dest?' destaque':'')+'">'+'<div class="ico">'+c.ico+'</div><div class="rotulo">'+c.rot+'</div><div class="valor">'+vv+'</div><div class="detalhe">'+rot+'</div></div>';
+  }).join('');
+  document.getElementById('kpis').innerHTML=html;
+}
+function montarGraficos(){
+  var g=document.getElementById('graficos');g.innerHTML='';
+  CARDS.forEach(function(c){
+    var card=document.createElement('div');card.className='card';
+    card.innerHTML='<h3>'+c.ico+' '+esc(c.rot)+'</h3><canvas id="cv-'+c.id+'" height="150"></canvas>';
+    g.appendChild(card);
+  });
+  CARDS.forEach(function(c){desenharGrafico(c);});
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function desenharGrafico(c){
+  var cv=document.getElementById('cv-'+c.id);if(!cv)return;
+  cv.width=cv.parentNode.clientWidth||600;cv.height=150;
+  var ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
+  var ms=mesesDoPeriodo();
+  var vals=ms.map(function(m){return c.fn(m);});
+  var labels=ms.map(function(m){return m.rot;});
+  var max=1;vals.forEach(function(v){if(v>max)max=v;});max*=1.1;
+  var padT=18,padB=20,padL=6,padR=6,gw=(cv.width-padL-padR)/vals.length,bw=Math.min(40,gw*0.5);
+  var cores=['#1d4a2e','#0e7490','#b45309'];
+  vals.forEach(function(v,i){
+    var x=padL+gw*i+gw/2;
+    var h=(v/max)*(cv.height-padT-padB);
+    if(v>0){ctx.fillStyle=cores[i%cores.length];ctx.fillRect(x-bw/2,cv.height-padB-h,bw,h+1);}
+    ctx.fillStyle='#374151';ctx.font='10px sans-serif';ctx.textAlign='center';
+    ctx.fillText(labels[i],x,cv.height-6);
+    if(v>0){ctx.fillStyle='#1f2937';ctx.font='bold 9px sans-serif';ctx.fillText(c.fmt(v),x,cv.height-padB-h-4);}
+  });
+  ctx.strokeStyle='#e5e0d4';ctx.beginPath();ctx.moveTo(padL,cv.height-padB);ctx.lineTo(cv.width-padR,cv.height-padB);ctx.stroke();
+}
+montarChips();montarKpis();montarGraficos();
+</script>
+</body>
+</html>
